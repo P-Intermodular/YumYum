@@ -20,12 +20,18 @@ class FeedScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Comida Cerca de Ti'),
+        title: const Text('mira comida cerca de ti', style: TextStyle(color: Color(0xFF1F4A5B), fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
+            icon: const Icon(Icons.notifications_none),
             onPressed: () {},
-          )
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => context.push('/profile'),
+          ),
         ],
       ),
       body: productsAsyncValue.when(

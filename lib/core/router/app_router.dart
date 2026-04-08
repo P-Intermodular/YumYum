@@ -11,6 +11,7 @@ import '../../features/profile/screens/profile_screen.dart';
 import '../../features/product/screens/add_product_screen.dart';
 import '../../features/product/screens/product_detail_screen.dart';
 import '../../features/chat/screens/chat_room_screen.dart';
+import '../../features/orders/screens/orders_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -36,14 +37,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AddProductScreen(),
           ),
           GoRoute(
+            path: '/orders',
+            builder: (context, state) => const OrdersScreen(),
+          ),
+          GoRoute(
             path: '/chats',
             builder: (context, state) => const ChatListScreen(),
           ),
-          GoRoute(
-            path: '/profile',
-            builder: (context, state) => const ProfileScreen(),
-          ),
         ],
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: '/product/:id',

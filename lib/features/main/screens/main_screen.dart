@@ -17,7 +17,7 @@ class MainScreen extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
-            label: 'Explorar',
+            label: 'Inicio',
           ),
           NavigationDestination(
             icon: Icon(Icons.map_outlined),
@@ -27,17 +27,17 @@ class MainScreen extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.add_circle_outline),
             selectedIcon: Icon(Icons.add_circle),
-            label: 'Subir',
+            label: 'Publicar',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.shopping_bag_outlined),
+            selectedIcon: Icon(Icons.shopping_bag),
+            label: 'Pedidos',
           ),
           NavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),
             selectedIcon: Icon(Icons.chat_bubble),
             label: 'Chats',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Perfil',
           ),
         ],
       ),
@@ -49,8 +49,8 @@ class MainScreen extends StatelessWidget {
     if (location.startsWith('/feed')) return 0;
     if (location.startsWith('/map')) return 1;
     if (location.startsWith('/add')) return 2;
-    if (location.startsWith('/chats')) return 3;
-    if (location.startsWith('/profile')) return 4;
+    if (location.startsWith('/orders')) return 3;
+    if (location.startsWith('/chats')) return 4;
     return 0;
   }
 
@@ -66,10 +66,10 @@ class MainScreen extends StatelessWidget {
         context.go('/add');
         break;
       case 3:
-        context.go('/chats');
+        context.go('/orders');
         break;
       case 4:
-        context.go('/profile');
+        context.go('/chats');
         break;
     }
   }
