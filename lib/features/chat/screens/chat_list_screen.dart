@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../models/chat_model.dart';
 import '../repositories/chat_repository.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/widgets/yumyum_app_bar.dart';
 
 final chatsProvider = FutureProvider<List<ChatModel>>((ref) async {
   final user = ref.read(authProvider).value;
@@ -21,7 +22,7 @@ class ChatListScreen extends ConsumerWidget {
     final chatsAsync = ref.watch(chatsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mensajes')),
+      appBar: const YumYumAppBar(title: 'Mensajes'),
       body: chatsAsync.when(
         data: (chats) {
           if (chats.isEmpty) {

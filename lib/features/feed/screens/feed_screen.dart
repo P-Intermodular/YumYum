@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../models/product_model.dart';
 import '../../product/repositories/product_repository.dart';
+import '../../../core/widgets/yumyum_app_bar.dart';
 
 final productsProvider = FutureProvider<List<ProductModel>>((ref) async {
   return ref.watch(productRepositoryProvider).getProducts();
@@ -19,20 +20,9 @@ class FeedScreen extends ConsumerWidget {
     final productsAsyncValue = ref.watch(productsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('mira comida cerca de ti', style: TextStyle(color: Color(0xFF1F4A5B), fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            onPressed: () => context.push('/profile'),
-          ),
-        ],
+      appBar: const YumYumAppBar(
+        title: 'Inicio',
+        showNotificationButton: true,
       ),
       body: productsAsyncValue.when(
         data: (products) => RefreshIndicator(

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../models/chat_model.dart';
 import '../repositories/chat_repository.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/widgets/yumyum_app_bar.dart';
 
 final messagesProvider = StreamProvider.family<List<MessageModel>, String>((ref, chatId) {
   return ref.watch(chatRepositoryProvider).getMessages(chatId);
@@ -46,7 +47,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     final currentUser = ref.watch(authProvider).value;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
+      appBar: const YumYumAppBar(title: 'Chat', showBackButton: true, showProfileButton: false),
       body: Column(
         children: [
           Expanded(

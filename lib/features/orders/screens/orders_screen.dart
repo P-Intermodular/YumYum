@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/widgets/yumyum_app_bar.dart';
 
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
@@ -7,15 +8,8 @@ class OrdersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('PEDIDOS', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            onPressed: () => context.push('/profile'),
-          ),
-        ],
+      appBar: const YumYumAppBar(
+        title: 'Pedidos',
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),

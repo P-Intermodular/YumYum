@@ -8,6 +8,7 @@ import '../../../models/product_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../repositories/product_repository.dart';
 import '../../feed/screens/feed_screen.dart';
+import '../../../core/widgets/yumyum_app_bar.dart';
 
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
@@ -60,7 +61,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Subir Comida')),
+      appBar: const YumYumAppBar(title: 'Publicar'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(

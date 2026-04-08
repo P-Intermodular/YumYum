@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../feed/screens/feed_screen.dart';
+import '../../../core/widgets/yumyum_app_bar.dart';
 
 class MapScreen extends ConsumerWidget {
   const MapScreen({super.key});
@@ -15,8 +16,8 @@ class MapScreen extends ConsumerWidget {
     final userLocation = const LatLng(40.4168, -3.7038); // Mock User Location : Madrid
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Descubre en tu zona'),
+      appBar: const YumYumAppBar(
+        title: 'Mapa',
       ),
       body: productsAsync.when(
         data: (products) {

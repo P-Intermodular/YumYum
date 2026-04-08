@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../repositories/product_repository.dart';
 import '../../feed/screens/feed_screen.dart';
+import '../../../core/widgets/yumyum_app_bar.dart';
 
 class ProductDetailScreen extends ConsumerWidget {
   final String productId;
@@ -16,8 +17,9 @@ class ProductDetailScreen extends ConsumerWidget {
     final productsAsync = ref.watch(productsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalles'),
+      appBar: const YumYumAppBar(
+        title: 'Detalles',
+        showBackButton: true,
       ),
       body: productsAsync.when(
         data: (products) {

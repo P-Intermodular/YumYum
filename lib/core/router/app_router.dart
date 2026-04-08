@@ -44,11 +44,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/chats',
             builder: (context, state) => const ChatListScreen(),
           ),
+          GoRoute(
+            path: '/profile',
+            builder: (context, state) => const ProfileScreen(),
+          ),
         ],
-      ),
-      GoRoute(
-        path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: '/product/:id',
