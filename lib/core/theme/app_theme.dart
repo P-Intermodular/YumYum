@@ -9,7 +9,6 @@ class AppTheme {
         primary: const Color(0xFF4CAF50),
         secondary: const Color(0xFF81C784),
         surface: Colors.white,
-        background: const Color(0xFFF5F5F5),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,

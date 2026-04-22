@@ -1,68 +1,109 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/auth/screens/login_screen.dart';
-import '../../features/feed/screens/feed_screen.dart';
-import '../../features/main/screens/main_screen.dart';
-import '../../features/map/screens/map_screen.dart';
-import '../../features/chat/screens/chat_list_screen.dart';
-import '../../features/profile/screens/profile_screen.dart';
-import '../../features/product/screens/add_product_screen.dart';
-import '../../features/product/screens/product_detail_screen.dart';
-import '../../features/chat/screens/chat_room_screen.dart';
-import '../../features/orders/screens/orders_screen.dart';
+import '../../features/auth/screens/inicio_sesion_screen.dart';
+import '../../features/auth/screens/registro_screen.dart';
+import '../../features/inicio/screens/inicio_screen.dart';
+import '../../features/principal/screens/principal_screen.dart';
+import '../../features/mapa/screens/mapa_screen.dart';
+import '../../features/chat/screens/lista_chats_screen.dart';
+import '../../features/perfil/screens/perfil_screen.dart';
+import '../../features/producto/screens/publicar_producto_screen.dart';
+import '../../features/producto/screens/detalle_producto_screen.dart';
+import '../../features/chat/screens/chat_screen.dart';
+import '../../features/pedidos/screens/pedidos_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/iniciar-sesion',
     routes: [
       GoRoute(
+        path: '/iniciar-sesion',
+        builder: (context, state) => const InicioSesionScreen(),
+      ),
+      GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        redirect: (context, state) => '/iniciar-sesion',
+      ),
+      GoRoute(
+        path: '/registro',
+        builder: (context, state) => const RegistroScreen(),
+      ),
+      GoRoute(
+        path: '/signup',
+        redirect: (context, state) => '/registro',
       ),
       ShellRoute(
-        builder: (context, state, child) => MainScreen(child: child),
+        builder: (context, state, child) => PrincipalScreen(child: child),
         routes: [
           GoRoute(
+            path: '/inicio',
+            builder: (context, state) => const InicioScreen(),
+          ),
+          GoRoute(
             path: '/feed',
-            builder: (context, state) => const FeedScreen(),
+            redirect: (context, state) => '/inicio',
+          ),
+          GoRoute(
+            path: '/mapa',
+            builder: (context, state) => const MapaScreen(),
           ),
           GoRoute(
             path: '/map',
-            builder: (context, state) => const MapScreen(),
+            redirect: (context, state) => '/mapa',
+          ),
+          GoRoute(
+            path: '/publicar',
+            builder: (context, state) => const PublicarProductoScreen(),
           ),
           GoRoute(
             path: '/add',
-            builder: (context, state) => const AddProductScreen(),
+            redirect: (context, state) => '/publicar',
+          ),
+          GoRoute(
+            path: '/pedidos',
+            builder: (context, state) => const PedidosScreen(),
           ),
           GoRoute(
             path: '/orders',
-            builder: (context, state) => const OrdersScreen(),
+            redirect: (context, state) => '/pedidos',
           ),
           GoRoute(
             path: '/chats',
-            builder: (context, state) => const ChatListScreen(),
+            builder: (context, state) => const ListaChatsScreen(),
+          ),
+          GoRoute(
+            path: '/perfil',
+            builder: (context, state) => const PerfilScreen(),
           ),
           GoRoute(
             path: '/profile',
-            builder: (context, state) => const ProfileScreen(),
+            redirect: (context, state) => '/perfil',
           ),
         ],
       ),
       GoRoute(
-        path: '/product/:id',
+        path: '/producto/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          return ProductDetailScreen(productId: id);
+          return DetalleProductoScreen(productoId: id);
+        },
+      ),
+      GoRoute(
+        path: '/product/:id',
+        redirect: (context, state) =>
+            '/producto/${state.pathParameters['id']!}',
+      ),
+      GoRoute(
+        path: '/chat/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ChatScreen(chatId: id);
         },
       ),
       GoRoute(
         path: '/chat_room/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return ChatRoomScreen(chatId: id);
-        },
+        redirect: (context, state) => '/chat/${state.pathParameters['id']!}',
       ),
     ],
   );

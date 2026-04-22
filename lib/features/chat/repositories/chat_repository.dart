@@ -1,94 +1,93 @@
-import '../../../models/chat_model.dart';
-import '../../../models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:async';
-import 'package:uuid/uuid.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../core/supabase/supabase_client_provider.dart';
+import '../../../models/conversacion_model.dart';
+import '../../../models/usuario_model.dart';
 
 abstract class ChatRepository {
-  Future<List<ChatModel>> getChats(String userId);
-  Stream<List<MessageModel>> getMessages(String chatId);
-  Future<void> sendMessage(String chatId, MessageModel message);
+  Future<List<ConversacionModel>> obtenerChats(String usuarioId);
+  Stream<List<MensajeModel>> obtenerMensajes(String conversacionId);
+  Future<void> enviarMensaje(String conversacionId, MensajeModel mensaje);
 }
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
-  return MockChatRepository();
+  return SupabaseChatRepository(ref.watch(supabaseClientProvider));
 });
 
-class MockChatRepository implements ChatRepository {
-  final Map<String, List<MessageModel>> _messages = {
-    'chat1': [
-      MessageModel(
-        id: 'm1',
-        text: '¡Hola! ¿Aún tienes la tarta de manzana?',
-        senderId: '1',
-        timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-      ),
-      MessageModel(
-        id: 'm2',
-        text: 'Sí, claro. ¿Por qué te gustaría intercambiarla?',
-        senderId: '2',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 50)),
-      ),
-    ]
-  };
+class SupabaseChatRepository implements ChatRepository {
+  final SupabaseClient _client;
 
-  final List<ChatModel> _chats = [
-    ChatModel(
-      id: 'chat1',
-      participant: UserModel(id: '2', name: 'Ana', email: 'ana@ejemplo.com', profileImageUrl: 'https://i.pravatar.cc/150?img=5'),
-      lastMessage: MessageModel(
-        id: 'm2',
-        text: 'Sí, claro. ¿Por qué te gustaría intercambiarla?',
-        senderId: '2',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 50)),
-      ),
-      unreadCount: 1,
-    )
-  ];
-
-  final Map<String, StreamController<List<MessageModel>>> _controllers = {};
+  SupabaseChatRepository(this._client);
 
   @override
-  Future<List<ChatModel>> getChats(String userId) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return _chats;
-  }
+  Future<List<ConversacionModel>> obtenerChats(String usuarioId) async {
+    final rows = await _client
+        .from('conversaciones')
+        .select()
+        .or('comprador_id.eq.$usuarioId,vendedor_id.eq.$usuarioId')
+        .order('creado_en', ascending: false);
 
-  @override
-  Stream<List<MessageModel>> getMessages(String chatId) {
-    if (!_controllers.containsKey(chatId)) {
-      _controllers[chatId] = StreamController<List<MessageModel>>.broadcast();
-      _messages[chatId] ??= [];
+    final conversaciones = <ConversacionModel>[];
+    for (final row in rows.cast<Map<String, dynamic>>()) {
+      final participanteId = row['comprador_id'] == usuarioId
+          ? row['vendedor_id'] as String
+          : row['comprador_id'] as String;
+
+      final participante = await _obtenerPerfil(participanteId);
+      final ultimoMensaje = await _obtenerUltimoMensaje(row['id'] as String);
+
+      conversaciones.add(
+        ConversacionModel(
+          id: row['id'] as String,
+          participante: participante,
+          ultimoMensaje: ultimoMensaje,
+        ),
+      );
     }
-    
-    // Simulate initial delay then emit
-    Future.delayed(const Duration(milliseconds: 400), () {
-      _controllers[chatId]!.add(_messages[chatId]!.toList());
-    });
 
-    return _controllers[chatId]!.stream;
+    return conversaciones;
   }
 
   @override
-  Future<void> sendMessage(String chatId, MessageModel message) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _messages[chatId] ??= [];
-    _messages[chatId]!.add(message);
-    
-    _controllers[chatId]?.add(_messages[chatId]!.toList());
-
-    // Auto-reply
-    if (message.senderId == '1') {
-      Future.delayed(const Duration(seconds: 2), () {
-        final reply = MessageModel(
-          id: const Uuid().v4(),
-          text: 'Esta es una respuesta automática de prueba.',
-          senderId: '2', // Other person
-          timestamp: DateTime.now(),
+  Stream<List<MensajeModel>> obtenerMensajes(String conversacionId) {
+    return _client
+        .from('mensajes')
+        .stream(primaryKey: ['id'])
+        .eq('conversacion_id', conversacionId)
+        .order('creado_en')
+        .map(
+          (rows) => rows
+              .cast<Map<String, dynamic>>()
+              .map(MensajeModel.desdeSupabase)
+              .toList(),
         );
-        _messages[chatId]!.add(reply);
-        _controllers[chatId]?.add(_messages[chatId]!.toList());
-      });
-    }
+  }
+
+  @override
+  Future<void> enviarMensaje(
+      String conversacionId, MensajeModel mensaje) async {
+    await _client
+        .from('mensajes')
+        .insert(mensaje.aInsercionMensaje(conversacionId));
+  }
+
+  Future<UsuarioModel> _obtenerPerfil(String usuarioId) async {
+    final row =
+        await _client.from('perfiles').select().eq('id', usuarioId).single();
+
+    return UsuarioModel.desdePerfil(row);
+  }
+
+  Future<MensajeModel?> _obtenerUltimoMensaje(String conversacionId) async {
+    final rows = await _client
+        .from('mensajes')
+        .select()
+        .eq('conversacion_id', conversacionId)
+        .order('creado_en', ascending: false)
+        .limit(1);
+
+    if (rows.isEmpty) return null;
+    return MensajeModel.desdeSupabase(rows.cast<Map<String, dynamic>>().first);
   }
 }

@@ -1,68 +1,104 @@
-import '../../../models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../core/supabase/supabase_client_provider.dart';
+import '../../../models/usuario_model.dart';
 
 abstract class AuthRepository {
-  Future<UserModel> login(String email, String password);
-  Future<UserModel> signUp(String name, String email, String password);
-  Future<void> logout();
-  Future<UserModel?> getCurrentUser();
+  Future<UsuarioModel> iniciarSesion(String correo, String password);
+  Future<UsuarioModel> registrarUsuario(
+      String nombre, String correo, String password);
+  Future<void> cerrarSesion();
+  Future<UsuarioModel?> obtenerUsuarioActual();
 }
 
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return MockAuthRepository();
+final autenticacionRepositoryProvider = Provider<AuthRepository>((ref) {
+  return SupabaseAuthRepository(ref.watch(supabaseClientProvider));
 });
 
-class MockAuthRepository implements AuthRepository {
-  UserModel? _currentUser;
-  
-  final List<UserModel> _users = [
-    UserModel(
-      id: '1',
-      name: 'Test User',
-      email: 'test@example.com',
-      profileImageUrl: 'https://i.pravatar.cc/150?img=33',
-    )
-  ];
+class SupabaseAuthRepository implements AuthRepository {
+  final SupabaseClient _client;
+
+  SupabaseAuthRepository(this._client);
 
   @override
-  Future<UserModel> login(String email, String password) async {
-    await Future.delayed(const Duration(seconds: 1)); // Simulate network
-    final user = _users.firstWhere(
-      (u) => u.email == email,
-      orElse: () => throw Exception('Usuario no encontrado o contraseña incorrecta'),
+  Future<UsuarioModel> iniciarSesion(String correo, String password) async {
+    final response = await _client.auth.signInWithPassword(
+      email: correo,
+      password: password,
     );
-    _currentUser = user;
-    return user;
-  }
 
-  @override
-  Future<UserModel> signUp(String name, String email, String password) async {
-    await Future.delayed(const Duration(seconds: 1));
-    if (_users.any((u) => u.email == email)) {
-      throw Exception('El correo ya está en uso');
+    final usuario = response.user;
+    if (usuario == null) {
+      throw Exception('No se pudo iniciar sesion.');
     }
-    
-    final newUser = UserModel(
-      id: const Uuid().v4(),
-      name: name,
-      email: email,
-      profileImageUrl: 'https://i.pravatar.cc/150?u=$email',
+
+    return _perfilParaUsuario(usuario.id, correoRespaldo: usuario.email);
+  }
+
+  @override
+  Future<UsuarioModel> registrarUsuario(
+      String nombre, String correo, String password) async {
+    final response = await _client.auth.signUp(
+      email: correo,
+      password: password,
+      data: {'nombre': nombre},
     );
-    _users.add(newUser);
-    _currentUser = newUser;
-    return newUser;
+
+    final usuario = response.user;
+    if (usuario == null) {
+      throw Exception('No se pudo crear la cuenta.');
+    }
+
+    if (response.session == null) {
+      throw Exception(
+        'Cuenta creada, pero Supabase requiere confirmar el correo. '
+        'Desactiva Email Confirmations para el MVP o confirma el email antes de entrar.',
+      );
+    }
+
+    return _perfilParaUsuario(usuario.id,
+        correoRespaldo: usuario.email, nombreRespaldo: nombre);
   }
 
   @override
-  Future<void> logout() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    _currentUser = null;
+  Future<void> cerrarSesion() async {
+    await _client.auth.signOut();
   }
 
   @override
-  Future<UserModel?> getCurrentUser() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return _currentUser; // For demo, we start logged out unless we want to auto-login
+  Future<UsuarioModel?> obtenerUsuarioActual() async {
+    final usuario = _client.auth.currentUser;
+    if (usuario == null) return null;
+    return _perfilParaUsuario(usuario.id, correoRespaldo: usuario.email);
+  }
+
+  Future<UsuarioModel> _perfilParaUsuario(
+    String usuarioId, {
+    String? correoRespaldo,
+    String? nombreRespaldo,
+  }) async {
+    for (var intento = 0; intento < 3; intento++) {
+      final perfil = await _client
+          .from('perfiles')
+          .select()
+          .eq('id', usuarioId)
+          .maybeSingle();
+
+      if (perfil != null) {
+        return UsuarioModel.desdePerfil(perfil);
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+
+    return UsuarioModel(
+      id: usuarioId,
+      nombre: nombreRespaldo ??
+          correoRespaldo?.split('@').first ??
+          'Usuario YumYum',
+      correo: correoRespaldo ?? '',
+      urlImagenPerfil: 'https://i.pravatar.cc/150?u=$usuarioId',
+    );
   }
 }

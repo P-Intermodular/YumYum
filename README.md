@@ -1,17 +1,27 @@
-# yumyum
+# YumYum
 
-A new Flutter project.
+Aplicacion Flutter para intercambio y venta local de comida casera.
 
-## Getting Started
+## Configuracion local
 
-This project is a starting point for a Flutter application.
+La app lee la configuracion de Supabase mediante `--dart-define`.
+Para no escribir las claves en cada arranque, crea un archivo `.env` local con:
 
-A few resources to get you started if this is your first Flutter project:
+```env
+SUPABASE_URL=https://gnzrintyysnpuiadzrce.supabase.co
+SUPABASE_ANON_KEY=tu_anon_key
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+`.env` esta ignorado por git. El archivo versionado es `.env.example`.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Arranque rapido en Chrome:
+
+```powershell
+.\scripts\run_dev.ps1
+```
+
+Para otro dispositivo:
+
+```powershell
+.\scripts\run_dev.ps1 -Device windows
+```

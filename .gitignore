@@ -43,4 +43,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-/documentacion
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Large documentation exports stay local; keep the backend divergence note versioned.
+/documentacion/*
+!/documentacion/
+!/documentacion/divergencias_diseno_backend.md

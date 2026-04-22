@@ -1,27 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// A reusable, unified AppBar for the YumYum app.
-///
-/// Provides consistent styling across all screens:
-/// - Soft green gradient background
-/// - Bold, centered title in dark teal
-/// - Optional notification bell and profile icon on the right
-/// - Optional leading widget (hamburger menu or back button)
+/// AppBar reutilizable para las pantallas de YumYum.
 class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final String title;
-  final bool showProfileButton;
-  final bool showNotificationButton;
-  final bool showBackButton;
-  final List<Widget>? extraActions;
+  final String titulo;
+  final bool mostrarBotonPerfil;
+  final bool mostrarBotonNotificaciones;
+  final bool mostrarBotonVolver;
+  final List<Widget>? accionesExtra;
 
   const YumYumAppBar({
     super.key,
-    required this.title,
-    this.showProfileButton = true,
-    this.showNotificationButton = false,
-    this.showBackButton = false,
-    this.extraActions,
+    required this.titulo,
+    this.mostrarBotonPerfil = true,
+    this.mostrarBotonNotificaciones = false,
+    this.mostrarBotonVolver = false,
+    this.accionesExtra,
   });
 
   @override
@@ -29,21 +23,22 @@ class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    const headerColor = Color(0xFF1F4A5B);
+    const colorCabecera = Color(0xFF1F4A5B);
 
     return AppBar(
       automaticallyImplyLeading: false,
-      leading: showBackButton
+      leading: mostrarBotonVolver
           ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: headerColor, size: 20),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: colorCabecera, size: 20),
               onPressed: () => Navigator.of(context).maybePop(),
             )
           : null,
       title: Text(
-        title,
+        titulo,
         style: const TextStyle(
           fontWeight: FontWeight.bold,
-          color: headerColor,
+          color: colorCabecera,
           fontSize: 18,
           letterSpacing: 0.5,
         ),
@@ -53,12 +48,13 @@ class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       actions: [
-        ...?extraActions,
-        if (showNotificationButton)
+        ...?accionesExtra,
+        if (mostrarBotonNotificaciones)
           IconButton(
             icon: Stack(
               children: [
-                const Icon(Icons.notifications_none_rounded, color: headerColor),
+                const Icon(Icons.notifications_none_rounded,
+                    color: colorCabecera),
                 Positioned(
                   right: 0,
                   top: 0,
@@ -75,10 +71,11 @@ class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             onPressed: () {},
           ),
-        if (showProfileButton)
+        if (mostrarBotonPerfil)
           IconButton(
-            icon: const Icon(Icons.person_outline_rounded, color: headerColor),
-            onPressed: () => context.push('/profile'),
+            icon:
+                const Icon(Icons.person_outline_rounded, color: colorCabecera),
+            onPressed: () => context.push('/perfil'),
           ),
       ],
     );

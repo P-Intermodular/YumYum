@@ -1,9 +1,24 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/theme/app_theme.dart';
-import 'core/router/app_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+import 'core/router/app_router.dart';
+import 'core/supabase/supabase_config.dart';
+import 'core/theme/app_theme.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  if (!SupabaseConfig.isConfigured) {
+    runApp(const SupabaseConfigMissingApp());
+    return;
+  }
+
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
+
   runApp(
     const ProviderScope(
       child: YumYumApp(),
@@ -23,6 +38,33 @@ class YumYumApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: router,
+    );
+  }
+}
+
+class SupabaseConfigMissingApp extends StatelessWidget {
+  const SupabaseConfigMissingApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'YumYum',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      home: const Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                'Faltan SUPABASE_URL y SUPABASE_ANON_KEY. '
+                'Ejecuta Flutter con --dart-define para conectar YumYum a Supabase.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

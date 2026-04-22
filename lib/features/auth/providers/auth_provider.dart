@@ -1,50 +1,54 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../models/user_model.dart';
+import '../../../../models/usuario_model.dart';
 import '../repositories/auth_repository.dart';
 
-final authProvider = StateNotifierProvider<AuthNotifier, AsyncValue<UserModel?>>((ref) {
-  return AuthNotifier(ref.watch(authRepositoryProvider));
+final autenticacionProvider =
+    StateNotifierProvider<AutenticacionNotifier, AsyncValue<UsuarioModel?>>(
+        (ref) {
+  return AutenticacionNotifier(ref.watch(autenticacionRepositoryProvider));
 });
 
-class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
+class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
   final AuthRepository _repository;
 
-  AuthNotifier(this._repository) : super(const AsyncValue.loading()) {
+  AutenticacionNotifier(this._repository) : super(const AsyncValue.loading()) {
     _init();
   }
 
   Future<void> _init() async {
     try {
-      final user = await _repository.getCurrentUser();
-      state = AsyncValue.data(user);
+      final usuario = await _repository.obtenerUsuarioActual();
+      state = AsyncValue.data(usuario);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> iniciarSesion(String correo, String password) async {
     state = const AsyncValue.loading();
     try {
-      final user = await _repository.login(email, password);
-      state = AsyncValue.data(user);
+      final usuario = await _repository.iniciarSesion(correo, password);
+      state = AsyncValue.data(usuario);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
-  Future<void> signUp(String name, String email, String password) async {
+  Future<void> registrarUsuario(
+      String nombre, String correo, String password) async {
     state = const AsyncValue.loading();
     try {
-      final user = await _repository.signUp(name, email, password);
-      state = AsyncValue.data(user);
+      final usuario =
+          await _repository.registrarUsuario(nombre, correo, password);
+      state = AsyncValue.data(usuario);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
-  Future<void> logout() async {
+  Future<void> cerrarSesion() async {
     state = const AsyncValue.loading();
-    await _repository.logout();
+    await _repository.cerrarSesion();
     state = const AsyncValue.data(null);
   }
 }
