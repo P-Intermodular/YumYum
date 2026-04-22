@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../providers/auth_provider.dart';
 
 class InicioSesionScreen extends ConsumerStatefulWidget {
@@ -45,7 +46,11 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.eco, size: 80, color: Color(0xFF4CAF50)),
+              Image.asset(
+                AppAssets.logo,
+                height: 120,
+                fit: BoxFit.contain,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'YumYum',

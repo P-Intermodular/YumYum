@@ -1,6 +1,6 @@
 name: yumyum
 description: "A new Flutter project for food exchange."
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
@@ -27,5 +27,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # assets:
-  #   - assets/images/
+  assets:
+    - assets/images/
