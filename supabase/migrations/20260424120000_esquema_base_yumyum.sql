@@ -1,61 +1,7 @@
+-- Esquema base unificado de YumYum para nuevos proyectos Supabase.
 create extension if not exists pgcrypto;
-
-do $$
-declare
-  registro record;
-begin
-  for registro in
-    select tgname
-    from pg_trigger
-    where tgrelid = 'auth.users'::regclass
-      and not tgisinternal
-  loop
-    execute format('drop trigger if exists %I on auth.users', registro.tgname);
-  end loop;
-end;
-$$;
-
-do $$
-declare
-  registro record;
-begin
-  for registro in
-    select p.oid::regprocedure::text as firma
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public'
-  loop
-    execute 'drop function if exists ' || registro.firma || ' cascade';
-  end loop;
-
-  for registro in
-    select tablename
-    from pg_tables
-    where schemaname = 'public'
-  loop
-    execute format('drop table if exists public.%I cascade', registro.tablename);
-  end loop;
-end;
-$$;
-
-do $$
-declare
-  registro record;
-begin
-  for registro in
-    select policyname
-    from pg_policies
-    where schemaname = 'storage'
-      and tablename = 'objects'
-  loop
-    execute format('drop policy if exists %I on storage.objects', registro.policyname);
-  end loop;
-end;
-$$;
-
--- Supabase remoto no permite borrar objetos ni buckets de Storage desde SQL.
--- La migracion crea los buckets nuevos en castellano; la limpieza fisica de
--- buckets antiguos debe hacerse mediante Storage API, CLI o Dashboard.
+create extension if not exists cube;
+create extension if not exists earthdistance;
 
 create table public.perfiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -216,6 +162,15 @@ create index notificaciones_no_leidas_usuario_creado_en_idx
   on public.notificaciones (usuario_id, creado_en desc)
   where leido_en is null;
 create index valoraciones_valorado_creado_en_idx on public.valoraciones (valorado_id, creado_en desc);
+create index if not exists productos_ubicacion_idx
+  on public.productos
+  using gist (
+    ll_to_earth(
+      latitud_publica::double precision,
+      longitud_publica::double precision
+    )
+  )
+  where estado = 'disponible';
 
 create or replace function public.establecer_actualizado_en()
 returns trigger
@@ -714,6 +669,86 @@ begin
 end;
 $$;
 
+create or replace function public.obtener_productos_cercanos(
+  p_latitud double precision,
+  p_longitud double precision,
+  p_radio_km double precision,
+  p_limite integer default 50
+)
+returns table (
+  id uuid,
+  propietario_id uuid,
+  titulo text,
+  descripcion text,
+  tipo_oferta text,
+  precio numeric,
+  estado text,
+  latitud_publica numeric,
+  longitud_publica numeric,
+  creado_en timestamptz,
+  perfiles jsonb,
+  imagenes_producto jsonb,
+  distancia_km numeric
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select
+    pr.id,
+    pr.propietario_id,
+    pr.titulo,
+    pr.descripcion,
+    pr.tipo_oferta,
+    pr.precio,
+    pr.estado,
+    pr.latitud_publica,
+    pr.longitud_publica,
+    pr.creado_en,
+    (
+      select to_jsonb(p)
+      from public.perfiles p
+      where p.id = pr.propietario_id
+    ) as perfiles,
+    (
+      select coalesce(
+        jsonb_agg(to_jsonb(ip) order by ip.posicion)
+          filter (where ip.id is not null),
+        '[]'::jsonb
+      )
+      from public.imagenes_producto ip
+      where ip.producto_id = pr.id
+    ) as imagenes_producto,
+    round((
+      earth_distance(
+        ll_to_earth(p_latitud, p_longitud),
+        ll_to_earth(
+          pr.latitud_publica::double precision,
+          pr.longitud_publica::double precision
+        )
+      ) / 1000.0
+    )::numeric, 3) as distancia_km
+  from public.productos pr
+  where pr.estado = 'disponible'
+    and earth_box(
+      ll_to_earth(p_latitud, p_longitud),
+      greatest(coalesce(p_radio_km, 10), 1) * 1000.0
+    ) @> ll_to_earth(
+      pr.latitud_publica::double precision,
+      pr.longitud_publica::double precision
+    )
+    and earth_distance(
+      ll_to_earth(p_latitud, p_longitud),
+      ll_to_earth(
+        pr.latitud_publica::double precision,
+        pr.longitud_publica::double precision
+      )
+    ) <= greatest(coalesce(p_radio_km, 10), 1) * 1000.0
+  order by distancia_km asc, pr.creado_en desc
+  limit greatest(coalesce(p_limite, 50), 1);
+$$;
+
 alter table public.perfiles enable row level security;
 alter table public.productos enable row level security;
 alter table public.imagenes_producto enable row level security;
@@ -948,12 +983,24 @@ revoke all on function public.aceptar_solicitud_oferta(uuid) from public, anon, 
 revoke all on function public.denegar_solicitud_oferta(uuid) from public, anon, authenticated;
 revoke all on function public.completar_transaccion(uuid) from public, anon, authenticated;
 revoke all on function public.obtener_ubicacion_exacta_producto(uuid) from public, anon, authenticated;
+revoke all on function public.obtener_productos_cercanos(
+  double precision,
+  double precision,
+  double precision,
+  integer
+) from public, anon, authenticated;
 
 grant execute on function public.crear_solicitud_oferta(uuid, text, uuid, text) to authenticated;
 grant execute on function public.aceptar_solicitud_oferta(uuid) to authenticated;
 grant execute on function public.denegar_solicitud_oferta(uuid) to authenticated;
 grant execute on function public.completar_transaccion(uuid) to authenticated;
 grant execute on function public.obtener_ubicacion_exacta_producto(uuid) to authenticated;
+grant execute on function public.obtener_productos_cercanos(
+  double precision,
+  double precision,
+  double precision,
+  integer
+) to authenticated;
 
 insert into storage.buckets (id, name, public)
 values
