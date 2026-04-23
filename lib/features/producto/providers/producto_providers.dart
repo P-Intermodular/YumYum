@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/location/ubicacion_actual_provider.dart';
 import '../domain/entities/producto_model.dart';
 import 'producto_repository_provider.dart';
 
@@ -7,6 +8,34 @@ import 'producto_repository_provider.dart';
 final productosProvider = FutureProvider<List<ProductoModel>>((ref) async {
   return ref.watch(productoRepositoryProvider).obtenerProductos();
 });
+
+/// Opciones discretas de radio para la busqueda por cercania.
+const radiosDisponiblesKm = <double>[1, 3, 5, 10, 25, 50];
+
+/// Radio activo para el filtrado por proximidad durante la sesion.
+final radioBusquedaProvider = StateProvider<double>((ref) => 10);
+
+/// Lista reactiva de productos cercanos a la ubicacion actual.
+///
+/// Si no hay permiso o no puede resolverse el GPS, hace fallback al catalogo
+/// general para no bloquear el feed ni el mapa.
+final productosCercanosProvider = FutureProvider<List<ProductoModel>>(
+  (ref) async {
+    final ubicacion = await ref.watch(ubicacionActualProvider.future);
+    final repositorio = ref.watch(productoRepositoryProvider);
+
+    if (ubicacion == null) {
+      return repositorio.obtenerProductos();
+    }
+
+    final radioKm = ref.watch(radioBusquedaProvider);
+    return repositorio.obtenerProductosCercanos(
+      latitud: ubicacion.latitud,
+      longitud: ubicacion.longitud,
+      radioKm: radioKm,
+    );
+  },
+);
 
 /// Carga el detalle de un producto concreto a partir de su identificador.
 final productoDetalleProvider =

@@ -39,6 +39,7 @@ abstract final class ProductoDto {
       tipo: json['tipo_oferta'] as String? ?? TipoOferta.intercambio,
       estado: json['estado'] as String? ?? EstadoProducto.disponible,
       precio: _toDoubleOrNull(json['precio']),
+      distanciaKm: _toDoubleOrNull(json['distancia_km']),
       ubicacion: LatLng(
         _toDouble(json['latitud_publica']),
         _toDouble(json['longitud_publica']),

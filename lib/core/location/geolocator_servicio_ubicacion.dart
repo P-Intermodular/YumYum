@@ -1,0 +1,39 @@
+import 'package:geolocator/geolocator.dart';
+
+import 'servicio_ubicacion.dart';
+import 'ubicacion_actual.dart';
+
+/// Implementacion de [ServicioUbicacion] respaldada por `geolocator`.
+///
+/// Cualquier incidencia del dispositivo se traduce a `null` para que la app
+/// pueda seguir mostrando el catalogo general como fallback.
+class GeolocatorServicioUbicacion implements ServicioUbicacion {
+  @override
+  Future<UbicacionActual?> obtenerUbicacionActual() async {
+    try {
+      final servicioActivo = await Geolocator.isLocationServiceEnabled();
+      if (!servicioActivo) return null;
+
+      var permiso = await Geolocator.checkPermission();
+      if (permiso == LocationPermission.denied) {
+        permiso = await Geolocator.requestPermission();
+      }
+
+      if (permiso == LocationPermission.denied ||
+          permiso == LocationPermission.deniedForever) {
+        return null;
+      }
+
+      final posicion = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
+
+      return UbicacionActual(
+        latitud: posicion.latitude,
+        longitud: posicion.longitude,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+}

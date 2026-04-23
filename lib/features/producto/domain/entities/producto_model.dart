@@ -13,6 +13,7 @@ class ProductoModel {
   final String tipo;
   final String estado;
   final double? precio;
+  final double? distanciaKm;
   final LatLng ubicacion;
 
   const ProductoModel({
@@ -25,6 +26,7 @@ class ProductoModel {
     required this.tipo,
     this.estado = 'disponible',
     this.precio,
+    this.distanciaKm,
     required this.ubicacion,
   });
 
@@ -39,6 +41,7 @@ class ProductoModel {
     String? tipo,
     String? estado,
     double? precio,
+    double? distanciaKm,
     LatLng? ubicacion,
   }) {
     return ProductoModel(
@@ -51,6 +54,7 @@ class ProductoModel {
       tipo: tipo ?? this.tipo,
       estado: estado ?? this.estado,
       precio: precio ?? this.precio,
+      distanciaKm: distanciaKm ?? this.distanciaKm,
       ubicacion: ubicacion ?? this.ubicacion,
     );
   }

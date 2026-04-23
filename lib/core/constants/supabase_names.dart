@@ -26,4 +26,5 @@ abstract final class RpcsSupabase {
   static const aceptarSolicitudOferta = 'aceptar_solicitud_oferta';
   static const denegarSolicitudOferta = 'denegar_solicitud_oferta';
   static const completarTransaccion = 'completar_transaccion';
+  static const obtenerProductosCercanos = 'obtener_productos_cercanos';
 }

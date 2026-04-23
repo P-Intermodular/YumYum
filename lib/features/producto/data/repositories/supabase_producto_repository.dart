@@ -63,6 +63,31 @@ class SupabaseProductoRepository implements ProductoRepository {
 
   @override
 
+  /// Recupera las ofertas disponibles ordenadas por distancia al usuario.
+  Future<List<ProductoModel>> obtenerProductosCercanos({
+    required double latitud,
+    required double longitud,
+    double radioKm = 10,
+    int limite = 50,
+  }) async {
+    final rows = await _client.rpc(
+      RpcsSupabase.obtenerProductosCercanos,
+      params: {
+        'p_latitud': latitud,
+        'p_longitud': longitud,
+        'p_radio_km': radioKm,
+        'p_limite': limite,
+      },
+    );
+
+    return (rows as List<dynamic>)
+        .cast<Map<String, dynamic>>()
+        .map(ProductoDto.desdeSupabase)
+        .toList();
+  }
+
+  @override
+
   /// Obtiene un producto concreto para la pantalla de detalle.
   Future<ProductoModel?> obtenerProductoPorId(String productoId) async {
     final row = await _client
