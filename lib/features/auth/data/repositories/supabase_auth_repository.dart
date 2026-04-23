@@ -6,12 +6,15 @@ import '../../domain/entities/usuario_model.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../dtos/usuario_dto.dart';
 
+/// Implementación de [AuthRepository] apoyada en Supabase Auth y Postgres.
 class SupabaseAuthRepository implements AuthRepository {
   final SupabaseClient _client;
 
   SupabaseAuthRepository(this._client);
 
   @override
+
+  /// Valida credenciales y devuelve el perfil público asociado al usuario.
   Future<UsuarioModel> iniciarSesion(String correo, String password) async {
     final response = await _client.auth.signInWithPassword(
       email: correo,
@@ -27,6 +30,8 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
+
+  /// Crea la cuenta en Supabase Auth y recupera el perfil generado por trigger.
   Future<UsuarioModel> registrarUsuario(
     String nombre,
     String correo,
@@ -58,11 +63,15 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
+
+  /// Cierra la sesión activa en Supabase.
   Future<void> cerrarSesion() async {
     await _client.auth.signOut();
   }
 
   @override
+
+  /// Resuelve el usuario actual si ya existe una sesión persistida.
   Future<UsuarioModel?> obtenerUsuarioActual() async {
     final usuario = _client.auth.currentUser;
     if (usuario == null) return null;
@@ -75,6 +84,7 @@ class SupabaseAuthRepository implements AuthRepository {
     String? nombreRespaldo,
   }) async {
     for (var intento = 0; intento < 3; intento++) {
+      // El trigger que crea perfiles puede tardar unos milisegundos tras signUp.
       final perfil = await _client
           .from(TablasSupabase.perfiles)
           .select()
@@ -88,13 +98,15 @@ class SupabaseAuthRepository implements AuthRepository {
       await Future<void>.delayed(const Duration(milliseconds: 250));
     }
 
+    // Si el perfil todavía no está disponible, devolvemos un usuario funcional
+    // para no bloquear la experiencia inicial del MVP.
     return UsuarioModel(
       id: usuarioId,
       nombre: nombreRespaldo ??
           correoRespaldo?.split('@').first ??
           'Usuario YumYum',
       correo: correoRespaldo ?? '',
-      urlImagenPerfil: 'https://i.pravatar.cc/150?u=$usuarioId',
+      urlImagenPerfil: '',
     );
   }
 }

@@ -8,7 +8,9 @@ import '../../domain/repositories/producto_repository.dart';
 import '../../domain/entities/producto_model.dart';
 import '../dtos/producto_dto.dart';
 
+/// Implementación de [ProductoRepository] respaldada por Supabase.
 class SupabaseProductoRepository implements ProductoRepository {
+  /// Select común que trae producto, perfil del propietario e imágenes.
   static const productoSelect = '''
     id,
     propietario_id,
@@ -44,6 +46,8 @@ class SupabaseProductoRepository implements ProductoRepository {
   SupabaseProductoRepository(this._client);
 
   @override
+
+  /// Recupera las ofertas publicadas con estado disponible.
   Future<List<ProductoModel>> obtenerProductos() async {
     final rows = await _client
         .from(TablasSupabase.productos)
@@ -58,6 +62,8 @@ class SupabaseProductoRepository implements ProductoRepository {
   }
 
   @override
+
+  /// Obtiene un producto concreto para la pantalla de detalle.
   Future<ProductoModel?> obtenerProductoPorId(String productoId) async {
     final row = await _client
         .from(TablasSupabase.productos)
@@ -70,6 +76,8 @@ class SupabaseProductoRepository implements ProductoRepository {
   }
 
   @override
+
+  /// Lista los productos disponibles del propietario actual.
   Future<List<ProductoModel>> obtenerMisProductosDisponibles(
     String propietarioId,
   ) async {
@@ -87,6 +95,8 @@ class SupabaseProductoRepository implements ProductoRepository {
   }
 
   @override
+
+  /// Inserta el producto y resuelve su versión final desde la base de datos.
   Future<ProductoModel> crearProducto(
     ProductoModel producto, {
     Uint8List? bytesImagen,
@@ -118,6 +128,7 @@ class SupabaseProductoRepository implements ProductoRepository {
     return ProductoDto.desdeSupabase(rows.cast<Map<String, dynamic>>().first);
   }
 
+  /// Sube la imagen al bucket de productos y registra su metadata relacional.
   Future<void> _subirImagenProducto({
     required String productoId,
     required String propietarioId,
@@ -127,6 +138,7 @@ class SupabaseProductoRepository implements ProductoRepository {
     final extensionNormalizada = extension.replaceAll('.', '').toLowerCase();
     final tipoContenido =
         extensionNormalizada == 'png' ? 'image/png' : 'image/jpeg';
+    // El prefijo por propietario simplifica las políticas de escritura en Storage.
     final path =
         '$propietarioId/$productoId-${DateTime.now().millisecondsSinceEpoch}.$extensionNormalizada';
 

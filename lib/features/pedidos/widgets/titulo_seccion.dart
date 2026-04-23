@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Encabezado simple y consistente para agrupar bloques del panel de pedidos.
 class TituloSeccion extends StatelessWidget {
   final String titulo;
 

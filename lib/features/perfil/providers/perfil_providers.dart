@@ -4,6 +4,7 @@ import '../../auth/controllers/auth_controller.dart';
 import '../../producto/domain/entities/producto_model.dart';
 import '../../producto/providers/producto_repository_provider.dart';
 
+/// Recupera los productos activos del usuario para su pantalla de perfil.
 final misProductosProvider = FutureProvider<List<ProductoModel>>((ref) async {
   final usuario = ref.watch(autenticacionProvider).value;
   if (usuario == null) return [];

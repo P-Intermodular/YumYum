@@ -15,6 +15,10 @@ import '../../features/producto/screens/detalle_producto_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/pedidos/screens/pedidos_screen.dart';
 
+/// Expone el [GoRouter] principal de la aplicación.
+///
+/// El router observa el estado de autenticación para redirigir automáticamente
+/// entre las rutas públicas y privadas.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final autenticacion = ref.watch(autenticacionProvider);
 
@@ -27,10 +31,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final autenticado = autenticacion.valueOrNull != null;
       final rutaPublica = RutasApp.esRutaPublica(path);
 
+      // Protege todas las rutas internas mientras la sesión sea anónima.
       if (!autenticado && !rutaPublica) {
         return RutasApp.iniciarSesion;
       }
 
+      // Evita que un usuario autenticado vuelva a login o registro.
       if (autenticado && rutaPublica) {
         return RutasApp.inicio;
       }

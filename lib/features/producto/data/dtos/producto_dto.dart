@@ -5,13 +5,17 @@ import '../../../auth/data/dtos/usuario_dto.dart';
 import '../../../auth/domain/entities/usuario_model.dart';
 import '../../domain/entities/producto_model.dart';
 
+/// Traduce filas de Supabase al modelo de dominio [ProductoModel].
 abstract final class ProductoDto {
+  /// Convierte una fila enriquecida con relaciones en una entidad de producto.
   static ProductoModel desdeSupabase(Map<String, dynamic> json) {
     final propietarioJson = json['perfiles'] as Map<String, dynamic>?;
     final imagenes = json['imagenes_producto'] as List<dynamic>? ?? const [];
     final imagenesOrdenadas = imagenes.cast<Map<String, dynamic>>().toList()
       ..sort((a, b) =>
           (a['posicion'] as int? ?? 0).compareTo(b['posicion'] as int? ?? 0));
+    // El feed siempre necesita una imagen visible, aunque la oferta todavía no
+    // tenga ficheros propios subidos a Storage.
     final urlImagen = imagenesOrdenadas.isEmpty
         ? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'
         : imagenesOrdenadas.first['url_publica'] as String? ??
@@ -27,8 +31,7 @@ abstract final class ProductoDto {
               id: json['propietario_id'] as String,
               nombre: 'Usuario YumYum',
               correo: '',
-              urlImagenPerfil:
-                  'https://i.pravatar.cc/150?u=${json['propietario_id']}',
+              urlImagenPerfil: '',
             )
           : UsuarioDto.desdePerfil(propietarioJson),
       creadoEn: DateTime.tryParse(json['creado_en']?.toString() ?? '') ??
@@ -43,6 +46,7 @@ abstract final class ProductoDto {
     );
   }
 
+  /// Prepara el payload compatible con la tabla `productos`.
   static Map<String, dynamic> aInsercion(ProductoModel producto) {
     return {
       'propietario_id': producto.propietario.id,
@@ -58,11 +62,13 @@ abstract final class ProductoDto {
     };
   }
 
+  /// Normaliza valores numéricos obligatorios procedentes de la base de datos.
   static double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
+  /// Normaliza valores numéricos opcionales como el precio.
   static double? _toDoubleOrNull(dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();

@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../constants/rutas_app.dart';
 
 /// AppBar reutilizable para las pantallas de YumYum.
+///
+/// Centraliza la navegación secundaria y mantiene el mismo lenguaje visual en
+/// inicio, detalle, perfil y el resto de secciones principales.
 class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String titulo;
   final bool mostrarBotonPerfil;

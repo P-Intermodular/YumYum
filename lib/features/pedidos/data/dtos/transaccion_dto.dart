@@ -1,7 +1,9 @@
 import '../../../../core/constants/estados_app.dart';
 import '../../domain/entities/transaccion_model.dart';
 
+/// Adapta la tabla `transacciones` al modelo de dominio de la app.
 abstract final class TransaccionDto {
+  /// Convierte una fila enriquecida en una [TransaccionModel].
   static TransaccionModel desdeSupabase(
     Map<String, dynamic> transaccion,
     String usuarioId,
@@ -25,6 +27,7 @@ abstract final class TransaccionDto {
     );
   }
 
+  /// Normaliza importes opcionales que pueden llegar en distintos formatos.
   static double? _toDoubleOrNull(dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();

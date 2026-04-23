@@ -1,3 +1,4 @@
+/// Resume una transacción visible en el panel de pedidos.
 class TransaccionModel {
   final String id;
   final String tipo;

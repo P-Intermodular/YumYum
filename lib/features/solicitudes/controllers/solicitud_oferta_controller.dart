@@ -5,11 +5,13 @@ import '../../pedidos/providers/panel_pedidos_provider.dart';
 import '../../producto/providers/producto_providers.dart';
 import '../providers/solicitud_oferta_repository_provider.dart';
 
+/// Gestiona las decisiones del usuario sobre solicitudes recibidas.
 final solicitudOfertaControllerProvider = StateNotifierProvider.autoDispose<
     SolicitudOfertaController, AsyncValue<void>>((ref) {
   return SolicitudOfertaController(ref);
 });
 
+/// Orquesta la aceptación y denegación de solicitudes desde pedidos.
 class SolicitudOfertaController extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;
 
@@ -29,6 +31,7 @@ class SolicitudOfertaController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
+  /// Deniega la solicitud indicada y refresca las vistas afectadas.
   Future<void> denegar(String solicitudId) async {
     state = const AsyncValue.loading();
     try {
@@ -43,6 +46,7 @@ class SolicitudOfertaController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
+  /// Invalida las consultas que reflejan solicitudes, catálogo y conversaciones.
   void _refrescarDatos() {
     _ref.invalidate(panelPedidosProvider);
     _ref.invalidate(productosProvider);

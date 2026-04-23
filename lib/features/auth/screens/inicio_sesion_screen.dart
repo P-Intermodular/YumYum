@@ -7,6 +7,7 @@ import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
 import '../controllers/auth_controller.dart';
 
+/// Pantalla de acceso para usuarios ya registrados.
 class InicioSesionScreen extends ConsumerStatefulWidget {
   const InicioSesionScreen({super.key});
 
@@ -18,6 +19,7 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
   final _correoController = TextEditingController(text: 'test@example.com');
   final _passwordController = TextEditingController(text: '123456');
 
+  /// Ejecuta el login usando el estado compartido de autenticación.
   Future<void> _iniciarSesion() async {
     await ref.read(autenticacionProvider.notifier).iniciarSesion(
           _correoController.text.trim(),
@@ -28,6 +30,8 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen(autenticacionProvider, (previous, next) {
+      // El propio router también protege rutas, pero aquí adelantamos la
+      // navegación para que la transición tras el login sea inmediata.
       if (next is AsyncData && next.value != null) {
         context.go(RutasApp.inicio);
       } else if (next is AsyncError) {

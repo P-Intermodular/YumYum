@@ -8,6 +8,7 @@ import '../../auth/controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../providers/chat_providers.dart';
 
+/// Pantalla de conversación en tiempo real entre dos usuarios.
 class ChatScreen extends ConsumerStatefulWidget {
   final String chatId;
 
@@ -20,6 +21,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _mensajeController = TextEditingController();
 
+  /// Envía el contenido actual del campo de texto y limpia la caja al terminar.
   Future<void> _enviarMensaje() async {
     final texto = _mensajeController.text.trim();
     if (texto.isEmpty) return;
@@ -55,6 +57,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   itemCount: mensajes.length,
                   itemBuilder: (context, index) {
                     final mensaje = mensajes[index];
+                    // La alineación diferencia visualmente mensajes propios y ajenos.
                     final esMio = mensaje.remitenteId == usuarioActual?.id;
 
                     return Align(

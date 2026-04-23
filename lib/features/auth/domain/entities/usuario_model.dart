@@ -1,3 +1,4 @@
+/// Representa el perfil público de un usuario dentro de YumYum.
 class UsuarioModel {
   final String id;
   final String nombre;
@@ -23,6 +24,7 @@ class UsuarioModel {
     this.numeroValoraciones = 0,
   });
 
+  /// Crea una copia parcial conservando el resto del estado actual.
   UsuarioModel copyWith({
     String? id,
     String? nombre,

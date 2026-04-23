@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/rutas_app.dart';
 
+/// Shell principal con la navegación inferior compartida de la app.
 class PrincipalScreen extends StatelessWidget {
   final Widget child;
 
@@ -46,6 +47,7 @@ class PrincipalScreen extends StatelessWidget {
     );
   }
 
+  /// Traduce la ruta actual al índice activo de la barra inferior.
   static int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.toString();
     if (location.startsWith(RutasApp.inicio)) return 0;
@@ -56,6 +58,7 @@ class PrincipalScreen extends StatelessWidget {
     return 0;
   }
 
+  /// Navega a la sección seleccionada preservando la shell principal.
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:

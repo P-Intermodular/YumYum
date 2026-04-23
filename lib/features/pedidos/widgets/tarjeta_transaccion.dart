@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/estados_app.dart';
 import '../domain/entities/transaccion_model.dart';
 
+/// Tarjeta visual que resume una transacción aceptada o completada.
 class TarjetaTransaccion extends StatelessWidget {
   final TransaccionModel transaccion;
 
@@ -98,6 +99,7 @@ class TarjetaTransaccion extends StatelessWidget {
     );
   }
 
+  /// Asigna colores de apoyo según el estado de la transacción.
   (Color, Color) _coloresEstado(String estado) {
     switch (estado) {
       case EstadoTransaccion.completada:
@@ -111,6 +113,7 @@ class TarjetaTransaccion extends StatelessWidget {
     }
   }
 
+  /// Devuelve la etiqueta mostrada al usuario para cada estado.
   String _etiquetaEstado(String estado) {
     switch (estado) {
       case EstadoTransaccion.completada:

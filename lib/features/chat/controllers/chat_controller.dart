@@ -6,11 +6,13 @@ import '../domain/entities/conversacion_model.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../providers/chat_repository_provider.dart';
 
+/// Gestiona el envío de mensajes desde la pantalla de chat.
 final chatControllerProvider =
     StateNotifierProvider.autoDispose<ChatController, AsyncValue<void>>((ref) {
   return ChatController(ref);
 });
 
+/// Construye mensajes válidos y delega la persistencia en el repositorio.
 class ChatController extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;
 
@@ -27,6 +29,8 @@ class ChatController extends StateNotifier<AsyncValue<void>> {
 
     state = const AsyncValue.loading();
     try {
+      // Se genera un identificador cliente para mantener el modelo completo,
+      // aunque la base de datos sea quien decide el identificador persistido.
       final mensaje = MensajeModel(
         id: const Uuid().v4(),
         texto: contenido,

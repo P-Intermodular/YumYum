@@ -1,5 +1,6 @@
 import '../../../auth/domain/entities/usuario_model.dart';
 
+/// Mensaje individual intercambiado dentro de una conversación.
 class MensajeModel {
   final String id;
   final String texto;
@@ -14,6 +15,7 @@ class MensajeModel {
   });
 }
 
+/// Conversación visible en la bandeja de chats del usuario.
 class ConversacionModel {
   final String id;
   final UsuarioModel participante;

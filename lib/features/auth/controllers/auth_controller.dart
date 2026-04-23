@@ -4,6 +4,10 @@ import '../domain/entities/usuario_model.dart';
 import '../domain/repositories/auth_repository.dart';
 import '../providers/auth_repository_provider.dart';
 
+/// Estado global de autenticación de la aplicación.
+///
+/// Arranca resolviendo la sesión actual y expone operaciones de entrada,
+/// registro y cierre de sesión para el resto de la UI.
 final autenticacionProvider =
     StateNotifierProvider<AutenticacionNotifier, AsyncValue<UsuarioModel?>>(
   (ref) {
@@ -11,6 +15,7 @@ final autenticacionProvider =
   },
 );
 
+/// Orquesta los flujos de autenticación desde la capa application.
 class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
   final AuthRepository _repository;
 
@@ -18,6 +23,7 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
     _init();
   }
 
+  /// Carga la sesión persistida al iniciar la app.
   Future<void> _init() async {
     try {
       final usuario = await _repository.obtenerUsuarioActual();
@@ -27,6 +33,7 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
     }
   }
 
+  /// Inicia sesión y actualiza el estado compartido de autenticación.
   Future<void> iniciarSesion(String correo, String password) async {
     state = const AsyncValue.loading();
     try {
@@ -37,6 +44,7 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
     }
   }
 
+  /// Registra un nuevo usuario en Supabase Auth y carga su perfil público.
   Future<void> registrarUsuario(
     String nombre,
     String correo,
@@ -52,6 +60,7 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
     }
   }
 
+  /// Cierra la sesión activa y deja la app en estado anónimo.
   Future<void> cerrarSesion() async {
     state = const AsyncValue.loading();
     await _repository.cerrarSesion();

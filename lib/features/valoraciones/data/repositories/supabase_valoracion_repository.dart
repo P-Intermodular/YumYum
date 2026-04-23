@@ -3,12 +3,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/constants/supabase_names.dart';
 import '../../domain/repositories/valoracion_repository.dart';
 
+/// Implementación de [ValoracionRepository] apoyada en Supabase.
 class SupabaseValoracionRepository implements ValoracionRepository {
   final SupabaseClient _client;
 
   SupabaseValoracionRepository(this._client);
 
   @override
+
+  /// Inserta la valoración y delega la agregación al trigger de la base de datos.
   Future<void> crearValoracion({
     required String transaccionId,
     required String valoradorId,

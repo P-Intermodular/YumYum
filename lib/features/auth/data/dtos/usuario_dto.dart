@@ -1,6 +1,11 @@
 import '../../domain/entities/usuario_model.dart';
 
+/// Convierte perfiles de Supabase en entidades de [UsuarioModel].
+///
+/// También prepara la forma de escritura del perfil cuando haya actualizaciones
+/// desde la aplicación.
 abstract final class UsuarioDto {
+  /// Crea una entidad de dominio a partir de una fila de `perfiles`.
   static UsuarioModel desdePerfil(Map<String, dynamic> json) {
     return UsuarioModel(
       id: json['id'] as String,
@@ -11,7 +16,7 @@ abstract final class UsuarioDto {
       urlImagenPerfil:
           (json['url_avatar'] as String?)?.trim().isNotEmpty == true
               ? json['url_avatar'] as String
-              : 'https://i.pravatar.cc/150?u=${json['id']}',
+              : '',
       ciudad: json['ciudad'] as String?,
       preferencias: (json['preferencias'] as List<dynamic>?)
               ?.map((item) => item.toString())
@@ -24,6 +29,7 @@ abstract final class UsuarioDto {
     );
   }
 
+  /// Genera el payload compatible con la tabla `perfiles`.
   static Map<String, dynamic> aActualizacionPerfil(UsuarioModel usuario) {
     return {
       'nombre': usuario.nombre,
@@ -34,6 +40,7 @@ abstract final class UsuarioDto {
     };
   }
 
+  /// Normaliza números que pueden llegar como `num`, `String` o `null`.
   static double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;

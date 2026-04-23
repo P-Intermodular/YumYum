@@ -10,6 +10,7 @@ import '../../../core/errors/app_exception.dart';
 import '../../producto/providers/producto_providers.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 
+/// Pantalla de mapa que sitúa las ofertas disponibles sobre OpenStreetMap.
 class MapaScreen extends ConsumerWidget {
   const MapaScreen({super.key});
 
@@ -24,6 +25,7 @@ class MapaScreen extends ConsumerWidget {
       ),
       body: productosAsync.when(
         data: (productos) {
+          // Cada marcador abre un resumen rápido y permite saltar al detalle.
           final markers = productos
               .map((producto) => Marker(
                     point: producto.ubicacion,

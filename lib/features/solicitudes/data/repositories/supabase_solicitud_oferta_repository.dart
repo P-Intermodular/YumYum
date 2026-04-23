@@ -8,7 +8,9 @@ import '../../domain/entities/solicitud_oferta_model.dart';
 import '../../domain/repositories/solicitud_oferta_repository.dart';
 import '../dtos/solicitud_oferta_dto.dart';
 
+/// Implementación de [SolicitudOfertaRepository] apoyada en RPCs y consultas SQL.
 class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
+  /// Select base con el título del producto y la contraparte visible.
   static const _solicitudSelect = '''
     *,
     producto:producto_id(titulo),
@@ -21,6 +23,8 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
   SupabaseSolicitudOfertaRepository(this._client);
 
   @override
+
+  /// Recupera las solicitudes donde el usuario actúa como propietario.
   Future<List<SolicitudOfertaModel>> obtenerSolicitudesRecibidas(
     String usuarioId,
   ) {
@@ -28,6 +32,8 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
   }
 
   @override
+
+  /// Recupera las solicitudes iniciadas por el usuario autenticado.
   Future<List<SolicitudOfertaModel>> obtenerSolicitudesEnviadas(
     String usuarioId,
   ) {
@@ -35,6 +41,8 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
   }
 
   @override
+
+  /// Ejecuta la RPC que crea solicitud, conversación y notificaciones asociadas.
   Future<SolicitudOfertaCreadaModel> crearSolicitudOferta({
     required String productoId,
     required String tipoSolicitud,
@@ -59,6 +67,8 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
   }
 
   @override
+
+  /// Ejecuta la RPC atómica que acepta una solicitud y crea la transacción.
   Future<ResultadoAceptacionSolicitudModel> aceptarSolicitudOferta(
     String solicitudId,
   ) async {
@@ -75,6 +85,8 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
   }
 
   @override
+
+  /// Ejecuta la RPC que deja la solicitud en estado denegado.
   Future<void> denegarSolicitudOferta(String solicitudId) async {
     await _client.rpc(
       RpcsSupabase.denegarSolicitudOferta,
@@ -82,6 +94,7 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
     );
   }
 
+  /// Normaliza la respuesta de las RPCs a una única fila de datos.
   Map<String, dynamic> _firstRpcRow(dynamic response) {
     if (response is List && response.isNotEmpty) {
       return Map<String, dynamic>.from(response.first as Map);
@@ -102,6 +115,8 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
         .eq(esEntrante ? 'propietario_id' : 'solicitante_id', usuarioId)
         .order('creado_en', ascending: false);
 
+    // El DTO decide cómo presentar la contraparte según si la solicitud es
+    // entrante o enviada.
     return rows
         .cast<Map<String, dynamic>>()
         .map(

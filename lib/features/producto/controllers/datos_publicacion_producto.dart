@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+/// Datos que la UI necesita reunir antes de publicar una oferta.
 class DatosPublicacionProducto {
   final String titulo;
   final String descripcion;

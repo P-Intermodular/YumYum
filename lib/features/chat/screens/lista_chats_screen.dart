@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/widgets/avatar_usuario.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../providers/chat_providers.dart';
 
+/// Pantalla que muestra la bandeja de conversaciones del usuario.
 class ListaChatsScreen extends ConsumerWidget {
   const ListaChatsScreen({super.key});
 
@@ -28,9 +30,10 @@ class ListaChatsScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final chat = chats[index];
               return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage:
-                      NetworkImage(chat.participante.urlImagenPerfil),
+                leading: AvatarUsuario(
+                  nombre: chat.participante.nombre,
+                  identificadorColor: chat.participante.id,
+                  urlImagen: chat.participante.urlImagenPerfil,
                 ),
                 title: Text(chat.participante.nombre,
                     style: const TextStyle(fontWeight: FontWeight.bold)),

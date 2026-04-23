@@ -6,6 +6,7 @@ import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
 import '../controllers/auth_controller.dart';
 
+/// Pantalla de creación de cuenta del MVP.
 class RegistroScreen extends ConsumerStatefulWidget {
   const RegistroScreen({super.key});
 
@@ -19,6 +20,7 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  /// Valida el formulario y delega el registro en [AutenticacionNotifier].
   Future<void> _registrarUsuario() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -32,6 +34,7 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen(autenticacionProvider, (previous, next) {
+      // Si el registro termina con sesión válida, saltamos directamente al inicio.
       if (next is AsyncData && next.value != null) {
         context.go(RutasApp.inicio);
       } else if (next is AsyncError) {

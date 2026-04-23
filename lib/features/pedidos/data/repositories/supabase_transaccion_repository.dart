@@ -5,7 +5,9 @@ import '../../domain/entities/transaccion_model.dart';
 import '../../domain/repositories/transaccion_repository.dart';
 import '../dtos/transaccion_dto.dart';
 
+/// Implementación de [TransaccionRepository] usando Supabase.
 class SupabaseTransaccionRepository implements TransaccionRepository {
+  /// Select base con producto y contraparte para la pantalla de pedidos.
   static const _transaccionSelect = '''
     *,
     producto:producto_id(titulo),
@@ -18,6 +20,8 @@ class SupabaseTransaccionRepository implements TransaccionRepository {
   SupabaseTransaccionRepository(this._client);
 
   @override
+
+  /// Recupera las transacciones del usuario como comprador o vendedor.
   Future<List<TransaccionModel>> obtenerTransacciones(String usuarioId) async {
     final rows = await _client
         .from(TablasSupabase.transacciones)
@@ -32,6 +36,8 @@ class SupabaseTransaccionRepository implements TransaccionRepository {
   }
 
   @override
+
+  /// Ejecuta la RPC que completa una transacción aceptada.
   Future<void> completarTransaccion(String transaccionId) async {
     await _client.rpc(
       RpcsSupabase.completarTransaccion,

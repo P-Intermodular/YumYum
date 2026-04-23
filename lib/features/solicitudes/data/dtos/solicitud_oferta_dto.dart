@@ -1,7 +1,9 @@
 import '../../../../core/constants/estados_app.dart';
 import '../../domain/entities/solicitud_oferta_model.dart';
 
+/// Convierte filas de Supabase en [SolicitudOfertaModel].
 abstract final class SolicitudOfertaDto {
+  /// Adapta una fila enriquecida al punto de vista del usuario actual.
   static SolicitudOfertaModel desdeSupabase({
     required Map<String, dynamic> solicitud,
     required bool esEntrante,

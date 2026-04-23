@@ -4,6 +4,7 @@ import '../../../core/supabase/supabase_client_provider.dart';
 import '../data/repositories/supabase_solicitud_oferta_repository.dart';
 import '../domain/repositories/solicitud_oferta_repository.dart';
 
+/// Inyecta la implementación de solicitudes respaldada por Supabase.
 final solicitudOfertaRepositoryProvider =
     Provider<SolicitudOfertaRepository>((ref) {
   return SupabaseSolicitudOfertaRepository(ref.watch(supabaseClientProvider));

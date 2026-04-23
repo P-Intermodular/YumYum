@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+/// Define el tema visual compartido por toda la aplicación.
 class AppTheme {
+  /// Construye el tema claro base del MVP.
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF4CAF50), // Fresh Green
+        seedColor: const Color(0xFF4CAF50),
         primary: const Color(0xFF4CAF50),
         secondary: const Color(0xFF81C784),
         surface: Colors.white,

@@ -251,7 +251,7 @@ begin
       nullif(new.raw_user_meta_data->>'name', ''),
       split_part(new.email, '@', 1)
     ),
-    coalesce(nullif(new.raw_user_meta_data->>'url_avatar', ''), 'https://i.pravatar.cc/150?u=' || new.email)
+    coalesce(nullif(new.raw_user_meta_data->>'url_avatar', ''), '')
   )
   on conflict (id) do nothing;
 

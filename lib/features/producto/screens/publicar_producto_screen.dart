@@ -12,6 +12,7 @@ import '../../../core/widgets/yumyum_app_bar.dart';
 import '../controllers/datos_publicacion_producto.dart';
 import '../controllers/publicar_producto_controller.dart';
 
+/// Pantalla de creación de nuevas ofertas.
 class PublicarProductoScreen extends ConsumerStatefulWidget {
   const PublicarProductoScreen({super.key});
 
@@ -32,6 +33,7 @@ class _PublicarProductoScreenState
   String _extensionImagen = 'jpg';
   String _tipo = TipoOferta.intercambio;
 
+  /// Abre la galería y guarda la imagen elegida en memoria.
   Future<void> _elegirImagen() async {
     final imagen = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -49,6 +51,7 @@ class _PublicarProductoScreenState
     });
   }
 
+  /// Valida el formulario y publica la oferta en el backend.
   Future<void> _publicar() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -143,6 +146,7 @@ class _PublicarProductoScreenState
                   DropdownMenuItem(
                       value: TipoOferta.venta, child: Text('Venta')),
                 ],
+                // El tipo elegido cambia la validación y visibilidad del precio.
                 onChanged: (val) => setState(() => _tipo = val!),
               ),
               if (_tipo == TipoOferta.venta) ...[

@@ -9,11 +9,13 @@ import '../providers/producto_providers.dart';
 import '../providers/producto_repository_provider.dart';
 import 'datos_publicacion_producto.dart';
 
+/// Gestiona la publicación de productos desde la UI.
 final publicarProductoControllerProvider = StateNotifierProvider.autoDispose<
     PublicarProductoController, AsyncValue<void>>((ref) {
   return PublicarProductoController(ref);
 });
 
+/// Construye el producto de dominio y delega su persistencia en el repositorio.
 class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;
 
@@ -46,6 +48,7 @@ class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
             extensionImagen: datos.extensionImagen,
           );
 
+      // Tras publicar, el inicio y el mapa deben resolver de nuevo el catálogo.
       _ref.invalidate(productosProvider);
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {

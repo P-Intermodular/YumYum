@@ -6,6 +6,7 @@ import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../producto/providers/producto_providers.dart';
 import '../../producto/widgets/tarjeta_producto.dart';
 
+/// Pantalla principal del feed de ofertas publicadas.
 class InicioScreen extends ConsumerWidget {
   const InicioScreen({super.key});
 
@@ -20,6 +21,7 @@ class InicioScreen extends ConsumerWidget {
       ),
       body: productosAsyncValue.when(
         data: (productos) => RefreshIndicator(
+          // Fuerza una nueva consulta al catálogo para sincronizar el feed.
           onRefresh: () async => ref.refresh(productosProvider),
           child: ListView.builder(
             padding: const EdgeInsets.all(16),

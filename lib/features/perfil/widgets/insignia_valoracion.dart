@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Insignia compacta que resume la puntuación media del perfil.
 class InsigniaValoracion extends StatelessWidget {
   final double valoracion;
   final int cantidad;

@@ -5,6 +5,7 @@ import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../domain/entities/producto_model.dart';
 
+/// Tarjeta compacta usada en carruseles horizontales, como el perfil.
 class TarjetaProductoHorizontal extends StatelessWidget {
   final ProductoModel producto;
 

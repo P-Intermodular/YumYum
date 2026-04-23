@@ -1,3 +1,4 @@
+/// Representa una solicitud enviada o recibida sobre una oferta publicada.
 class SolicitudOfertaModel {
   final String id;
   final String tipoSolicitud;

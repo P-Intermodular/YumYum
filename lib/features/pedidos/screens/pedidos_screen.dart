@@ -11,6 +11,7 @@ import '../widgets/tarjeta_solicitud_oferta.dart';
 import '../widgets/tarjeta_transaccion.dart';
 import '../widgets/titulo_seccion.dart';
 
+/// Pantalla que reúne solicitudes y transacciones del usuario.
 class PedidosScreen extends ConsumerWidget {
   const PedidosScreen({super.key});
 
@@ -54,6 +55,7 @@ class PedidosScreen extends ConsumerWidget {
               .toList();
 
           return RefreshIndicator(
+            // Permite resincronizar el panel completo tras cambios externos.
             onRefresh: () => ref.refresh(panelPedidosProvider.future),
             child: ListView(
               padding: const EdgeInsets.all(16),
@@ -84,6 +86,7 @@ class PedidosScreen extends ConsumerWidget {
     );
   }
 
+  /// Construye una sección homogénea para solicitudes recibidas o enviadas.
   Widget _buildSeccionSolicitudes(
     String titulo,
     List<SolicitudOfertaModel> solicitudes, {
@@ -107,6 +110,7 @@ class PedidosScreen extends ConsumerWidget {
     );
   }
 
+  /// Construye una sección homogénea para las transacciones del panel.
   Widget _buildSeccionTransacciones(
     String titulo,
     List<TransaccionModel> transacciones,

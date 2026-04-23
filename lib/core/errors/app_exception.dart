@@ -1,3 +1,4 @@
+/// Excepción ligera de dominio para mostrar errores controlados en la UI.
 class AppException implements Exception {
   final String mensaje;
 
@@ -7,6 +8,7 @@ class AppException implements Exception {
   String toString() => mensaje;
 }
 
+/// Convierte cualquier error capturado en un mensaje legible para el usuario.
 String mensajeError(Object? error) {
   if (error == null) {
     return 'Ha ocurrido un error inesperado';

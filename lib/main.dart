@@ -6,6 +6,10 @@ import 'core/router/app_router.dart';
 import 'core/supabase/supabase_config.dart';
 import 'core/theme/app_theme.dart';
 
+/// Punto de entrada de YumYum.
+///
+/// Inicializa Flutter, comprueba que la configuración de Supabase esté
+/// disponible y arranca la aplicación dentro de un [ProviderScope].
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -26,6 +30,10 @@ Future<void> main() async {
   );
 }
 
+/// Widget raíz de la aplicación.
+///
+/// Resuelve el router desde Riverpod para que los cambios de autenticación
+/// actualicen la navegación de forma reactiva.
 class YumYumApp extends ConsumerWidget {
   const YumYumApp({super.key});
 
@@ -42,6 +50,7 @@ class YumYumApp extends ConsumerWidget {
   }
 }
 
+/// Pantalla de respaldo cuando faltan las variables de entorno de Supabase.
 class SupabaseConfigMissingApp extends StatelessWidget {
   const SupabaseConfigMissingApp({super.key});
 

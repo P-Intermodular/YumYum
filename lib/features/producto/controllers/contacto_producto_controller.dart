@@ -9,11 +9,13 @@ import '../../pedidos/providers/panel_pedidos_provider.dart';
 import '../../solicitudes/providers/solicitud_oferta_repository_provider.dart';
 import '../providers/producto_repository_provider.dart';
 
+/// Gestiona el flujo de contacto y creación de solicitudes desde detalle.
 final contactoProductoControllerProvider = StateNotifierProvider.autoDispose<
     ContactoProductoController, AsyncValue<void>>((ref) {
   return ContactoProductoController(ref);
 });
 
+/// Orquesta la preparación de intercambios y solicitudes de oferta.
 class ContactoProductoController extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;
 
@@ -31,6 +33,8 @@ class ContactoProductoController extends StateNotifier<AsyncValue<void>> {
         .read(productoRepositoryProvider)
         .obtenerMisProductosDisponibles(usuario.id);
 
+    // Un trueque solo puede proponerse con productos propios, disponibles y
+    // distintos al producto que se quiere solicitar.
     return productos
         .where(
           (candidate) =>
@@ -64,6 +68,8 @@ class ContactoProductoController extends StateNotifier<AsyncValue<void>> {
             mensaje: 'Hola, me interesa tu oferta.',
           );
 
+      // La creación de una solicitud impacta al panel de pedidos y a la lista
+      // de chats porque el backend abre o reutiliza una conversación.
       _ref.invalidate(panelPedidosProvider);
       _ref.invalidate(listaChatsProvider);
       state = const AsyncValue.data(null);

@@ -4,6 +4,7 @@ import '../../../core/supabase/supabase_client_provider.dart';
 import '../data/repositories/supabase_transaccion_repository.dart';
 import '../domain/repositories/transaccion_repository.dart';
 
+/// Inyecta la implementación de transacciones basada en Supabase.
 final transaccionRepositoryProvider = Provider<TransaccionRepository>((ref) {
   return SupabaseTransaccionRepository(ref.watch(supabaseClientProvider));
 });

@@ -7,12 +7,14 @@ import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/feedback/app_feedback.dart';
+import '../../../core/widgets/avatar_usuario.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/contacto_producto_controller.dart';
 import '../domain/entities/producto_model.dart';
 import '../providers/producto_providers.dart';
 
+/// Pantalla de detalle de una oferta concreta.
 class DetalleProductoScreen extends ConsumerWidget {
   final String productoId;
 
@@ -88,9 +90,10 @@ class DetalleProductoScreen extends ConsumerWidget {
                       const SizedBox(height: 16),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          backgroundImage: NetworkImage(
-                              producto.propietario.urlImagenPerfil),
+                        leading: AvatarUsuario(
+                          nombre: producto.propietario.nombre,
+                          identificadorColor: producto.propietario.id,
+                          urlImagen: producto.propietario.urlImagenPerfil,
                         ),
                         title: Text(producto.propietario.nombre),
                         subtitle: Text(
@@ -143,6 +146,7 @@ class DetalleProductoScreen extends ConsumerWidget {
     );
   }
 
+  /// Inicia el flujo de contacto para venta o intercambio.
   Future<void> _contactar(
       BuildContext context, WidgetRef ref, ProductoModel producto) async {
     final usuario = ref.read(autenticacionProvider).value;
@@ -158,6 +162,7 @@ class DetalleProductoScreen extends ConsumerWidget {
           : TipoOferta.intercambio;
 
       if (tipoSolicitud == TipoOferta.intercambio) {
+        // En un trueque el usuario debe elegir primero cuál de sus platos ofrece.
         final candidates = await ref
             .read(contactoProductoControllerProvider.notifier)
             .obtenerProductosIntercambioDisponibles(producto);
@@ -201,6 +206,7 @@ class DetalleProductoScreen extends ConsumerWidget {
           );
 
       if (context.mounted) {
+        // El backend ya habrá creado o recuperado la conversación asociada.
         context.push(RutasApp.chat(conversacionId));
       }
     } catch (error) {

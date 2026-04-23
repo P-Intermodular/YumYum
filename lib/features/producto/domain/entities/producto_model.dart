@@ -2,6 +2,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../auth/domain/entities/usuario_model.dart';
 
+/// Entidad de dominio que representa una oferta publicada en YumYum.
 class ProductoModel {
   final String id;
   final String titulo;
@@ -27,6 +28,7 @@ class ProductoModel {
     required this.ubicacion,
   });
 
+  /// Devuelve una copia parcial del producto manteniendo el resto de campos.
   ProductoModel copyWith({
     String? id,
     String? titulo,

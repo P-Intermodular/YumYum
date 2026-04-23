@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/widgets/avatar_usuario.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../producto/widgets/tarjeta_producto_horizontal.dart';
 import '../providers/perfil_providers.dart';
 import '../widgets/insignia_valoracion.dart';
 
+/// Pantalla de perfil del usuario autenticado.
 class PerfilScreen extends ConsumerWidget {
   const PerfilScreen({super.key});
 
@@ -42,9 +44,11 @@ class PerfilScreen extends ConsumerWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: topColor, width: 3),
               ),
-              child: CircleAvatar(
+              child: AvatarUsuario(
+                nombre: usuario.nombre,
+                identificadorColor: usuario.id,
+                urlImagen: usuario.urlImagenPerfil,
                 radius: 50,
-                backgroundImage: NetworkImage(usuario.urlImagenPerfil),
               ),
             ),
             const SizedBox(height: 16),
@@ -160,6 +164,7 @@ class PerfilScreen extends ConsumerWidget {
     );
   }
 
+  /// Dibuja una estadística resumida del perfil.
   Widget _buildCajaEstadistica(String cantidad, String etiqueta, Color color) {
     return Expanded(
       child: Container(
@@ -190,6 +195,7 @@ class PerfilScreen extends ConsumerWidget {
     );
   }
 
+  /// Dibuja una tarjeta simple de información descriptiva del perfil.
   Widget _buildTarjetaInformacion({
     required String titulo,
     required String contenido,
@@ -230,6 +236,7 @@ class PerfilScreen extends ConsumerWidget {
     );
   }
 
+  /// Construye un título de sección consistente dentro del perfil.
   Widget _buildTituloSeccion(String titulo) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),

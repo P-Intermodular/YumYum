@@ -5,8 +5,10 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/rutas_app.dart';
+import '../../../core/widgets/avatar_usuario.dart';
 import '../domain/entities/producto_model.dart';
 
+/// Tarjeta vertical usada en el feed principal de productos.
 class TarjetaProducto extends StatelessWidget {
   final ProductoModel producto;
 
@@ -87,10 +89,11 @@ class TarjetaProducto extends StatelessWidget {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      CircleAvatar(
+                      AvatarUsuario(
+                        nombre: producto.propietario.nombre,
+                        identificadorColor: producto.propietario.id,
+                        urlImagen: producto.propietario.urlImagenPerfil,
                         radius: 12,
-                        backgroundImage:
-                            NetworkImage(producto.propietario.urlImagenPerfil),
                       ),
                       const SizedBox(width: 8),
                       Text(

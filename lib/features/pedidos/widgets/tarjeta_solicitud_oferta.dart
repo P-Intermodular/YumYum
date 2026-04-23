@@ -7,6 +7,7 @@ import '../../../core/feedback/app_feedback.dart';
 import '../../solicitudes/controllers/solicitud_oferta_controller.dart';
 import '../../solicitudes/domain/entities/solicitud_oferta_model.dart';
 
+/// Tarjeta visual que resume una solicitud y permite responder si procede.
 class TarjetaSolicitudOferta extends ConsumerWidget {
   final SolicitudOfertaModel solicitud;
   final bool puedeResponder;
@@ -142,6 +143,7 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
     );
   }
 
+  /// Acepta la solicitud y muestra feedback inmediato en la UI.
   Future<void> _aceptar(BuildContext context, WidgetRef ref) async {
     try {
       await ref
@@ -158,6 +160,7 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
     }
   }
 
+  /// Deniega la solicitud y muestra feedback inmediato en la UI.
   Future<void> _denegar(BuildContext context, WidgetRef ref) async {
     try {
       await ref
@@ -174,6 +177,7 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
     }
   }
 
+  /// Asigna colores según el estado funcional de la solicitud.
   (Color, Color) _coloresEstado(String estado) {
     switch (estado) {
       case EstadoSolicitud.aceptada:
@@ -187,6 +191,7 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
     }
   }
 
+  /// Devuelve la etiqueta legible que se muestra en la tarjeta.
   String _etiquetaEstado(String estado) {
     switch (estado) {
       case EstadoSolicitud.aceptada:
