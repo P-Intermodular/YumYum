@@ -21,10 +21,13 @@ final radioBusquedaProvider = StateProvider<double>((ref) => 10);
 /// general para no bloquear el feed ni el mapa.
 final productosCercanosProvider = FutureProvider<List<ProductoModel>>(
   (ref) async {
-    final ubicacion = await ref.watch(ubicacionActualProvider.future);
+    final ubicacion = ref.watch(ubicacionActualProvider).valueOrNull;
     final repositorio = ref.watch(productoRepositoryProvider);
 
     if (ubicacion == null) {
+      // Mientras la ubicacion se resuelve, o si falla, no bloqueamos la UI:
+      // el feed y el mapa pueden mostrar el catalogo general y actualizarse
+      // despues cuando llegue una posicion valida.
       return repositorio.obtenerProductos();
     }
 

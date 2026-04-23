@@ -16,6 +16,7 @@ Este documento recoge las decisiones tomadas al implementar el backend de YumYum
 - `Mensaje`: se vincula a `conversaciones` para soportar chat en tiempo real con Supabase Realtime.
 - `reportes.objetivo_id`: se mantiene polimorfico para MVP. Es una limitacion aceptada para evitar tablas de reporte separadas por entidad.
 - Ubicacion exacta: no se expone en lecturas publicas de productos. Solo se consulta mediante `obtener_ubicacion_exacta_producto` cuando hay una transaccion aceptada o completada.
+- Busqueda por proximidad: se realiza en PostgreSQL mediante las extensiones `cube` y `earthdistance`, un indice GIST parcial sobre productos disponibles y la RPC `obtener_productos_cercanos`. El cliente elige radio en pasos discretos (1, 3, 5, 10, 25, 50 km; por defecto 10 km). Si el usuario deniega permiso o el GPS no responde, el feed hace fallback al catalogo completo sin proximidad.
 
 ## Glosario Backend
 
@@ -53,6 +54,7 @@ Este documento recoge las decisiones tomadas al implementar el backend de YumYum
 - `denegar_solicitud_oferta`: registra una denegacion manual.
 - `completar_transaccion`: marca la transaccion y sus productos como completados.
 - `obtener_ubicacion_exacta_producto`: devuelve ubicacion exacta solo a usuarios autorizados.
+- `obtener_productos_cercanos`: lista productos disponibles dentro de un radio en kilometros desde la ubicacion indicada, ordenados por distancia y con el mismo shape que el feed general mas `distancia_km`.
 
 ### Buckets
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'servicio_ubicacion.dart';
@@ -14,18 +15,24 @@ class GeolocatorServicioUbicacion implements ServicioUbicacion {
       final servicioActivo = await Geolocator.isLocationServiceEnabled();
       if (!servicioActivo) return null;
 
-      var permiso = await Geolocator.checkPermission();
-      if (permiso == LocationPermission.denied) {
-        permiso = await Geolocator.requestPermission();
-      }
+      const precision = kIsWeb ? LocationAccuracy.low : LocationAccuracy.medium;
+      const timeout = kIsWeb ? Duration(seconds: 6) : Duration(seconds: 12);
 
-      if (permiso == LocationPermission.denied ||
-          permiso == LocationPermission.deniedForever) {
-        return null;
+      if (!kIsWeb) {
+        var permiso = await Geolocator.checkPermission();
+        if (permiso == LocationPermission.denied) {
+          permiso = await Geolocator.requestPermission();
+        }
+
+        if (permiso == LocationPermission.denied ||
+            permiso == LocationPermission.deniedForever) {
+          return null;
+        }
       }
 
       final posicion = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
+        desiredAccuracy: precision,
+        timeLimit: timeout,
       );
 
       return UbicacionActual(

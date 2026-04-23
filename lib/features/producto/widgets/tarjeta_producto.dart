@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/rutas_app.dart';
+import '../../../core/location/formato_distancia.dart';
 import '../../../core/widgets/avatar_usuario.dart';
 import '../domain/entities/producto_model.dart';
 
@@ -96,13 +97,21 @@ class TarjetaProducto extends StatelessWidget {
                         radius: 12,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        producto.propietario.nombre,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                      Flexible(
+                        child: Text(
+                          producto.propietario.nombre,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (producto.distanciaKm != null) ...[
+                        const SizedBox(width: 8),
+                        _ChipDistancia(distanciaKm: producto.distanciaKm!),
+                      ],
                       const Spacer(),
                       Text(
                         DateFormat('dd/MM HH:mm').format(producto.creadoEn),
@@ -116,6 +125,38 @@ class TarjetaProducto extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ChipDistancia extends StatelessWidget {
+  final double distanciaKm;
+
+  const _ChipDistancia({required this.distanciaKm});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.place, size: 14, color: Colors.blue.shade700),
+          const SizedBox(width: 4),
+          Text(
+            formatearDistanciaKm(distanciaKm),
+            style: TextStyle(
+              color: Colors.blue.shade800,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }
