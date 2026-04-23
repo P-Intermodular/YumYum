@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../models/solicitud_oferta_model.dart';
-import '../../chat/providers/chat_providers.dart';
-import '../../producto/providers/producto_providers.dart';
-import '../../solicitudes/repositories/solicitud_oferta_repository.dart';
-import '../providers/panel_pedidos_provider.dart';
+import '../../../core/constants/estados_app.dart';
+import '../../../core/feedback/app_feedback.dart';
+import '../../solicitudes/controllers/solicitud_oferta_controller.dart';
+import '../../solicitudes/domain/entities/solicitud_oferta_model.dart';
 
 class TarjetaSolicitudOferta extends ConsumerWidget {
   final SolicitudOfertaModel solicitud;
@@ -40,16 +39,16 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: solicitud.tipoSolicitud == 'intercambio'
+                    color: solicitud.tipoSolicitud == TipoOferta.intercambio
                         ? Colors.purple.shade50
                         : Colors.green.shade50,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    solicitud.tipoSolicitud == 'intercambio'
+                    solicitud.tipoSolicitud == TipoOferta.intercambio
                         ? Icons.swap_horiz
                         : Icons.shopping_bag_outlined,
-                    color: solicitud.tipoSolicitud == 'intercambio'
+                    color: solicitud.tipoSolicitud == TipoOferta.intercambio
                         ? Colors.purple.shade700
                         : Colors.green.shade700,
                   ),
@@ -116,7 +115,8 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
                 ),
               ],
             ),
-            if (puedeResponder && solicitud.estado == 'pendiente') ...[
+            if (puedeResponder &&
+                solicitud.estado == EstadoSolicitud.pendiente) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -145,20 +145,15 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
   Future<void> _aceptar(BuildContext context, WidgetRef ref) async {
     try {
       await ref
-          .read(solicitudOfertaRepositoryProvider)
-          .aceptarSolicitudOferta(solicitud.id);
-      _refrescarDatos(ref);
+          .read(solicitudOfertaControllerProvider.notifier)
+          .aceptar(solicitud.id);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Solicitud aceptada')),
-        );
+        mostrarExito(context, 'Solicitud aceptada');
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.toString())),
-        );
+        mostrarError(context, error);
       }
     }
   }
@@ -166,37 +161,26 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
   Future<void> _denegar(BuildContext context, WidgetRef ref) async {
     try {
       await ref
-          .read(solicitudOfertaRepositoryProvider)
-          .denegarSolicitudOferta(solicitud.id);
-      _refrescarDatos(ref);
+          .read(solicitudOfertaControllerProvider.notifier)
+          .denegar(solicitud.id);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Solicitud denegada')),
-        );
+        mostrarExito(context, 'Solicitud denegada');
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.toString())),
-        );
+        mostrarError(context, error);
       }
     }
   }
 
-  void _refrescarDatos(WidgetRef ref) {
-    ref.invalidate(panelPedidosProvider);
-    ref.invalidate(productosProvider);
-    ref.invalidate(listaChatsProvider);
-  }
-
   (Color, Color) _coloresEstado(String estado) {
     switch (estado) {
-      case 'aceptada':
+      case EstadoSolicitud.aceptada:
         return (Colors.green.shade100, Colors.green.shade800);
-      case 'denegada':
-      case 'auto_denegada':
-      case 'cancelada':
+      case EstadoSolicitud.denegada:
+      case EstadoSolicitud.autoDenegada:
+      case EstadoSolicitud.cancelada:
         return (Colors.grey.shade200, Colors.grey.shade700);
       default:
         return (Colors.orange.shade100, Colors.orange.shade800);
@@ -205,13 +189,13 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
 
   String _etiquetaEstado(String estado) {
     switch (estado) {
-      case 'aceptada':
+      case EstadoSolicitud.aceptada:
         return 'Aceptada';
-      case 'denegada':
+      case EstadoSolicitud.denegada:
         return 'Denegada';
-      case 'auto_denegada':
+      case EstadoSolicitud.autoDenegada:
         return 'No disponible';
-      case 'cancelada':
+      case EstadoSolicitud.cancelada:
         return 'Cancelada';
       default:
         return 'Pendiente';

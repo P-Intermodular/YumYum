@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/rutas_app.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../providers/chat_providers.dart';
 
@@ -64,13 +66,13 @@ class ListaChatsScreen extends ConsumerWidget {
                       )
                   ],
                 ),
-                onTap: () => context.push('/chat/${chat.id}'),
+                onTap: () => context.push(RutasApp.chat(chat.id)),
               );
             },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+        error: (e, st) => Center(child: Text(mensajeError(e))),
       ),
     );
   }

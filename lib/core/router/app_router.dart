@@ -1,6 +1,8 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/rutas_app.dart';
+import '../../features/auth/controllers/auth_controller.dart';
 import '../../features/auth/screens/inicio_sesion_screen.dart';
 import '../../features/auth/screens/registro_screen.dart';
 import '../../features/inicio/screens/inicio_screen.dart';
@@ -14,96 +16,116 @@ import '../../features/chat/screens/chat_screen.dart';
 import '../../features/pedidos/screens/pedidos_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final autenticacion = ref.watch(autenticacionProvider);
+
   return GoRouter(
-    initialLocation: '/iniciar-sesion',
+    initialLocation: RutasApp.iniciarSesion,
+    redirect: (context, state) {
+      if (autenticacion.isLoading) return null;
+
+      final path = state.uri.path;
+      final autenticado = autenticacion.valueOrNull != null;
+      final rutaPublica = RutasApp.esRutaPublica(path);
+
+      if (!autenticado && !rutaPublica) {
+        return RutasApp.iniciarSesion;
+      }
+
+      if (autenticado && rutaPublica) {
+        return RutasApp.inicio;
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
-        path: '/iniciar-sesion',
+        path: RutasApp.iniciarSesion,
         builder: (context, state) => const InicioSesionScreen(),
       ),
       GoRoute(
-        path: '/login',
-        redirect: (context, state) => '/iniciar-sesion',
+        path: RutasApp.aliasLogin,
+        redirect: (context, state) => RutasApp.iniciarSesion,
       ),
       GoRoute(
-        path: '/registro',
+        path: RutasApp.registro,
         builder: (context, state) => const RegistroScreen(),
       ),
       GoRoute(
-        path: '/signup',
-        redirect: (context, state) => '/registro',
+        path: RutasApp.aliasSignup,
+        redirect: (context, state) => RutasApp.registro,
       ),
       ShellRoute(
         builder: (context, state, child) => PrincipalScreen(child: child),
         routes: [
           GoRoute(
-            path: '/inicio',
+            path: RutasApp.inicio,
             builder: (context, state) => const InicioScreen(),
           ),
           GoRoute(
-            path: '/feed',
-            redirect: (context, state) => '/inicio',
+            path: RutasApp.aliasFeed,
+            redirect: (context, state) => RutasApp.inicio,
           ),
           GoRoute(
-            path: '/mapa',
+            path: RutasApp.mapa,
             builder: (context, state) => const MapaScreen(),
           ),
           GoRoute(
-            path: '/map',
-            redirect: (context, state) => '/mapa',
+            path: RutasApp.aliasMap,
+            redirect: (context, state) => RutasApp.mapa,
           ),
           GoRoute(
-            path: '/publicar',
+            path: RutasApp.publicar,
             builder: (context, state) => const PublicarProductoScreen(),
           ),
           GoRoute(
-            path: '/add',
-            redirect: (context, state) => '/publicar',
+            path: RutasApp.aliasAdd,
+            redirect: (context, state) => RutasApp.publicar,
           ),
           GoRoute(
-            path: '/pedidos',
+            path: RutasApp.pedidos,
             builder: (context, state) => const PedidosScreen(),
           ),
           GoRoute(
-            path: '/orders',
-            redirect: (context, state) => '/pedidos',
+            path: RutasApp.aliasOrders,
+            redirect: (context, state) => RutasApp.pedidos,
           ),
           GoRoute(
-            path: '/chats',
+            path: RutasApp.chats,
             builder: (context, state) => const ListaChatsScreen(),
           ),
           GoRoute(
-            path: '/perfil',
+            path: RutasApp.perfil,
             builder: (context, state) => const PerfilScreen(),
           ),
           GoRoute(
-            path: '/profile',
-            redirect: (context, state) => '/perfil',
+            path: RutasApp.aliasProfile,
+            redirect: (context, state) => RutasApp.perfil,
           ),
         ],
       ),
       GoRoute(
-        path: '/producto/:id',
+        path: RutasApp.productoParametro,
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return DetalleProductoScreen(productoId: id);
         },
       ),
       GoRoute(
-        path: '/product/:id',
+        path: RutasApp.aliasProducto,
         redirect: (context, state) =>
-            '/producto/${state.pathParameters['id']!}',
+            RutasApp.productoDetalle(state.pathParameters['id']!),
       ),
       GoRoute(
-        path: '/chat/:id',
+        path: RutasApp.chatParametro,
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return ChatScreen(chatId: id);
         },
       ),
       GoRoute(
-        path: '/chat_room/:id',
-        redirect: (context, state) => '/chat/${state.pathParameters['id']!}',
+        path: RutasApp.aliasChatRoom,
+        redirect: (context, state) =>
+            RutasApp.chat(state.pathParameters['id']!),
       ),
     ],
   );

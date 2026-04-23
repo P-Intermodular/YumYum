@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../providers/auth_provider.dart';
+import '../../../core/constants/rutas_app.dart';
+import '../../../core/feedback/app_feedback.dart';
+import '../controllers/auth_controller.dart';
 
 class InicioSesionScreen extends ConsumerStatefulWidget {
   const InicioSesionScreen({super.key});
@@ -27,11 +29,9 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
   Widget build(BuildContext context) {
     ref.listen(autenticacionProvider, (previous, next) {
       if (next is AsyncData && next.value != null) {
-        context.go('/inicio');
+        context.go(RutasApp.inicio);
       } else if (next is AsyncError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error.toString())),
-        );
+        mostrarError(context, next.error);
       }
     });
 
@@ -92,7 +92,7 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                     : const Text('Entrar'),
               ),
               TextButton(
-                onPressed: () => context.push('/registro'),
+                onPressed: () => context.push(RutasApp.registro),
                 child: const Text('No tienes cuenta? Registrate'),
               ),
             ],

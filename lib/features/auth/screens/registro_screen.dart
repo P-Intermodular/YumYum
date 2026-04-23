@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/auth_provider.dart';
+import '../../../core/constants/rutas_app.dart';
+import '../../../core/feedback/app_feedback.dart';
+import '../controllers/auth_controller.dart';
 
 class RegistroScreen extends ConsumerStatefulWidget {
   const RegistroScreen({super.key});
@@ -31,11 +33,9 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
   Widget build(BuildContext context) {
     ref.listen(autenticacionProvider, (previous, next) {
       if (next is AsyncData && next.value != null) {
-        context.go('/inicio');
+        context.go(RutasApp.inicio);
       } else if (next is AsyncError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error.toString())),
-        );
+        mostrarError(context, next.error);
       }
     });
 
@@ -102,7 +102,7 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
                       : const Text('Registrarme'),
                 ),
                 TextButton(
-                  onPressed: () => context.go('/iniciar-sesion'),
+                  onPressed: () => context.go(RutasApp.iniciarSesion),
                   child: const Text('Ya tengo cuenta'),
                 ),
               ],

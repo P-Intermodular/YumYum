@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../models/producto_model.dart';
+import '../../../core/constants/estados_app.dart';
+import '../../../core/constants/rutas_app.dart';
+import '../domain/entities/producto_model.dart';
 
 class TarjetaProductoHorizontal extends StatelessWidget {
   final ProductoModel producto;
@@ -11,7 +13,7 @@ class TarjetaProductoHorizontal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => context.push('/producto/${producto.id}'),
+      onTap: () => context.push(RutasApp.productoDetalle(producto.id)),
       child: Container(
         width: 220,
         decoration: BoxDecoration(
@@ -46,7 +48,7 @@ class TarjetaProductoHorizontal extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    producto.tipo == 'intercambio'
+                    producto.tipo == TipoOferta.intercambio
                         ? 'Intercambio'
                         : '${producto.precio?.toStringAsFixed(2)} EUR',
                     style: const TextStyle(

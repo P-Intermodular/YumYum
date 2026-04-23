@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../constants/rutas_app.dart';
+
 /// AppBar reutilizable para las pantallas de YumYum.
 class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String titulo;
@@ -75,7 +77,7 @@ class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
           IconButton(
             icon:
                 const Icon(Icons.person_outline_rounded, color: colorCabecera),
-            onPressed: () => context.push('/perfil'),
+            onPressed: () => context.push(RutasApp.perfil),
           ),
       ],
     );

@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:latlong2/latlong.dart';
 
+import '../../../core/constants/estados_app.dart';
+import '../../../core/constants/rutas_app.dart';
+import '../../../core/feedback/app_feedback.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
-import '../../../models/producto_model.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../providers/producto_providers.dart';
-import '../repositories/producto_repository.dart';
+import '../controllers/datos_publicacion_producto.dart';
+import '../controllers/publicar_producto_controller.dart';
 
 class PublicarProductoScreen extends ConsumerStatefulWidget {
   const PublicarProductoScreen({super.key});
@@ -30,8 +30,7 @@ class _PublicarProductoScreenState
 
   Uint8List? _bytesImagen;
   String _extensionImagen = 'jpg';
-  String _tipo = 'intercambio';
-  bool _cargando = false;
+  String _tipo = TipoOferta.intercambio;
 
   Future<void> _elegirImagen() async {
     final imagen = await _picker.pickImage(
@@ -53,57 +52,35 @@ class _PublicarProductoScreenState
   Future<void> _publicar() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final usuario = ref.read(autenticacionProvider).value;
-    if (usuario == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes iniciar sesion')),
-      );
-      return;
-    }
-
-    setState(() => _cargando = true);
-
     try {
-      final nuevoProducto = ProductoModel(
-        id: '',
-        titulo: _tituloController.text.trim(),
-        descripcion: _descripcionController.text.trim(),
-        urlImagen: '',
-        propietario: usuario,
-        creadoEn: DateTime.now(),
-        tipo: _tipo,
-        precio: _tipo == 'venta'
-            ? double.tryParse(_precioController.text.replaceAll(',', '.'))
-            : null,
-        ubicacion: const LatLng(40.4180, -3.7050),
-      );
-
-      await ref.read(productoRepositoryProvider).crearProducto(
-            nuevoProducto,
-            bytesImagen: _bytesImagen,
-            extensionImagen: _extensionImagen,
+      await ref.read(publicarProductoControllerProvider.notifier).publicar(
+            DatosPublicacionProducto(
+              titulo: _tituloController.text.trim(),
+              descripcion: _descripcionController.text.trim(),
+              tipo: _tipo,
+              precio: _tipo == TipoOferta.venta
+                  ? double.tryParse(_precioController.text.replaceAll(',', '.'))
+                  : null,
+              bytesImagen: _bytesImagen,
+              extensionImagen: _extensionImagen,
+            ),
           );
-      ref.invalidate(productosProvider);
 
       if (mounted) {
-        context.go('/inicio');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Oferta publicada')),
-        );
+        context.go(RutasApp.inicio);
+        mostrarExito(context, 'Oferta publicada');
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.toString())),
-        );
+        mostrarError(context, error);
       }
-    } finally {
-      if (mounted) setState(() => _cargando = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cargando = ref.watch(publicarProductoControllerProvider).isLoading;
+
     return Scaffold(
       appBar: const YumYumAppBar(titulo: 'Publicar'),
       body: SingleChildScrollView(
@@ -114,7 +91,7 @@ class _PublicarProductoScreenState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               InkWell(
-                onTap: _cargando ? null : _elegirImagen,
+                onTap: cargando ? null : _elegirImagen,
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   height: 200,
@@ -161,19 +138,21 @@ class _PublicarProductoScreenState
                 decoration: const InputDecoration(labelText: 'Tipo de oferta'),
                 items: const [
                   DropdownMenuItem(
-                      value: 'intercambio', child: Text('Intercambio')),
-                  DropdownMenuItem(value: 'venta', child: Text('Venta')),
+                      value: TipoOferta.intercambio,
+                      child: Text('Intercambio')),
+                  DropdownMenuItem(
+                      value: TipoOferta.venta, child: Text('Venta')),
                 ],
                 onChanged: (val) => setState(() => _tipo = val!),
               ),
-              if (_tipo == 'venta') ...[
+              if (_tipo == TipoOferta.venta) ...[
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _precioController,
                   decoration: const InputDecoration(labelText: 'Precio'),
                   keyboardType: TextInputType.number,
                   validator: (val) {
-                    if (_tipo != 'venta') return null;
+                    if (_tipo != TipoOferta.venta) return null;
                     final parsed =
                         double.tryParse((val ?? '').replaceAll(',', '.'));
                     return parsed == null ? 'Introduce un precio valido' : null;
@@ -182,8 +161,8 @@ class _PublicarProductoScreenState
               ],
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: _cargando ? null : _publicar,
-                child: _cargando
+                onPressed: cargando ? null : _publicar,
+                child: cargando
                     ? const SizedBox(
                         width: 20,
                         height: 20,

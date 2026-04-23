@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/rutas_app.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
-import '../../auth/providers/auth_provider.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../../producto/widgets/tarjeta_producto_horizontal.dart';
 import '../providers/perfil_providers.dart';
 import '../widgets/insignia_valoracion.dart';
@@ -80,7 +82,7 @@ class PerfilScreen extends ConsumerWidget {
                   ],
                 ),
                 loading: () => const LinearProgressIndicator(),
-                error: (e, st) => Text('Error: $e'),
+                error: (e, st) => Text(mensajeError(e)),
               ),
             ),
             const SizedBox(height: 24),
@@ -136,7 +138,7 @@ class PerfilScreen extends ConsumerWidget {
               ),
               error: (e, st) => Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text('Error: $e'),
+                child: Text(mensajeError(e)),
               ),
             ),
             const SizedBox(height: 32),
@@ -144,7 +146,7 @@ class PerfilScreen extends ConsumerWidget {
               onPressed: () async {
                 await ref.read(autenticacionProvider.notifier).cerrarSesion();
                 if (context.mounted) {
-                  context.go('/iniciar-sesion');
+                  context.go(RutasApp.iniciarSesion);
                 }
               },
               icon: const Icon(Icons.logout, color: Colors.red),

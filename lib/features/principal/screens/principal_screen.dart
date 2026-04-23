@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/rutas_app.dart';
+
 class PrincipalScreen extends StatelessWidget {
   final Widget child;
 
@@ -46,30 +48,30 @@ class PrincipalScreen extends StatelessWidget {
 
   static int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/inicio')) return 0;
-    if (location.startsWith('/mapa')) return 1;
-    if (location.startsWith('/publicar')) return 2;
-    if (location.startsWith('/pedidos')) return 3;
-    if (location.startsWith('/chats')) return 4;
+    if (location.startsWith(RutasApp.inicio)) return 0;
+    if (location.startsWith(RutasApp.mapa)) return 1;
+    if (location.startsWith(RutasApp.publicar)) return 2;
+    if (location.startsWith(RutasApp.pedidos)) return 3;
+    if (location.startsWith(RutasApp.chats)) return 4;
     return 0;
   }
 
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:
-        context.go('/inicio');
+        context.go(RutasApp.inicio);
         break;
       case 1:
-        context.go('/mapa');
+        context.go(RutasApp.mapa);
         break;
       case 2:
-        context.go('/publicar');
+        context.go(RutasApp.publicar);
         break;
       case 3:
-        context.go('/pedidos');
+        context.go(RutasApp.pedidos);
         break;
       case 4:
-        context.go('/chats');
+        context.go(RutasApp.chats);
         break;
     }
   }

@@ -45,7 +45,6 @@ app.*.map.json
 /android/app/release
 
 # Local environment
-.env
 .env.*
 !.env.example
 

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/estados_app.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
-import '../../../models/solicitud_oferta_model.dart';
-import '../../../models/transaccion_model.dart';
+import '../../solicitudes/domain/entities/solicitud_oferta_model.dart';
+import '../domain/entities/transaccion_model.dart';
 import '../providers/panel_pedidos_provider.dart';
 import '../widgets/tarjeta_solicitud_oferta.dart';
 import '../widgets/tarjeta_transaccion.dart';
@@ -27,23 +29,27 @@ class PedidosScreen extends ConsumerWidget {
           }
 
           final recibidasPendientes = data.solicitudesRecibidas
-              .where((solicitud) => solicitud.estado == 'pendiente')
+              .where(
+                  (solicitud) => solicitud.estado == EstadoSolicitud.pendiente)
               .toList();
           final otrasRecibidas = data.solicitudesRecibidas
-              .where((solicitud) => solicitud.estado != 'pendiente')
+              .where(
+                  (solicitud) => solicitud.estado != EstadoSolicitud.pendiente)
               .toList();
           final enviadas = data.solicitudesEnviadas;
           final aceptadas = data.transacciones
-              .where((transaccion) => transaccion.estado == 'aceptada')
+              .where((transaccion) =>
+                  transaccion.estado == EstadoTransaccion.aceptada)
               .toList();
           final completadas = data.transacciones
-              .where((transaccion) => transaccion.estado == 'completada')
+              .where((transaccion) =>
+                  transaccion.estado == EstadoTransaccion.completada)
               .toList();
           final otrasTransacciones = data.transacciones
               .where(
                 (transaccion) =>
-                    transaccion.estado != 'aceptada' &&
-                    transaccion.estado != 'completada',
+                    transaccion.estado != EstadoTransaccion.aceptada &&
+                    transaccion.estado != EstadoTransaccion.completada,
               )
               .toList();
 
@@ -73,7 +79,7 @@ class PedidosScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+        error: (e, st) => Center(child: Text(mensajeError(e))),
       ),
     );
   }

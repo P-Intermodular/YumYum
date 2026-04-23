@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/estados_app.dart';
+import '../../../core/constants/rutas_app.dart';
+import '../../../core/errors/app_exception.dart';
+import '../../../core/feedback/app_feedback.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
-import '../../../models/producto_model.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../solicitudes/repositories/solicitud_oferta_repository.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../controllers/contacto_producto_controller.dart';
+import '../domain/entities/producto_model.dart';
 import '../providers/producto_providers.dart';
-import '../repositories/producto_repository.dart';
 
 class DetalleProductoScreen extends ConsumerWidget {
   final String productoId;
@@ -65,19 +68,20 @@ class DetalleProductoScreen extends ConsumerWidget {
                           ),
                           Chip(
                             label: Text(
-                              producto.tipo == 'intercambio'
+                              producto.tipo == TipoOferta.intercambio
                                   ? 'Intercambio'
                                   : '${producto.precio?.toStringAsFixed(2)} EUR',
                               style: TextStyle(
-                                color: producto.tipo == 'intercambio'
+                                color: producto.tipo == TipoOferta.intercambio
                                     ? Colors.purple.shade900
                                     : Colors.green.shade900,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            backgroundColor: producto.tipo == 'intercambio'
-                                ? Colors.purple.shade100
-                                : Colors.green.shade100,
+                            backgroundColor:
+                                producto.tipo == TipoOferta.intercambio
+                                    ? Colors.purple.shade100
+                                    : Colors.green.shade100,
                           ),
                         ],
                       ),
@@ -114,7 +118,7 @@ class DetalleProductoScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+        error: (e, st) => Center(child: Text(mensajeError(e))),
       ),
       bottomNavigationBar: productoAsync.maybeWhen(
         data: (producto) {
@@ -143,71 +147,65 @@ class DetalleProductoScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, ProductoModel producto) async {
     final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes iniciar sesion')),
-      );
+      mostrarError(context, Exception('Debes iniciar sesion'));
       return;
     }
 
-    String? productoOfrecidoId;
-    final tipoSolicitud = producto.tipo == 'venta' ? 'venta' : 'intercambio';
+    try {
+      String? productoOfrecidoId;
+      final tipoSolicitud = producto.tipo == TipoOferta.venta
+          ? TipoOferta.venta
+          : TipoOferta.intercambio;
 
-    if (tipoSolicitud == 'intercambio') {
-      final candidates = (await ref
-              .read(productoRepositoryProvider)
-              .obtenerMisProductosDisponibles(usuario.id))
-          .where((candidate) =>
-              candidate.id != producto.id && candidate.tipo == 'intercambio')
-          .toList();
+      if (tipoSolicitud == TipoOferta.intercambio) {
+        final candidates = await ref
+            .read(contactoProductoControllerProvider.notifier)
+            .obtenerProductosIntercambioDisponibles(producto);
 
-      if (candidates.isEmpty) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text(
-                    'Publica un plato de intercambio antes de solicitar este trueque.')),
-          );
+        if (candidates.isEmpty) {
+          if (context.mounted) {
+            mostrarError(
+              context,
+              Exception(
+                'Publica un plato de intercambio antes de solicitar este trueque.',
+              ),
+            );
+          }
+          return;
         }
-        return;
+
+        if (!context.mounted) return;
+        final selected = await showDialog<ProductoModel>(
+          context: context,
+          builder: (context) => SimpleDialog(
+            title: const Text('Elige que plato ofreces'),
+            children: [
+              for (final candidate in candidates)
+                SimpleDialogOption(
+                  onPressed: () => Navigator.of(context).pop(candidate),
+                  child: Text(candidate.titulo),
+                ),
+            ],
+          ),
+        );
+
+        if (selected == null) return;
+        productoOfrecidoId = selected.id;
       }
 
-      if (!context.mounted) return;
-      final selected = await showDialog<ProductoModel>(
-        context: context,
-        builder: (context) => SimpleDialog(
-          title: const Text('Elige que plato ofreces'),
-          children: [
-            for (final candidate in candidates)
-              SimpleDialogOption(
-                onPressed: () => Navigator.of(context).pop(candidate),
-                child: Text(candidate.titulo),
-              ),
-          ],
-        ),
-      );
-
-      if (selected == null) return;
-      productoOfrecidoId = selected.id;
-    }
-
-    try {
-      final created = await ref
-          .read(solicitudOfertaRepositoryProvider)
-          .crearSolicitudOferta(
-            productoId: producto.id,
-            tipoSolicitud: tipoSolicitud,
+      final conversacionId = await ref
+          .read(contactoProductoControllerProvider.notifier)
+          .crearSolicitud(
+            producto: producto,
             productoOfrecidoId: productoOfrecidoId,
-            mensaje: 'Hola, me interesa tu oferta.',
           );
 
       if (context.mounted) {
-        context.push('/chat/${created.conversacionId}');
+        context.push(RutasApp.chat(conversacionId));
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.toString())),
-        );
+        mostrarError(context, error);
       }
     }
   }

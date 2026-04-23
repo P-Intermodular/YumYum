@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
-import '../../../models/conversacion_model.dart';
-import '../../auth/providers/auth_provider.dart';
+import '../../../core/errors/app_exception.dart';
+import '../../../core/feedback/app_feedback.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../controllers/chat_controller.dart';
 import '../providers/chat_providers.dart';
-import '../repositories/chat_repository.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String chatId;
@@ -20,22 +20,20 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _mensajeController = TextEditingController();
 
-  void _enviarMensaje() {
+  Future<void> _enviarMensaje() async {
     final texto = _mensajeController.text.trim();
     if (texto.isEmpty) return;
 
-    final usuario = ref.read(autenticacionProvider).value;
-    if (usuario == null) return;
-
-    final mensaje = MensajeModel(
-      id: const Uuid().v4(),
-      texto: texto,
-      remitenteId: usuario.id,
-      creadoEn: DateTime.now(),
-    );
-
-    ref.read(chatRepositoryProvider).enviarMensaje(widget.chatId, mensaje);
-    _mensajeController.clear();
+    try {
+      await ref
+          .read(chatControllerProvider.notifier)
+          .enviarMensaje(widget.chatId, texto);
+      _mensajeController.clear();
+    } catch (error) {
+      if (mounted) {
+        mostrarError(context, error);
+      }
+    }
   }
 
   @override
@@ -90,7 +88,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, st) => Center(child: Text('Error: $e')),
+              error: (e, st) => Center(child: Text(mensajeError(e))),
             ),
           ),
           SafeArea(
@@ -119,7 +117,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     backgroundColor: Colors.green,
                     child: IconButton(
                       icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: _enviarMensaje,
+                      onPressed: () => _enviarMensaje(),
                     ),
                   )
                 ],

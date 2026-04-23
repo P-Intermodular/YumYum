@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../models/conversacion_model.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../repositories/chat_repository.dart';
+import '../domain/entities/conversacion_model.dart';
+import '../../auth/controllers/auth_controller.dart';
+import 'chat_repository_provider.dart';
 
 final listaChatsProvider = FutureProvider<List<ConversacionModel>>((ref) async {
   final usuario = ref.watch(autenticacionProvider).value;

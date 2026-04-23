@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/app_exception.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../producto/providers/producto_providers.dart';
 import '../../producto/widgets/tarjeta_producto.dart';
@@ -30,7 +31,7 @@ class InicioScreen extends ConsumerWidget {
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+        error: (e, st) => Center(child: Text(mensajeError(e))),
       ),
     );
   }

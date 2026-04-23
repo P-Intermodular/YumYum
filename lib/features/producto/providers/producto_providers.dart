@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../models/producto_model.dart';
-import '../repositories/producto_repository.dart';
+import '../domain/entities/producto_model.dart';
+import 'producto_repository_provider.dart';
 
 final productosProvider = FutureProvider<List<ProductoModel>>((ref) async {
   return ref.watch(productoRepositoryProvider).obtenerProductos();

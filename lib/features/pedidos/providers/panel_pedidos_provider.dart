@@ -1,32 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../models/solicitud_oferta_model.dart';
-import '../../../models/transaccion_model.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../solicitudes/repositories/solicitud_oferta_repository.dart';
-import '../repositories/transaccion_repository.dart';
+import '../domain/entities/panel_pedidos_model.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../../solicitudes/providers/solicitud_oferta_repository_provider.dart';
+import 'transaccion_repository_provider.dart';
 
-class PanelPedidosData {
-  final List<SolicitudOfertaModel> solicitudesRecibidas;
-  final List<SolicitudOfertaModel> solicitudesEnviadas;
-  final List<TransaccionModel> transacciones;
-
-  const PanelPedidosData({
-    required this.solicitudesRecibidas,
-    required this.solicitudesEnviadas,
-    required this.transacciones,
-  });
-
-  bool get isEmpty =>
-      solicitudesRecibidas.isEmpty &&
-      solicitudesEnviadas.isEmpty &&
-      transacciones.isEmpty;
-}
-
-final panelPedidosProvider = FutureProvider<PanelPedidosData>((ref) async {
+final panelPedidosProvider = FutureProvider<PanelPedidosModel>((ref) async {
   final usuario = ref.watch(autenticacionProvider).value;
   if (usuario == null) {
-    return const PanelPedidosData(
+    return const PanelPedidosModel(
       solicitudesRecibidas: [],
       solicitudesEnviadas: [],
       transacciones: [],
@@ -43,7 +25,7 @@ final panelPedidosProvider = FutureProvider<PanelPedidosData>((ref) async {
   final transacciones =
       await transaccionRepository.obtenerTransacciones(usuario.id);
 
-  return PanelPedidosData(
+  return PanelPedidosModel(
     solicitudesRecibidas: recibidas,
     solicitudesEnviadas: enviadas,
     transacciones: transacciones,

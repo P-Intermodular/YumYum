@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../models/producto_model.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../producto/repositories/producto_repository.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../../producto/domain/entities/producto_model.dart';
+import '../../producto/providers/producto_repository_provider.dart';
 
 final misProductosProvider = FutureProvider<List<ProductoModel>>((ref) async {
   final usuario = ref.watch(autenticacionProvider).value;

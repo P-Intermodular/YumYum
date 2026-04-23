@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../models/transaccion_model.dart';
+import '../../../core/constants/estados_app.dart';
+import '../domain/entities/transaccion_model.dart';
 
 class TarjetaTransaccion extends StatelessWidget {
   final TransaccionModel transaccion;
@@ -11,7 +12,7 @@ class TarjetaTransaccion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final coloresEstado = _coloresEstado(transaccion.estado);
-    final precio = transaccion.tipo == 'intercambio'
+    final precio = transaccion.tipo == TipoOferta.intercambio
         ? 'Trueque'
         : '${transaccion.total?.toStringAsFixed(2) ?? '--'} EUR';
 
@@ -99,11 +100,11 @@ class TarjetaTransaccion extends StatelessWidget {
 
   (Color, Color) _coloresEstado(String estado) {
     switch (estado) {
-      case 'completada':
+      case EstadoTransaccion.completada:
         return (Colors.grey.shade200, Colors.grey.shade700);
-      case 'aceptada':
+      case EstadoTransaccion.aceptada:
         return (Colors.green.shade100, Colors.green.shade800);
-      case 'reportada':
+      case EstadoTransaccion.reportada:
         return (Colors.red.shade100, Colors.red.shade800);
       default:
         return (Colors.orange.shade100, Colors.orange.shade800);
@@ -112,13 +113,13 @@ class TarjetaTransaccion extends StatelessWidget {
 
   String _etiquetaEstado(String estado) {
     switch (estado) {
-      case 'completada':
+      case EstadoTransaccion.completada:
         return 'Completado';
-      case 'aceptada':
+      case EstadoTransaccion.aceptada:
         return 'Aceptado';
-      case 'reportada':
+      case EstadoTransaccion.reportada:
         return 'Reportado';
-      case 'cancelada':
+      case EstadoTransaccion.cancelada:
         return 'Cancelado';
       default:
         return 'Pendiente';

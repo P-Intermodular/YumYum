@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../models/producto_model.dart';
+import '../../../core/constants/estados_app.dart';
+import '../../../core/constants/rutas_app.dart';
+import '../domain/entities/producto_model.dart';
 
 class TarjetaProducto extends StatelessWidget {
   final ProductoModel producto;
@@ -16,7 +18,7 @@ class TarjetaProducto extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push('/producto/${producto.id}'),
+        onTap: () => context.push(RutasApp.productoDetalle(producto.id)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -55,17 +57,17 @@ class TarjetaProducto extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: producto.tipo == 'intercambio'
+                          color: producto.tipo == TipoOferta.intercambio
                               ? Colors.purple.shade100
                               : Colors.green.shade100,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          producto.tipo == 'intercambio'
+                          producto.tipo == TipoOferta.intercambio
                               ? 'Intercambio'
                               : '${producto.precio?.toStringAsFixed(2)} EUR',
                           style: TextStyle(
-                            color: producto.tipo == 'intercambio'
+                            color: producto.tipo == TipoOferta.intercambio
                                 ? Colors.purple.shade800
                                 : Colors.green.shade800,
                             fontWeight: FontWeight.bold,
