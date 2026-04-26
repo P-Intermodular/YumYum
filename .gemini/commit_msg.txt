@@ -1,0 +1,24 @@
+feat(core): implementar flujo completo de transacciones (P0-1, P0-2, P0-3)
+
+Se ha completado el núcleo interactivo de la aplicación abarcando el ciclo de vida de los pedidos, la privacidad de ubicaciones del usuario y el sistema de reputación cruzada.
+
+P0-1 - Cierre de Transacciones:
+- Añadida `DetalleTransaccionScreen` con acciones de negocio ("Marcar como realizado", "Valorar").
+- Integrado un minimapa estático en el detalle del pedido para previsualizar el punto de encuentro real.
+- Optimizados los selectores (DTOs) en Supabase para enriquecer las transacciones con datos de la contraparte mediante joins relacionales.
+
+P0-2 - Privacidad y Ubicaciones de Perfil:
+- Incorporada la pantalla `EditarUbicacionPerfilScreen` para configurar las coordenadas por defecto del usuario.
+- Añadido el componente reutilizable `SelectorUbicacionMapa`.
+- Refactorizado `ProductoModel` separando `ubicacionPublica` (mostrada en el feed con un offset aleatorio de 100-200m) y `ubicacionExacta` (protegida vía RPC, visible solo para los implicados de una transacción).
+- Ejecutada la migración SQL `20260426120000_anadir_ubicacion_predeterminada_perfiles.sql` que añade el soporte de ubicación predeterminada en los perfiles.
+- La pantalla de publicación ahora exige configurar la ubicación del perfil antes de publicar.
+
+P0-3 - Sistema de Valoraciones:
+- Creado el módulo de valoraciones (`ValorarTransaccionScreen`, repositorios, controllers) para gestionar calificaciones de 1 a 5 estrellas y comentarios opcionales.
+- Añadida la sección dinámica "Valoraciones recibidas" en el perfil del usuario.
+- Implementado el badge `InsigniaValoracionCompacta` para visibilizar la reputación en todo el flujo de compras/ventas.
+
+Infraestructura:
+- Actualización del GoRouter con las nuevas rutas de detalle, valoración y configuración de perfil.
+- Invalidación precisa del estado local con Riverpod para garantizar una UI reactiva sin llamadas innecesarias a red tras cada mutación.

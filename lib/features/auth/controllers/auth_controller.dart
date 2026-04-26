@@ -66,4 +66,27 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
     await _repository.cerrarSesion();
     state = const AsyncValue.data(null);
   }
+
+  /// Actualiza los datos del perfil del usuario y refresca el estado.
+  Future<void> actualizarPerfil(UsuarioModel usuario) async {
+    try {
+      final usuarioActualizado = await _repository.actualizarPerfil(usuario);
+      state = AsyncValue.data(usuarioActualizado);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Actualiza solo la ubicacion predeterminada y refresca el estado.
+  Future<void> actualizarUbicacionPredeterminada(UsuarioModel usuario) async {
+    try {
+      final actualizado =
+          await _repository.actualizarUbicacionPredeterminada(usuario);
+      state = AsyncValue.data(actualizado);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      rethrow;
+    }
+  }
 }

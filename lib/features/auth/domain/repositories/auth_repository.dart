@@ -20,4 +20,10 @@ abstract class AuthRepository {
 
   /// Devuelve el usuario autenticado si existe una sesión previa.
   Future<UsuarioModel?> obtenerUsuarioActual();
+
+  /// Actualiza los datos del perfil del usuario en la base de datos.
+  Future<UsuarioModel> actualizarPerfil(UsuarioModel usuario);
+
+  /// Actualiza solo la ubicacion predeterminada del perfil.
+  Future<UsuarioModel> actualizarUbicacionPredeterminada(UsuarioModel usuario);
 }

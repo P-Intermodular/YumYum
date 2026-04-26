@@ -5,6 +5,12 @@ abstract class TransaccionRepository {
   /// Recupera las transacciones donde participa el usuario indicado.
   Future<List<TransaccionModel>> obtenerTransacciones(String usuarioId);
 
+  /// Recupera una transacción concreta por su identificador.
+  Future<TransaccionModel?> obtenerTransaccionPorId(
+    String transaccionId,
+    String usuarioId,
+  );
+
   /// Marca una transacción como completada mediante la RPC correspondiente.
   Future<void> completarTransaccion(String transaccionId);
 }

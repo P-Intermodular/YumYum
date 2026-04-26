@@ -10,10 +10,13 @@ import '../../features/principal/screens/principal_screen.dart';
 import '../../features/mapa/screens/mapa_screen.dart';
 import '../../features/chat/screens/lista_chats_screen.dart';
 import '../../features/perfil/screens/perfil_screen.dart';
+import '../../features/perfil/screens/editar_ubicacion_perfil_screen.dart';
 import '../../features/producto/screens/publicar_producto_screen.dart';
 import '../../features/producto/screens/detalle_producto_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/pedidos/screens/pedidos_screen.dart';
+import '../../features/pedidos/screens/detalle_transaccion_screen.dart';
+import '../../features/valoraciones/screens/valorar_transaccion_screen.dart';
 
 /// Expone el [GoRouter] principal de la aplicación.
 ///
@@ -117,6 +120,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: RutasApp.perfilUbicacion,
+        builder: (context, state) => const EditarUbicacionPerfilScreen(),
+      ),
+      GoRoute(
         path: RutasApp.aliasProducto,
         redirect: (context, state) =>
             RutasApp.productoDetalle(state.pathParameters['id']!),
@@ -132,6 +139,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RutasApp.aliasChatRoom,
         redirect: (context, state) =>
             RutasApp.chat(state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: RutasApp.transaccionParametro,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return DetalleTransaccionScreen(transaccionId: id);
+        },
+      ),
+      GoRoute(
+        path: RutasApp.valorarParametro,
+        builder: (context, state) {
+          final id = state.pathParameters['transaccionId']!;
+          return ValorarTransaccionScreen(transaccionId: id);
+        },
       ),
     ],
   );

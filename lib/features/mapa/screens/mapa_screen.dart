@@ -83,7 +83,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
           final markersProductos = productos
               .map(
                 (producto) => Marker(
-                  point: producto.ubicacion,
+                  point: producto.ubicacionPublica,
                   width: 80,
                   height: 80,
                   child: GestureDetector(

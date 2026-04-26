@@ -78,6 +78,38 @@ class SupabaseAuthRepository implements AuthRepository {
     return _perfilParaUsuario(usuario.id, correoRespaldo: usuario.email);
   }
 
+  @override
+
+  /// Actualiza los datos del perfil del usuario en la base de datos.
+  Future<UsuarioModel> actualizarPerfil(UsuarioModel usuario) async {
+    final payload = UsuarioDto.aActualizacionPerfil(usuario);
+    final response = await _client
+        .from(TablasSupabase.perfiles)
+        .update(payload)
+        .eq('id', usuario.id)
+        .select()
+        .single();
+
+    return UsuarioDto.desdePerfil(response);
+  }
+
+  @override
+
+  /// Actualiza solo la ubicacion predeterminada del perfil.
+  Future<UsuarioModel> actualizarUbicacionPredeterminada(
+    UsuarioModel usuario,
+  ) async {
+    final payload = UsuarioDto.aActualizacionUbicacion(usuario);
+    final response = await _client
+        .from(TablasSupabase.perfiles)
+        .update(payload)
+        .eq('id', usuario.id)
+        .select()
+        .single();
+
+    return UsuarioDto.desdePerfil(response);
+  }
+
   Future<UsuarioModel> _perfilParaUsuario(
     String usuarioId, {
     String? correoRespaldo,

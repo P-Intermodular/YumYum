@@ -8,6 +8,7 @@ import '../../../core/widgets/avatar_usuario.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../producto/widgets/tarjeta_producto_horizontal.dart';
+import '../../valoraciones/providers/valoracion_providers.dart';
 import '../providers/perfil_providers.dart';
 import '../widgets/insignia_valoracion.dart';
 
@@ -96,8 +97,14 @@ class PerfilScreen extends ConsumerWidget {
                 children: [
                   _buildTarjetaInformacion(
                     titulo: 'Ubicacion',
-                    contenido: usuario.ciudad ?? 'Sin ubicacion configurada',
+                    contenido: usuario.ubicacionPredeterminada != null
+                        ? 'Ubicacion configurada (Toca para editar)'
+                        : 'Sin ubicacion configurada — toca para anadir',
                     icon: Icons.location_on_outlined,
+                    onTap: () => context.push(RutasApp.perfilUbicacion),
+                    colorContenido: usuario.ubicacionPredeterminada == null
+                        ? Colors.orange.shade800
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   _buildTarjetaInformacion(
@@ -145,6 +152,10 @@ class PerfilScreen extends ConsumerWidget {
                 child: Text(mensajeError(e)),
               ),
             ),
+            const SizedBox(height: 32),
+            _buildTituloSeccion('Valoraciones recibidas'),
+            const SizedBox(height: 16),
+            _buildValoracionesRecibidas(ref, usuario.id),
             const SizedBox(height: 32),
             TextButton.icon(
               onPressed: () async {
@@ -200,38 +211,46 @@ class PerfilScreen extends ConsumerWidget {
     required String titulo,
     required String contenido,
     required IconData icon,
+    VoidCallback? onTap,
+    Color? colorContenido,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+    return Material(
+      color: Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey.shade700),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  titulo,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F4A5B),
-                  ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: Colors.grey.shade700),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titulo,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1F4A5B),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(contenido,
+                        style:
+                            TextStyle(color: colorContenido ?? Colors.grey.shade700, fontSize: 15)),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(contenido,
-                    style:
-                        TextStyle(color: Colors.grey.shade700, fontSize: 15)),
-              ],
-            ),
+              ),
+              if (onTap != null)
+                Icon(Icons.edit, size: 16, color: Colors.grey.shade500),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -250,6 +269,104 @@ class PerfilScreen extends ConsumerWidget {
             color: Color(0xFF1F4A5B),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Muestra las valoraciones recibidas por el usuario.
+  Widget _buildValoracionesRecibidas(WidgetRef ref, String usuarioId) {
+    final valoracionesAsync = ref.watch(
+      valoracionesRecibidasProvider(usuarioId),
+    );
+
+    return valoracionesAsync.when(
+      data: (valoraciones) {
+        if (valoraciones.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Todavia no has recibido valoraciones.'),
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              for (final v in valoraciones) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AvatarUsuario(
+                        nombre: v.nombreValorador,
+                        identificadorColor: v.valoradorId,
+                        urlImagen: v.urlAvatarValorador,
+                        radius: 18,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              v.nombreValorador,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1F4A5B),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: List.generate(5, (i) {
+                                return Icon(
+                                  i < v.puntuacion
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded,
+                                  size: 16,
+                                  color: Colors.amber,
+                                );
+                              }),
+                            ),
+                            if (v.comentario != null &&
+                                v.comentario!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                v.comentario!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: CircularProgressIndicator(),
+      ),
+      error: (e, st) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(mensajeError(e)),
       ),
     );
   }

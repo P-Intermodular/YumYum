@@ -26,6 +26,12 @@ abstract final class UsuarioDto {
       esModerador: json['es_moderador'] as bool? ?? false,
       valoracionMedia: _toDouble(json['valoracion_media']),
       numeroValoraciones: json['numero_valoraciones'] as int? ?? 0,
+      latitudPredeterminada: json['latitud_predeterminada'] != null
+          ? _toDouble(json['latitud_predeterminada'])
+          : null,
+      longitudPredeterminada: json['longitud_predeterminada'] != null
+          ? _toDouble(json['longitud_predeterminada'])
+          : null,
     );
   }
 
@@ -37,6 +43,16 @@ abstract final class UsuarioDto {
       'ciudad': usuario.ciudad,
       'preferencias': usuario.preferencias,
       'certificacion_sanitaria': usuario.certificacionSanitaria,
+      'latitud_predeterminada': usuario.latitudPredeterminada,
+      'longitud_predeterminada': usuario.longitudPredeterminada,
+    };
+  }
+
+  /// Genera el payload minimo para actualizar solo la ubicacion predeterminada.
+  static Map<String, dynamic> aActualizacionUbicacion(UsuarioModel usuario) {
+    return {
+      'latitud_predeterminada': usuario.latitudPredeterminada,
+      'longitud_predeterminada': usuario.longitudPredeterminada,
     };
   }
 

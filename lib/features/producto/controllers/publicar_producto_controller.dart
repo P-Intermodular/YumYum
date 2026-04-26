@@ -1,7 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/estados_app.dart';
-import '../../../core/constants/ubicaciones_app.dart';
 import '../../../core/errors/app_exception.dart';
 import '../domain/entities/producto_model.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -29,6 +31,8 @@ class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
 
     state = const AsyncValue.loading();
     try {
+      final ubicacionPublica = _calcularUbicacionPublica(datos.ubicacionExacta);
+
       final nuevoProducto = ProductoModel(
         id: '',
         titulo: datos.titulo,
@@ -39,21 +43,42 @@ class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
         tipo: datos.tipo,
         estado: EstadoProducto.disponible,
         precio: datos.tipo == TipoOferta.venta ? datos.precio : null,
-        ubicacion: UbicacionesApp.madridCentro,
+        ubicacionPublica: ubicacionPublica,
       );
 
       await _ref.read(productoRepositoryProvider).crearProducto(
             nuevoProducto,
+            ubicacionExacta: datos.ubicacionExacta,
             bytesImagen: datos.bytesImagen,
             extensionImagen: datos.extensionImagen,
           );
 
       // Tras publicar, el inicio y el mapa deben resolver de nuevo el catálogo.
       _ref.invalidate(productosProvider);
+      _ref.invalidate(productosCercanosProvider);
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       rethrow;
     }
+  }
+
+  /// Desplaza la ubicacion exacta entre 100 y 200 metros en una direccion
+  /// aleatoria para que el feed muestre una posicion aproximada.
+  LatLng _calcularUbicacionPublica(LatLng exacta) {
+    final aleatorio = Random();
+    final angulo = aleatorio.nextDouble() * 2 * pi;
+    final distancia = 100 + aleatorio.nextDouble() * 100; // metros
+
+    final dx = distancia * cos(angulo);
+    final dy = distancia * sin(angulo);
+
+    final deltaLat = dy / 111320.0;
+    final deltaLng = dx / (111320.0 * cos(exacta.latitude * pi / 180));
+
+    return LatLng(
+      exacta.latitude + deltaLat,
+      exacta.longitude + deltaLng,
+    );
   }
 }

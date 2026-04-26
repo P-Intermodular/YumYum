@@ -10,6 +10,7 @@ abstract final class RutasApp {
   static const publicar = '/publicar';
   static const pedidos = '/pedidos';
   static const perfil = '/perfil';
+  static const perfilUbicacion = '/perfil/ubicacion';
   static const chats = '/chats';
 
   static const aliasLogin = '/login';
@@ -24,12 +25,21 @@ abstract final class RutasApp {
 
   static const productoParametro = '/producto/:id';
   static const chatParametro = '/chat/:id';
+  static const transaccionParametro = '/transaccion/:id';
+  static const valorarParametro = '/valorar/:transaccionId';
 
   /// Construye la ruta de detalle para un producto concreto.
   static String productoDetalle(String productoId) => '/producto/$productoId';
 
   /// Construye la ruta de acceso a un chat concreto.
   static String chat(String chatId) => '/chat/$chatId';
+
+  /// Construye la ruta de detalle de una transacción.
+  static String transaccionDetalle(String id) => '/transaccion/$id';
+
+  /// Construye la ruta para valorar una transacción completada.
+  static String valorarTransaccion(String transaccionId) =>
+      '/valorar/$transaccionId';
 
   /// Indica si una ruta puede visitarse sin sesión iniciada.
   static bool esRutaPublica(String path) {

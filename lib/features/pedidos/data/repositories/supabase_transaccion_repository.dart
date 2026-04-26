@@ -7,14 +7,6 @@ import '../dtos/transaccion_dto.dart';
 
 /// Implementación de [TransaccionRepository] usando Supabase.
 class SupabaseTransaccionRepository implements TransaccionRepository {
-  /// Select base con producto y contraparte para la pantalla de pedidos.
-  static const _transaccionSelect = '''
-    *,
-    producto:producto_id(titulo),
-    comprador:comprador_id(nombre),
-    vendedor:vendedor_id(nombre)
-  ''';
-
   final SupabaseClient _client;
 
   SupabaseTransaccionRepository(this._client);
@@ -25,7 +17,7 @@ class SupabaseTransaccionRepository implements TransaccionRepository {
   Future<List<TransaccionModel>> obtenerTransacciones(String usuarioId) async {
     final rows = await _client
         .from(TablasSupabase.transacciones)
-        .select(_transaccionSelect)
+        .select(TransaccionDto.selectCompleto)
         .or('comprador_id.eq.$usuarioId,vendedor_id.eq.$usuarioId')
         .order('creado_en', ascending: false);
 
@@ -33,6 +25,23 @@ class SupabaseTransaccionRepository implements TransaccionRepository {
         .cast<Map<String, dynamic>>()
         .map((row) => TransaccionDto.desdeSupabase(row, usuarioId))
         .toList();
+  }
+
+  @override
+
+  /// Recupera una transacción concreta por su identificador.
+  Future<TransaccionModel?> obtenerTransaccionPorId(
+    String transaccionId,
+    String usuarioId,
+  ) async {
+    final row = await _client
+        .from(TablasSupabase.transacciones)
+        .select(TransaccionDto.selectCompleto)
+        .eq('id', transaccionId)
+        .maybeSingle();
+
+    if (row == null) return null;
+    return TransaccionDto.desdeSupabase(row, usuarioId);
   }
 
   @override

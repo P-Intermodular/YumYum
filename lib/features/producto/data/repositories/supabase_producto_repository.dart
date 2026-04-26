@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/constants/estados_app.dart';
@@ -124,12 +125,13 @@ class SupabaseProductoRepository implements ProductoRepository {
   /// Inserta el producto y resuelve su versión final desde la base de datos.
   Future<ProductoModel> crearProducto(
     ProductoModel producto, {
+    required LatLng ubicacionExacta,
     Uint8List? bytesImagen,
     String extensionImagen = 'jpg',
   }) async {
     final inserted = await _client
         .from(TablasSupabase.productos)
-        .insert(ProductoDto.aInsercion(producto))
+        .insert(ProductoDto.aInsercion(producto, ubicacionExacta: ubicacionExacta))
         .select('id')
         .single();
 
@@ -151,6 +153,33 @@ class SupabaseProductoRepository implements ProductoRepository {
         .limit(1);
 
     return ProductoDto.desdeSupabase(rows.cast<Map<String, dynamic>>().first);
+  }
+
+  @override
+
+  /// Llama a la RPC protegida que devuelve la ubicacion exacta del producto.
+  ///
+  /// Si el usuario no esta autorizado o el producto no existe, la RPC lanza
+  /// una excepcion: este metodo deja que se propague para que la UI muestre el
+  /// error con el patron habitual de `mostrarError`.
+  Future<LatLng?> obtenerUbicacionExactaProducto(String productoId) async {
+    final filas = await _client.rpc(
+      RpcsSupabase.obtenerUbicacionExactaProducto,
+      params: {'p_producto_id': productoId},
+    );
+
+    final lista = (filas as List<dynamic>?)?.cast<Map<String, dynamic>>();
+    if (lista == null || lista.isEmpty) return null;
+
+    final fila = lista.first;
+    final lat = fila['latitud_exacta'];
+    final lng = fila['longitud_exacta'];
+    if (lat == null || lng == null) return null;
+
+    return LatLng(
+      (lat as num).toDouble(),
+      (lng as num).toDouble(),
+    );
   }
 
   /// Sube la imagen al bucket de productos y registra su metadata relacional.

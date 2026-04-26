@@ -40,7 +40,7 @@ abstract final class ProductoDto {
       estado: json['estado'] as String? ?? EstadoProducto.disponible,
       precio: _toDoubleOrNull(json['precio']),
       distanciaKm: _toDoubleOrNull(json['distancia_km']),
-      ubicacion: LatLng(
+      ubicacionPublica: LatLng(
         _toDouble(json['latitud_publica']),
         _toDouble(json['longitud_publica']),
       ),
@@ -48,7 +48,14 @@ abstract final class ProductoDto {
   }
 
   /// Prepara el payload compatible con la tabla `productos`.
-  static Map<String, dynamic> aInsercion(ProductoModel producto) {
+  ///
+  /// La ubicacion publica del producto es la que viaja en el feed y en el mapa,
+  /// mientras que la exacta solo se entrega a participantes de la transaccion
+  /// a traves de `obtener_ubicacion_exacta_producto`.
+  static Map<String, dynamic> aInsercion(
+    ProductoModel producto, {
+    required LatLng ubicacionExacta,
+  }) {
     return {
       'propietario_id': producto.propietario.id,
       'titulo': producto.titulo,
@@ -56,10 +63,10 @@ abstract final class ProductoDto {
       'tipo_oferta': producto.tipo,
       'precio': producto.tipo == TipoOferta.venta ? producto.precio : null,
       'estado': producto.estado,
-      'latitud_publica': producto.ubicacion.latitude,
-      'longitud_publica': producto.ubicacion.longitude,
-      'latitud_exacta': producto.ubicacion.latitude,
-      'longitud_exacta': producto.ubicacion.longitude,
+      'latitud_publica': producto.ubicacionPublica.latitude,
+      'longitud_publica': producto.ubicacionPublica.longitude,
+      'latitud_exacta': ubicacionExacta.latitude,
+      'longitud_exacta': ubicacionExacta.longitude,
     };
   }
 
