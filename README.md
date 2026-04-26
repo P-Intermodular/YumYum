@@ -32,3 +32,17 @@ cd .\scripts
 ```
 
 El script lee el `.env` del proyecto y pasa `SUPABASE_URL` y `SUPABASE_ANON_KEY` a Flutter automaticamente.
+
+## Build para Render
+
+Para desplegar YumYum como sitio estatico en Render, usa:
+
+- **Build Command**: `bash ./scripts/build_web_from_env.sh`
+- **Publish Directory**: `build/web`
+
+El script:
+
+- lee el `.env` versionado del repo
+- descarga una version fija de Flutter (`3.41.6`) si el entorno no la trae instalada
+- ejecuta `flutter pub get`
+- compila la web con los `--dart-define` necesarios para Supabase

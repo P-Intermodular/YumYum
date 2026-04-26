@@ -47,6 +47,7 @@ app.*.map.json
 # Local environment
 .env.*
 !.env.example
+.render/
 
 # Large documentation exports stay local; keep the backend divergence note versioned.
 /documentacion/*

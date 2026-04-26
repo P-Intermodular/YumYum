@@ -1,12 +1,15 @@
 {
-    "name": "yumyum",
-    "short_name": "yumyum",
-    "start_url": ".",
+    "id": "/",
+    "name": "YumYum",
+    "short_name": "YumYum",
+    "start_url": "/",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#D5ECD4",
+    "theme_color": "#4CAF50",
+    "description": "Compra e intercambia comida casera cerca de ti.",
     "orientation": "portrait-primary",
+    "lang": "es",
     "prefer_related_applications": false,
     "icons": [
         {
