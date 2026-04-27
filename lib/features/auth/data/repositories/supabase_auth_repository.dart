@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/constants/rutas_app.dart';
 import '../../../../core/constants/supabase_names.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/supabase/supabase_config.dart';
 import '../../domain/entities/usuario_model.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../dtos/usuario_dto.dart';
@@ -156,6 +157,20 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
 
+  /// Verifica el token hash del enlace y abre una sesión recovery válida.
+  Future<void> verificarRecuperacionPassword(String tokenHash) async {
+    try {
+      await _client.auth.verifyOTP(
+        type: OtpType.recovery,
+        tokenHash: tokenHash,
+      );
+    } on AuthException catch (error) {
+      throw AppException(error.message);
+    }
+  }
+
+  @override
+
   /// Actualiza la contraseña dentro de una sesión de recuperación válida.
   Future<void> restablecerPassword(String nuevaPassword) async {
     try {
@@ -173,13 +188,11 @@ class SupabaseAuthRepository implements AuthRepository {
 
   /// Construye el destino de vuelta para el enlace de recuperación.
   String _resolverRedirectRecuperacion() {
+    const appBaseUrl = SupabaseConfig.appBaseUrl;
+
     if (kIsWeb) {
-      return Uri(
-        scheme: Uri.base.scheme,
-        host: Uri.base.host,
-        port: Uri.base.hasPort ? Uri.base.port : null,
-        path: RutasApp.restablecerPassword,
-      ).toString();
+      final baseUrl = appBaseUrl.isNotEmpty ? appBaseUrl : Uri.base.origin;
+      return Uri.parse(baseUrl).resolve(RutasApp.restablecerPassword).toString();
     }
 
     return 'yumyum://restablecer-password';

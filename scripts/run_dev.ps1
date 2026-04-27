@@ -54,12 +54,32 @@ $maskedKey = $values["SUPABASE_ANON_KEY"].Substring(0, [Math]::Min(8, $values["S
 Write-Host "Supabase URL: $($values["SUPABASE_URL"])"
 Write-Host "Supabase anon key cargada: $maskedKey... ($($values["SUPABASE_ANON_KEY"].Length) caracteres)"
 
+$dispositivosWeb = @("chrome", "edge", "web-server")
+$appBaseUrl = if ($values.ContainsKey("APP_BASE_URL") -and -not [string]::IsNullOrWhiteSpace($values["APP_BASE_URL"])) {
+  $values["APP_BASE_URL"]
+} else {
+  "http://localhost:3000"
+}
+
+$argumentosFlutter = @(
+  "run"
+  "-d"
+  $Device
+  "--dart-define=SUPABASE_URL=$($values["SUPABASE_URL"])"
+  "--dart-define=SUPABASE_ANON_KEY=$($values["SUPABASE_ANON_KEY"])"
+  "--dart-define=APP_BASE_URL=$appBaseUrl"
+)
+
+if ($dispositivosWeb -contains $Device) {
+  $argumentosFlutter += "--web-port=3000"
+  Write-Host "Puerto web fijado en: 3000"
+}
+
+Write-Host "APP_BASE_URL: $appBaseUrl"
+
 Push-Location $projectRoot
 try {
-  flutter run `
-    -d $Device `
-    --dart-define="SUPABASE_URL=$($values["SUPABASE_URL"])" `
-    --dart-define="SUPABASE_ANON_KEY=$($values["SUPABASE_ANON_KEY"])"
+  flutter @argumentosFlutter
 } finally {
   Pop-Location
 }

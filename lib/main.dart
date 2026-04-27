@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/router/app_router.dart';
 import 'core/supabase/supabase_config.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/providers/recuperacion_password_provider.dart';
 
 /// Punto de entrada de YumYum.
 ///
@@ -13,6 +13,7 @@ import 'features/auth/providers/recuperacion_password_provider.dart';
 /// disponible y arranca la aplicación dentro de un [ProviderScope].
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
 
   if (!SupabaseConfig.isConfigured) {
     runApp(const SupabaseConfigMissingApp());
@@ -40,7 +41,6 @@ class YumYumApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(recuperacionPasswordActivaProvider);
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(

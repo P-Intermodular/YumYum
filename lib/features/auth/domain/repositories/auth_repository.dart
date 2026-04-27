@@ -30,6 +30,9 @@ abstract class AuthRepository {
   /// Envía un correo de recuperación de contraseña al email indicado.
   Future<void> enviarEmailRecuperacion(String correo);
 
+  /// Verifica el token hash del correo antes de mostrar el formulario recovery.
+  Future<void> verificarRecuperacionPassword(String tokenHash);
+
   /// Actualiza la contraseña del usuario autenticado dentro del flujo recovery.
   Future<void> restablecerPassword(String nuevaPassword);
 }
