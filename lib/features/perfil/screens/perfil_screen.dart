@@ -23,7 +23,7 @@ class PerfilScreen extends ConsumerWidget {
 
     if (usuario == null) {
       return const Scaffold(
-        body: Center(child: Text('No has iniciado sesion')),
+        body: Center(child: Text('No has iniciado sesión')),
       );
     }
 
@@ -96,10 +96,10 @@ class PerfilScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   _buildTarjetaInformacion(
-                    titulo: 'Ubicacion',
+                    titulo: 'Ubicación',
                     contenido: usuario.ubicacionPredeterminada != null
-                        ? 'Ubicacion configurada (Toca para editar)'
-                        : 'Sin ubicacion configurada — toca para anadir',
+                        ? 'Ubicación configurada (Toca para editar)'
+                        : 'Sin ubicación configurada — toca para añadir',
                     icon: Icons.location_on_outlined,
                     onTap: () => context.push(RutasApp.perfilUbicacion),
                     colorContenido: usuario.ubicacionPredeterminada == null
@@ -108,7 +108,7 @@ class PerfilScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   _buildTarjetaInformacion(
-                    titulo: 'Certificacion sanitaria',
+                    titulo: 'Certificación sanitaria',
                     contenido: usuario.certificacionSanitaria ?? 'No indicada',
                     icon: Icons.verified_user_outlined,
                   ),
@@ -126,7 +126,7 @@ class PerfilScreen extends ConsumerWidget {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child:
-                          Text('Todavia no has publicado platos disponibles.'),
+                          Text('Todavía no has publicado platos disponibles.'),
                     ),
                   );
                 }
@@ -165,7 +165,7 @@ class PerfilScreen extends ConsumerWidget {
                 }
               },
               icon: const Icon(Icons.logout, color: Colors.red),
-              label: const Text('Cerrar sesion',
+              label: const Text('Cerrar sesión',
                   style: TextStyle(color: Colors.red)),
             ),
             const SizedBox(height: 40),
@@ -286,7 +286,7 @@ class PerfilScreen extends ConsumerWidget {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Todavia no has recibido valoraciones.'),
+              child: Text('Todavía no has recibido valoraciones.'),
             ),
           );
         }

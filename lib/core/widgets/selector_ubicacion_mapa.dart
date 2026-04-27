@@ -73,7 +73,7 @@ class SelectorUbicacionMapa extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'No pudimos leer tu ubicacion. Mueve el mapa y toca para fijar el punto.',
+                    'No pudimos leer tu ubicación. Mueve el mapa y toca para fijar el punto.',
                     style: theme.textTheme.bodySmall,
                   ),
                 ),

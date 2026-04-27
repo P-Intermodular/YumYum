@@ -172,14 +172,21 @@ class SupabaseProductoRepository implements ProductoRepository {
     if (lista == null || lista.isEmpty) return null;
 
     final fila = lista.first;
-    final lat = fila['latitud_exacta'];
-    final lng = fila['longitud_exacta'];
+    final lat = _toDoubleOrNull(fila['latitud_exacta']);
+    final lng = _toDoubleOrNull(fila['longitud_exacta']);
     if (lat == null || lng == null) return null;
 
     return LatLng(
-      (lat as num).toDouble(),
-      (lng as num).toDouble(),
+      lat,
+      lng,
     );
+  }
+
+  /// Normaliza coordenadas que pueden llegar como `numeric` o como `String`.
+  double? _toDoubleOrNull(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 
   /// Sube la imagen al bucket de productos y registra su metadata relacional.

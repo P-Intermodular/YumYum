@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/constants/rutas_app.dart';
 import '../../../../core/constants/supabase_names.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/usuario_model.dart';
@@ -23,7 +25,7 @@ class SupabaseAuthRepository implements AuthRepository {
 
     final usuario = response.user;
     if (usuario == null) {
-      throw const AppException('No se pudo iniciar sesion.');
+      throw const AppException('No se pudo iniciar sesión.');
     }
 
     return _perfilParaUsuario(usuario.id, correoRespaldo: usuario.email);
@@ -140,5 +142,46 @@ class SupabaseAuthRepository implements AuthRepository {
       correo: correoRespaldo ?? '',
       urlImagenPerfil: '',
     );
+  }
+
+  @override
+
+  /// Delega la recuperación de contraseña en Supabase Auth.
+  Future<void> enviarEmailRecuperacion(String correo) async {
+    await _client.auth.resetPasswordForEmail(
+      correo.trim(),
+      redirectTo: _resolverRedirectRecuperacion(),
+    );
+  }
+
+  @override
+
+  /// Actualiza la contraseña dentro de una sesión de recuperación válida.
+  Future<void> restablecerPassword(String nuevaPassword) async {
+    try {
+      await _client.auth.updateUser(
+        UserAttributes(password: nuevaPassword),
+      );
+    } on AuthSessionMissingException {
+      throw const AppException(
+        'El enlace de recuperación ya no es válido. Solicita uno nuevo.',
+      );
+    } on AuthException catch (error) {
+      throw AppException(error.message);
+    }
+  }
+
+  /// Construye el destino de vuelta para el enlace de recuperación.
+  String _resolverRedirectRecuperacion() {
+    if (kIsWeb) {
+      return Uri(
+        scheme: Uri.base.scheme,
+        host: Uri.base.host,
+        port: Uri.base.hasPort ? Uri.base.port : null,
+        path: RutasApp.restablecerPassword,
+      ).toString();
+    }
+
+    return 'yumyum://restablecer-password';
   }
 }

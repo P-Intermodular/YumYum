@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/rutas_app.dart';
 import '../../features/auth/controllers/auth_controller.dart';
+import '../../features/auth/providers/recuperacion_password_provider.dart';
 import '../../features/auth/screens/inicio_sesion_screen.dart';
 import '../../features/auth/screens/registro_screen.dart';
+import '../../features/auth/screens/recuperar_password_screen.dart';
+import '../../features/auth/screens/restablecer_password_screen.dart';
 import '../../features/inicio/screens/inicio_screen.dart';
 import '../../features/principal/screens/principal_screen.dart';
 import '../../features/mapa/screens/mapa_screen.dart';
@@ -24,6 +27,7 @@ import '../../features/valoraciones/screens/valorar_transaccion_screen.dart';
 /// entre las rutas públicas y privadas.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final autenticacion = ref.watch(autenticacionProvider);
+  final recuperacionActiva = ref.watch(recuperacionPasswordActivaProvider);
 
   return GoRouter(
     initialLocation: RutasApp.iniciarSesion,
@@ -33,6 +37,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final path = state.uri.path;
       final autenticado = autenticacion.valueOrNull != null;
       final rutaPublica = RutasApp.esRutaPublica(path);
+      final esRutaRestablecer = path == RutasApp.restablecerPassword;
+
+      if (esRutaRestablecer) {
+        return null;
+      }
 
       // Protege todas las rutas internas mientras la sesión sea anónima.
       if (!autenticado && !rutaPublica) {
@@ -40,7 +49,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // Evita que un usuario autenticado vuelva a login o registro.
-      if (autenticado && rutaPublica) {
+      if (autenticado && rutaPublica && !recuperacionActiva) {
         return RutasApp.inicio;
       }
 
@@ -58,6 +67,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RutasApp.registro,
         builder: (context, state) => const RegistroScreen(),
+      ),
+      GoRoute(
+        path: RutasApp.recuperarPassword,
+        builder: (context, state) => const RecuperarPasswordScreen(),
+      ),
+      GoRoute(
+        path: RutasApp.restablecerPassword,
+        builder: (context, state) => const RestablecerPasswordScreen(),
       ),
       GoRoute(
         path: RutasApp.aliasSignup,

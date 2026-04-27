@@ -104,7 +104,7 @@ class DetalleProductoScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'Descripcion',
+                        'Descripción',
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold),
                       ),
@@ -151,7 +151,7 @@ class DetalleProductoScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, ProductoModel producto) async {
     final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) {
-      mostrarError(context, Exception('Debes iniciar sesion'));
+      mostrarError(context, Exception('Debes iniciar sesión'));
       return;
     }
 
@@ -183,7 +183,7 @@ class DetalleProductoScreen extends ConsumerWidget {
         final selected = await showDialog<ProductoModel>(
           context: context,
           builder: (context) => SimpleDialog(
-            title: const Text('Elige que plato ofreces'),
+            title: const Text('Elige qué plato ofreces'),
             children: [
               for (final candidate in candidates)
                 SimpleDialogOption(

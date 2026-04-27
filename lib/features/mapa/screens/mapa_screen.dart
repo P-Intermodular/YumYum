@@ -267,7 +267,7 @@ class _OverlaySinUbicacion extends StatelessWidget {
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
-                'Activa tu ubicacion para centrar el mapa en ti.',
+                'Activa tu ubicación para centrar el mapa en ti.',
                 style: TextStyle(fontSize: 13),
               ),
             ),

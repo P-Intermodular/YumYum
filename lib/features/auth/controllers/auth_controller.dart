@@ -89,4 +89,16 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
       rethrow;
     }
   }
+
+  /// Guarda la nueva contraseña y cierra la sesión temporal de recovery.
+  Future<void> restablecerPassword(String nuevaPassword) async {
+    try {
+      await _repository.restablecerPassword(nuevaPassword);
+      await _repository.cerrarSesion();
+      state = const AsyncValue.data(null);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      rethrow;
+    }
+  }
 }

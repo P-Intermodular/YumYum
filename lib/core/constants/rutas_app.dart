@@ -11,6 +11,8 @@ abstract final class RutasApp {
   static const pedidos = '/pedidos';
   static const perfil = '/perfil';
   static const perfilUbicacion = '/perfil/ubicacion';
+  static const recuperarPassword = '/recuperar-password';
+  static const restablecerPassword = '/restablecer-password';
   static const chats = '/chats';
 
   static const aliasLogin = '/login';
@@ -45,6 +47,8 @@ abstract final class RutasApp {
   static bool esRutaPublica(String path) {
     return path == iniciarSesion ||
         path == registro ||
+        path == recuperarPassword ||
+        path == restablecerPassword ||
         path == aliasLogin ||
         path == aliasSignup;
   }

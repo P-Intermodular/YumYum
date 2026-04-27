@@ -39,6 +39,7 @@ class _EditarUbicacionPerfilScreenState
   }
 
   Future<void> _usarUbicacionActual() async {
+    ref.invalidate(ubicacionActualProvider);
     final ubicacionActual = await ref.read(ubicacionActualProvider.future);
     if (!mounted) return;
 
@@ -47,7 +48,7 @@ class _EditarUbicacionPerfilScreenState
       setState(() => _ubicacionElegida = punto);
       _mapController.move(punto, _zoomMapa);
     } else {
-      mostrarError(context, Exception('No se pudo obtener la ubicacion actual.'));
+      mostrarError(context, Exception('No se pudo obtener la ubicación actual.'));
     }
   }
 
@@ -70,7 +71,7 @@ class _EditarUbicacionPerfilScreenState
 
       if (!mounted) return;
       context.pop();
-      mostrarExito(context, 'Ubicacion actualizada correctamente');
+      mostrarExito(context, 'Ubicación actualizada correctamente');
     } catch (error) {
       if (mounted) {
         mostrarError(context, error);
@@ -89,29 +90,30 @@ class _EditarUbicacionPerfilScreenState
         !gpsResolviendo && ubicacionActualAsync.valueOrNull == null;
 
     if (!_inicializado && usuario != null) {
-      _inicializado = true;
-      _ubicacionElegida = usuario.ubicacionPredeterminada;
-      if (_ubicacionElegida != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _mapController.move(_ubicacionElegida!, _zoomMapa);
-        });
-      } else {
-        final gps = ubicacionActualAsync.valueOrNull;
-        if (gps != null) {
+      final ubicacionPerfil = usuario.ubicacionPredeterminada;
+      final gps = ubicacionActualAsync.valueOrNull;
+      final puedeInicializar =
+          ubicacionPerfil != null || !ubicacionActualAsync.isLoading;
+
+      if (puedeInicializar) {
+        _inicializado = true;
+
+        final puntoInicial = ubicacionPerfil ??
+            (gps == null ? null : LatLng(gps.latitud, gps.longitud));
+
+        _ubicacionElegida = puntoInicial;
+
+        if (puntoInicial != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            _mapController.move(
-              LatLng(gps.latitud, gps.longitud),
-              _zoomMapa,
-            );
+            _mapController.move(puntoInicial, _zoomMapa);
           });
         }
       }
     }
 
     return Scaffold(
-      appBar: const YumYumAppBar(titulo: 'Editar ubicacion'),
+      appBar: const YumYumAppBar(titulo: 'Editar ubicación'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -124,9 +126,9 @@ class _EditarUbicacionPerfilScreenState
               gpsResolviendo: gpsResolviendo,
               gpsFallido: gpsFallido,
               onTap: _guardando ? null : _seleccionarUbicacion,
-              titulo: 'Ubicacion predeterminada',
-              subtitulo: 'Toca el mapa para establecer tu ubicacion habitual. '
-                  'Sera la predeterminada al publicar platos.',
+              titulo: 'Ubicación predeterminada',
+              subtitulo: 'Toca el mapa para establecer tu ubicación habitual. '
+                  'Será la predeterminada al publicar platos.',
             ),
             const SizedBox(height: 8),
             Align(
@@ -134,7 +136,7 @@ class _EditarUbicacionPerfilScreenState
               child: TextButton.icon(
                 onPressed: _guardando ? null : _usarUbicacionActual,
                 icon: const Icon(Icons.my_location, size: 18),
-                label: const Text('Usar mi ubicacion actual'),
+                label: const Text('Usar mi ubicación actual'),
               ),
             ),
             const SizedBox(height: 32),

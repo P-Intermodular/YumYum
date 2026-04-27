@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/estados_app.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../perfil/providers/perfil_providers.dart';
 import '../domain/entities/producto_model.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../providers/producto_providers.dart';
@@ -26,7 +27,7 @@ class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
   Future<void> publicar(DatosPublicacionProducto datos) async {
     final usuario = _ref.read(autenticacionProvider).value;
     if (usuario == null) {
-      throw const AppException('Debes iniciar sesion');
+      throw const AppException('Debes iniciar sesión');
     }
 
     state = const AsyncValue.loading();
@@ -56,6 +57,7 @@ class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
       // Tras publicar, el inicio y el mapa deben resolver de nuevo el catálogo.
       _ref.invalidate(productosProvider);
       _ref.invalidate(productosCercanosProvider);
+      _ref.invalidate(misProductosProvider);
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

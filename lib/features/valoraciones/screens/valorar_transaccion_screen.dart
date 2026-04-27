@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/feedback/app_feedback.dart';
@@ -55,7 +56,7 @@ class _ValorarTransaccionScreenState
           );
 
       if (mounted) {
-        mostrarExito(context, 'Valoracion enviada');
+        mostrarExito(context, 'Valoración enviada');
         context.go(RutasApp.pedidos);
       }
     } catch (error) {
@@ -80,7 +81,11 @@ class _ValorarTransaccionScreenState
       body: transaccionAsync.when(
         data: (transaccion) {
           if (transaccion == null || usuario == null) {
-            return const Center(child: Text('Transaccion no encontrada'));
+            return const Center(child: Text('Transacción no encontrada'));
+          }
+
+          if (transaccion.estado != EstadoTransaccion.completada) {
+            return _buildBloqueoValoracion();
           }
 
           final valoracionAsync = ref.watch(
@@ -108,6 +113,45 @@ class _ValorarTransaccionScreenState
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text(mensajeError(e))),
+      ),
+    );
+  }
+
+  Widget _buildBloqueoValoracion() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.lock_clock_outlined,
+              size: 48,
+              color: Color(0xFF1F4A5B),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Esta transacción todavía no se puede valorar.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F4A5B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Solo podrás enviar una valoración cuando figure como completada.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => context.go(RutasApp.pedidos),
+              child: const Text('Volver a pedidos'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -143,7 +187,7 @@ class _ValorarTransaccionScreenState
           ),
           const SizedBox(height: 32),
           const Text(
-            'Como fue tu experiencia?',
+            '¿Cómo fue tu experiencia?',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -195,7 +239,7 @@ class _ValorarTransaccionScreenState
                         strokeWidth: 2,
                       ),
                     )
-                  : const Text('Enviar valoracion'),
+                  : const Text('Enviar valoración'),
             ),
           ),
         ],
@@ -243,7 +287,7 @@ class _VistaValoracionExistente extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           const Text(
-            'Tu valoracion',
+            'Tu valoración',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -295,7 +339,7 @@ class _VistaValoracionExistente extends StatelessWidget {
                 Icon(Icons.check_circle, color: Colors.green.shade700, size: 18),
                 const SizedBox(width: 6),
                 Text(
-                  'Valoracion enviada',
+                  'Valoración enviada',
                   style: TextStyle(
                     color: Colors.green.shade800,
                     fontWeight: FontWeight.w600,

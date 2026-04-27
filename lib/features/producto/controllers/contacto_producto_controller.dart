@@ -26,7 +26,7 @@ class ContactoProductoController extends StateNotifier<AsyncValue<void>> {
   ) async {
     final usuario = _ref.read(autenticacionProvider).value;
     if (usuario == null) {
-      throw const AppException('Debes iniciar sesion');
+      throw const AppException('Debes iniciar sesión');
     }
 
     final productos = await _ref
@@ -50,7 +50,7 @@ class ContactoProductoController extends StateNotifier<AsyncValue<void>> {
   }) async {
     final usuario = _ref.read(autenticacionProvider).value;
     if (usuario == null) {
-      throw const AppException('Debes iniciar sesion');
+      throw const AppException('Debes iniciar sesión');
     }
 
     final tipoSolicitud = producto.tipo == TipoOferta.venta

@@ -39,7 +39,7 @@ class _DetalleTransaccionScreenState
           .completar(transaccionId);
 
       if (!mounted) return;
-      mostrarExito(context, 'Transaccion completada');
+      mostrarExito(context, 'Transacción completada');
       context.push(RutasApp.valorarTransaccion(transaccionId));
     } catch (error) {
       if (mounted) {
@@ -63,7 +63,7 @@ class _DetalleTransaccionScreenState
       body: transaccionAsync.when(
         data: (transaccion) {
           if (transaccion == null || usuario == null) {
-            return const Center(child: Text('Transaccion no encontrada'));
+            return const Center(child: Text('Transacción no encontrada'));
           }
           return _buildContenido(transaccion, usuario.id, cargando);
         },
@@ -203,7 +203,7 @@ class _DetalleTransaccionScreenState
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Ya has valorado esta transaccion',
+                      'Ya has valorado esta transacción',
                       style: TextStyle(
                         color: Colors.green.shade800,
                         fontWeight: FontWeight.w600,
@@ -224,7 +224,7 @@ class _DetalleTransaccionScreenState
     return ubicacionAsync.when(
       data: (latLng) => latLng == null
           ? Text(
-              'Lugar de recogida no disponible aun.',
+              'Lugar de recogida no disponible aún.',
               style: TextStyle(color: Colors.grey.shade700),
             )
           : _MiniMapaRecogida(punto: latLng),
@@ -233,7 +233,7 @@ class _DetalleTransaccionScreenState
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (_, __) => Text(
-        'Lugar de recogida no disponible aun.',
+        'Lugar de recogida no disponible aún.',
         style: TextStyle(color: Colors.grey.shade700),
       ),
     );

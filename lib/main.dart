@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/router/app_router.dart';
 import 'core/supabase/supabase_config.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/providers/recuperacion_password_provider.dart';
 
 /// Punto de entrada de YumYum.
 ///
@@ -39,6 +40,7 @@ class YumYumApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(recuperacionPasswordActivaProvider);
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(

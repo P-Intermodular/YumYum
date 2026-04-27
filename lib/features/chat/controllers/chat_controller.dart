@@ -24,7 +24,7 @@ class ChatController extends StateNotifier<AsyncValue<void>> {
 
     final usuario = _ref.read(autenticacionProvider).value;
     if (usuario == null) {
-      throw const AppException('Debes iniciar sesion');
+      throw const AppException('Debes iniciar sesión');
     }
 
     state = const AsyncValue.loading();

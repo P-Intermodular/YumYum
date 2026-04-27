@@ -22,7 +22,7 @@ class ListaChatsScreen extends ConsumerWidget {
       body: chatsAsync.when(
         data: (chats) {
           if (chats.isEmpty) {
-            return const Center(child: Text('No tienes mensajes todavia.'));
+            return const Center(child: Text('No tienes mensajes todavía.'));
           }
           return ListView.separated(
             itemCount: chats.length,

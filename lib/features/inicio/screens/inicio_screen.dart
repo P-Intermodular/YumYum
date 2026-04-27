@@ -103,8 +103,8 @@ class _CabeceraProximidad extends ConsumerWidget {
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
-                'Mostrando todas las ofertas. Activa la ubicacion para ver '
-                'las mas cercanas.',
+                'Mostrando todas las ofertas. Activa la ubicación para ver '
+                'las más cercanas.',
                 style: TextStyle(fontSize: 13),
               ),
             ),

@@ -25,7 +25,7 @@ class PedidosScreen extends ConsumerWidget {
         data: (data) {
           if (data.isEmpty) {
             return const Center(
-              child: Text('Todavia no tienes pedidos ni intercambios.'),
+              child: Text('Todavía no tienes pedidos ni intercambios.'),
             );
           }
 

@@ -80,7 +80,7 @@ class _PublicarProductoScreenState
     if (ubicacion == null) {
       mostrarError(
         context,
-        Exception('Configura tu ubicacion en el perfil antes de publicar.'),
+        Exception('Configura tu ubicación en el perfil antes de publicar.'),
       );
       return;
     }
@@ -118,6 +118,7 @@ class _PublicarProductoScreenState
 
   /// Establece la ubicacion elegida a la ubicacion actual del GPS.
   Future<void> _usarUbicacionActual() async {
+    ref.invalidate(ubicacionActualProvider);
     final ubicacionActual = await ref.read(ubicacionActualProvider.future);
     if (!mounted) return;
 
@@ -128,7 +129,7 @@ class _PublicarProductoScreenState
     } else {
       mostrarError(
         context,
-        Exception('No se pudo obtener la ubicacion actual.'),
+        Exception('No se pudo obtener la ubicación actual.'),
       );
     }
   }
@@ -188,7 +189,7 @@ class _PublicarProductoScreenState
                               Icon(Icons.add_a_photo,
                                   size: 48, color: Colors.grey),
                               SizedBox(height: 8),
-                              Text('Toca para anadir foto',
+                              Text('Toca para añadir foto',
                                   style: TextStyle(color: Colors.grey)),
                             ],
                           ),
@@ -200,14 +201,14 @@ class _PublicarProductoScreenState
               TextFormField(
                 controller: _tituloController,
                 decoration:
-                    const InputDecoration(labelText: 'Titulo de la oferta'),
+                    const InputDecoration(labelText: 'Título de la oferta'),
                 validator: (val) =>
                     val == null || val.trim().isEmpty ? 'Requerido' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descripcionController,
-                decoration: const InputDecoration(labelText: 'Descripcion'),
+                decoration: const InputDecoration(labelText: 'Descripción'),
                 maxLines: 4,
                 validator: (val) =>
                     val == null || val.trim().isEmpty ? 'Requerido' : null,
@@ -235,7 +236,7 @@ class _PublicarProductoScreenState
                     if (_tipo != TipoOferta.venta) return null;
                     final parsed =
                         double.tryParse((val ?? '').replaceAll(',', '.'));
-                    return parsed == null ? 'Introduce un precio valido' : null;
+                    return parsed == null ? 'Introduce un precio válido' : null;
                   },
                 ),
               ],
@@ -254,7 +255,7 @@ class _PublicarProductoScreenState
                           color: Colors.orange.shade800, size: 32),
                       const SizedBox(height: 8),
                       Text(
-                        'Configura tu ubicacion predeterminada en el perfil antes de publicar.',
+                        'Configura tu ubicación predeterminada en el perfil antes de publicar.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.orange.shade900),
                       ),
@@ -280,7 +281,7 @@ class _PublicarProductoScreenState
                   gpsFallido: false,
                   onTap: cargando ? null : _seleccionarUbicacion,
                   titulo: 'Punto exacto de recogida',
-                  subtitulo: 'Usando tu ubicacion predeterminada. '
+                  subtitulo: 'Usando tu ubicación predeterminada. '
                       'Toca el mapa para ajustarla solo para este plato.',
                 ),
                 const SizedBox(height: 8),
@@ -290,7 +291,7 @@ class _PublicarProductoScreenState
                     TextButton.icon(
                       onPressed: cargando ? null : _usarUbicacionActual,
                       icon: const Icon(Icons.my_location, size: 18),
-                      label: const Text('Usar mi ubicacion actual'),
+                      label: const Text('Usar mi ubicación actual'),
                     ),
                     if (ubicacionDifiereDePerfil)
                       TextButton.icon(

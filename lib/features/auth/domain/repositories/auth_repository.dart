@@ -26,4 +26,10 @@ abstract class AuthRepository {
 
   /// Actualiza solo la ubicacion predeterminada del perfil.
   Future<UsuarioModel> actualizarUbicacionPredeterminada(UsuarioModel usuario);
+
+  /// Envía un correo de recuperación de contraseña al email indicado.
+  Future<void> enviarEmailRecuperacion(String correo);
+
+  /// Actualiza la contraseña del usuario autenticado dentro del flujo recovery.
+  Future<void> restablecerPassword(String nuevaPassword);
 }
