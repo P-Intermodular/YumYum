@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/constants/estados_app.dart';
 import '../../../core/providers_refresher.dart';
@@ -9,16 +8,14 @@ import '../providers/valoracion_repository_provider.dart';
 
 /// Gestiona el envío de valoraciones sobre transacciones completadas.
 final valoracionControllerProvider =
-    StateNotifierProvider.autoDispose<ValoracionController, AsyncValue<void>>(
-        (ref) {
-  return ValoracionController(ref);
-});
+    NotifierProvider.autoDispose<ValoracionController, AsyncValue<void>>(
+  ValoracionController.new,
+);
 
 /// Orquesta la creación de valoraciones y la invalidación de providers.
-class ValoracionController extends StateNotifier<AsyncValue<void>> {
-  final Ref _ref;
-
-  ValoracionController(this._ref) : super(const AsyncValue.data(null));
+class ValoracionController extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
 
   /// Envía la valoración calculando automáticamente el producto valorado.
   Future<void> enviarValoracion({
@@ -28,12 +25,12 @@ class ValoracionController extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      final usuario = _ref.read(autenticacionProvider).value!;
+      final usuario = ref.read(autenticacionProvider).value!;
       final valoradoId = transaccion.contraparte(usuario.id);
       final productoValoradoId =
           _resolverProductoValorado(transaccion, usuario.id);
 
-      await _ref.read(valoracionRepositoryProvider).crearValoracion(
+      await ref.read(valoracionRepositoryProvider).crearValoracion(
             transaccionId: transaccion.id,
             valoradorId: usuario.id,
             valoradoId: valoradoId,
@@ -42,13 +39,13 @@ class ValoracionController extends StateNotifier<AsyncValue<void>> {
             comentario: comentario?.trim().isEmpty == true ? null : comentario,
           );
 
-      _ref.refrescarPedidos();
-      _ref.refrescarTransaccionDetalle(transaccion.id);
-      _ref.refrescarValoracionUsuario(
+      ref.refrescarPedidos();
+      ref.refrescarTransaccionDetalle(transaccion.id);
+      ref.refrescarValoracionUsuario(
         transaccionId: transaccion.id,
         usuarioId: usuario.id,
       );
-      _ref.refrescarValoracionesRecibidas(valoradoId);
+      ref.refrescarValoracionesRecibidas(valoradoId);
 
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {

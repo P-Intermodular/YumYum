@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/estados_app.dart';
@@ -13,19 +12,18 @@ import '../providers/producto_repository_provider.dart';
 import 'datos_publicacion_producto.dart';
 
 /// Gestiona la publicación de productos desde la UI.
-final publicarProductoControllerProvider = StateNotifierProvider.autoDispose<
-    PublicarProductoController, AsyncValue<void>>((ref) {
-  return PublicarProductoController(ref);
-});
+final publicarProductoControllerProvider =
+    NotifierProvider.autoDispose<PublicarProductoController, AsyncValue<void>>(
+  PublicarProductoController.new,
+);
 
 /// Construye el producto de dominio y delega su persistencia en el repositorio.
-class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
-  final Ref _ref;
-
-  PublicarProductoController(this._ref) : super(const AsyncValue.data(null));
+class PublicarProductoController extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
 
   Future<void> publicar(DatosPublicacionProducto datos) async {
-    final usuario = _ref.read(autenticacionProvider).value;
+    final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) {
       throw const AppException('Debes iniciar sesión');
     }
@@ -47,7 +45,7 @@ class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
         ubicacionPublica: ubicacionPublica,
       );
 
-      await _ref.read(productoRepositoryProvider).crearProducto(
+      await ref.read(productoRepositoryProvider).crearProducto(
             nuevoProducto,
             ubicacionExacta: datos.ubicacionExacta,
             bytesImagen: datos.bytesImagen,
@@ -55,7 +53,7 @@ class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
           );
 
       // Tras publicar, el inicio, mapa y perfil deben resolver de nuevo datos.
-      _ref.refrescarCatalogo();
+      ref.refrescarCatalogo();
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

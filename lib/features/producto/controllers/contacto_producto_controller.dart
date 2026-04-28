@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/constants/estados_app.dart';
 import '../../../core/errors/app_exception.dart';
@@ -10,26 +9,25 @@ import '../../solicitudes/providers/solicitud_oferta_repository_provider.dart';
 import '../providers/producto_repository_provider.dart';
 
 /// Gestiona el flujo de contacto y creación de solicitudes desde detalle.
-final contactoProductoControllerProvider = StateNotifierProvider.autoDispose<
-    ContactoProductoController, AsyncValue<void>>((ref) {
-  return ContactoProductoController(ref);
-});
+final contactoProductoControllerProvider =
+    NotifierProvider.autoDispose<ContactoProductoController, AsyncValue<void>>(
+  ContactoProductoController.new,
+);
 
 /// Orquesta la preparación de intercambios y solicitudes de oferta.
-class ContactoProductoController extends StateNotifier<AsyncValue<void>> {
-  final Ref _ref;
-
-  ContactoProductoController(this._ref) : super(const AsyncValue.data(null));
+class ContactoProductoController extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
 
   Future<List<ProductoModel>> obtenerProductosIntercambioDisponibles(
     ProductoModel producto,
   ) async {
-    final usuario = _ref.read(autenticacionProvider).value;
+    final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) {
       throw const AppException('Debes iniciar sesión');
     }
 
-    final productos = await _ref
+    final productos = await ref
         .read(productoRepositoryProvider)
         .obtenerMisProductosDisponibles(usuario.id);
 
@@ -48,7 +46,7 @@ class ContactoProductoController extends StateNotifier<AsyncValue<void>> {
     required ProductoModel producto,
     String? productoOfrecidoId,
   }) async {
-    final usuario = _ref.read(autenticacionProvider).value;
+    final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) {
       throw const AppException('Debes iniciar sesión');
     }
@@ -59,7 +57,7 @@ class ContactoProductoController extends StateNotifier<AsyncValue<void>> {
 
     state = const AsyncValue.loading();
     try {
-      final solicitud = await _ref
+      final solicitud = await ref
           .read(solicitudOfertaRepositoryProvider)
           .crearSolicitudOferta(
             productoId: producto.id,
@@ -69,8 +67,8 @@ class ContactoProductoController extends StateNotifier<AsyncValue<void>> {
           );
 
       // La creación de una solicitud impacta al panel y a las conversaciones.
-      _ref.refrescarPedidos();
-      _ref.refrescarChats();
+      ref.refrescarPedidos();
+      ref.refrescarChats();
       state = const AsyncValue.data(null);
       return solicitud.conversacionId;
     } catch (error, stackTrace) {
