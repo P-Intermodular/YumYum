@@ -46,7 +46,7 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
     final theme = Theme.of(context);
 
     ref.listen(autenticacionProvider, (previous, next) {
-      if (!next.enRecuperacion && next.usuario.valueOrNull != null) {
+      if (!next.enRecuperacion && next.usuario.value != null) {
         context.go(RutasApp.inicio);
       } else if (next.usuario.hasError) {
         mostrarError(context, next.usuario.error!);

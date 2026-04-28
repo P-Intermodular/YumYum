@@ -88,7 +88,7 @@ class _DetalleTransaccionScreenState
     final valoracionAsync = ref.watch(
       valoracionUsuarioProvider((transaccion.id, usuarioId)),
     );
-    final yaValoro = valoracionAsync.valueOrNull != null;
+    final yaValoro = valoracionAsync.value != null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -100,8 +100,7 @@ class _DetalleTransaccionScreenState
               children: [
                 AvatarUsuario(
                   nombre: transaccion.nombreContraparte,
-                  identificadorColor:
-                      transaccion.contraparte(usuarioId),
+                  identificadorColor: transaccion.contraparte(usuarioId),
                   urlImagen: transaccion.urlAvatarContraparte,
                   radius: 36,
                 ),
@@ -136,8 +135,7 @@ class _DetalleTransaccionScreenState
           if (transaccion.completadoEn != null)
             _buildFilaInfo(
               'Completado',
-              DateFormat('dd/MM/yyyy HH:mm')
-                  .format(transaccion.completadoEn!),
+              DateFormat('dd/MM/yyyy HH:mm').format(transaccion.completadoEn!),
             ),
           const SizedBox(height: 24),
           if (mostrarMapa) ...[
@@ -157,9 +155,7 @@ class _DetalleTransaccionScreenState
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: cargando
-                    ? null
-                    : () => _completar(transaccion.id),
+                onPressed: cargando ? null : () => _completar(transaccion.id),
                 child: cargando
                     ? const SizedBox(
                         width: 20,
@@ -309,8 +305,7 @@ class _MiniMapaRecogida extends StatelessWidget {
           ),
           children: [
             TileLayer(
-              urlTemplate:
-                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.yumyum.app',
             ),
             MarkerLayer(

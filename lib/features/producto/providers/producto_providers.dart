@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/location/ubicacion_actual_provider.dart';
 import '../domain/entities/producto_model.dart';
@@ -21,7 +22,7 @@ final radioBusquedaProvider = StateProvider<double>((ref) => 10);
 /// general para no bloquear el feed ni el mapa.
 final productosCercanosProvider = FutureProvider<List<ProductoModel>>(
   (ref) async {
-    final ubicacion = ref.watch(ubicacionActualProvider).valueOrNull;
+    final ubicacion = ref.watch(ubicacionActualProvider).value;
     final repositorio = ref.watch(productoRepositoryProvider);
 
     if (ubicacion == null) {

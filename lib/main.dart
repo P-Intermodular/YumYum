@@ -30,8 +30,9 @@ Future<void> main() async {
   );
 
   runApp(
-    const ProviderScope(
-      child: YumYumApp(),
+    ProviderScope(
+      retry: (retryCount, error) => null,
+      child: const YumYumApp(),
     ),
   );
 }

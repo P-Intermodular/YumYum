@@ -41,10 +41,10 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
     _suscripcionUbicacion = ref.listenManual<AsyncValue<UbicacionActual?>>(
       ubicacionActualProvider,
       (anterior, actual) {
-        final ubicacion = actual.valueOrNull;
+        final ubicacion = actual.value;
         if (ubicacion == null) return;
 
-        final previa = anterior?.valueOrNull;
+        final previa = anterior?.value;
         final cambio = previa == null ||
             previa.latitud != ubicacion.latitud ||
             previa.longitud != ubicacion.longitud;
@@ -70,7 +70,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
   Widget build(BuildContext context) {
     final productosAsync = ref.watch(productosCercanosProvider);
     final ubicacionAsync = ref.watch(ubicacionActualProvider);
-    final ubicacionUsuario = ubicacionAsync.valueOrNull;
+    final ubicacionUsuario = ubicacionAsync.value;
     final radioKm = ref.watch(radioBusquedaProvider);
 
     final centroInicial = ubicacionUsuario == null

@@ -88,12 +88,11 @@ class _EditarUbicacionPerfilScreenState
     final usuario = ref.watch(autenticacionProvider).value;
     final ubicacionActualAsync = ref.watch(ubicacionActualProvider);
     final gpsResolviendo = ubicacionActualAsync.isLoading;
-    final gpsFallido =
-        !gpsResolviendo && ubicacionActualAsync.valueOrNull == null;
+    final gpsFallido = !gpsResolviendo && ubicacionActualAsync.value == null;
 
     if (!_inicializado && usuario != null) {
       final ubicacionPerfil = usuario.ubicacionPredeterminada;
-      final gps = ubicacionActualAsync.valueOrNull;
+      final gps = ubicacionActualAsync.value;
       final puedeInicializar =
           ubicacionPerfil != null || !ubicacionActualAsync.isLoading;
 
@@ -124,7 +123,7 @@ class _EditarUbicacionPerfilScreenState
             SelectorUbicacionMapa(
               mapController: _mapController,
               ubicacionElegida: _ubicacionElegida,
-              ubicacionUsuario: ubicacionActualAsync.valueOrNull,
+              ubicacionUsuario: ubicacionActualAsync.value,
               gpsResolviendo: gpsResolviendo,
               gpsFallido: gpsFallido,
               onTap: _guardando ? null : _seleccionarUbicacion,

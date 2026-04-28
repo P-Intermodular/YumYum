@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/providers_refresher.dart';
 import '../providers/transaccion_providers.dart';
@@ -22,7 +23,7 @@ class TransaccionController extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       final transaccion =
-          _ref.read(transaccionDetalleProvider(transaccionId)).valueOrNull;
+          _ref.read(transaccionDetalleProvider(transaccionId)).value;
 
       await _ref
           .read(transaccionRepositoryProvider)

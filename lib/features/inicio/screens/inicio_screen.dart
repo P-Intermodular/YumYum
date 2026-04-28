@@ -58,7 +58,7 @@ class _CabeceraProximidad extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tieneUbicacion = ubicacionAsync.valueOrNull != null;
+    final tieneUbicacion = ubicacionAsync.value != null;
     final radioActual = ref.watch(radioBusquedaProvider);
 
     if (ubicacionAsync.isLoading) {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_client_provider.dart';
@@ -54,7 +55,7 @@ class EstadoAutenticacion {
   bool get hasError => usuario.hasError;
   Object? get error => usuario.error;
   UsuarioModel? get value => usuario.value;
-  UsuarioModel? get valueOrNull => usuario.valueOrNull;
+  UsuarioModel? get valueOrNull => usuario.value;
 }
 
 /// Orquesta los flujos de autenticación desde la capa application.
