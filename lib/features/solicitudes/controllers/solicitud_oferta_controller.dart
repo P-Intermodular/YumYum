@@ -1,25 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/providers_refresher.dart';
 import '../providers/solicitud_oferta_repository_provider.dart';
 
 /// Gestiona las decisiones del usuario sobre solicitudes recibidas.
-final solicitudOfertaControllerProvider = StateNotifierProvider.autoDispose<
-    SolicitudOfertaController, AsyncValue<void>>((ref) {
-  return SolicitudOfertaController(ref);
-});
+final solicitudOfertaControllerProvider =
+    NotifierProvider.autoDispose<SolicitudOfertaController, AsyncValue<void>>(
+  SolicitudOfertaController.new,
+);
 
 /// Orquesta la aceptación y denegación de solicitudes desde pedidos.
-class SolicitudOfertaController extends StateNotifier<AsyncValue<void>> {
-  final Ref _ref;
-
-  SolicitudOfertaController(this._ref) : super(const AsyncValue.data(null));
+class SolicitudOfertaController extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
 
   Future<void> aceptar(String solicitudId) async {
     state = const AsyncValue.loading();
     try {
-      await _ref
+      await ref
           .read(solicitudOfertaRepositoryProvider)
           .aceptarSolicitudOferta(solicitudId);
       _refrescarDatos();
@@ -34,7 +32,7 @@ class SolicitudOfertaController extends StateNotifier<AsyncValue<void>> {
   Future<void> denegar(String solicitudId) async {
     state = const AsyncValue.loading();
     try {
-      await _ref
+      await ref
           .read(solicitudOfertaRepositoryProvider)
           .denegarSolicitudOferta(solicitudId);
       _refrescarDatos();
@@ -47,8 +45,8 @@ class SolicitudOfertaController extends StateNotifier<AsyncValue<void>> {
 
   /// Invalida las consultas que reflejan solicitudes, catálogo y conversaciones.
   void _refrescarDatos() {
-    _ref.refrescarPedidos();
-    _ref.refrescarCatalogo();
-    _ref.refrescarChats();
+    ref.refrescarPedidos();
+    ref.refrescarCatalogo();
+    ref.refrescarChats();
   }
 }

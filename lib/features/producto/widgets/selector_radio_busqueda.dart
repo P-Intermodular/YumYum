@@ -27,7 +27,7 @@ class SelectorRadioBusqueda extends ConsumerWidget {
                 selected: radio == radioActual,
                 onSelected: (seleccionado) {
                   if (!seleccionado) return;
-                  ref.read(radioBusquedaProvider.notifier).state = radio;
+                  ref.read(radioBusquedaProvider.notifier).seleccionar(radio);
                 },
               ),
             ),

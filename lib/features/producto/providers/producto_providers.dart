@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/location/ubicacion_actual_provider.dart';
 import '../domain/entities/producto_model.dart';
@@ -14,7 +13,19 @@ final productosProvider = FutureProvider<List<ProductoModel>>((ref) async {
 const radiosDisponiblesKm = <double>[1, 3, 5, 10, 25, 50];
 
 /// Radio activo para el filtrado por proximidad durante la sesion.
-final radioBusquedaProvider = StateProvider<double>((ref) => 10);
+final radioBusquedaProvider = NotifierProvider<RadioBusquedaController, double>(
+  RadioBusquedaController.new,
+);
+
+/// Gestiona el radio activo para busquedas por proximidad.
+class RadioBusquedaController extends Notifier<double> {
+  @override
+  double build() => 10;
+
+  void seleccionar(double radio) {
+    state = radio;
+  }
+}
 
 /// Lista reactiva de productos cercanos a la ubicacion actual.
 ///
