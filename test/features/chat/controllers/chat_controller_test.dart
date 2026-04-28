@@ -1,21 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:yumyum/core/errors/app_exception.dart';
+import 'package:yumyum/core/supabase/supabase_client_provider.dart';
 import 'package:yumyum/features/auth/controllers/auth_controller.dart';
 import 'package:yumyum/features/auth/domain/entities/usuario_model.dart';
-import 'package:yumyum/features/auth/domain/repositories/auth_repository.dart';
+import 'package:yumyum/features/auth/providers/auth_repository_provider.dart';
 import 'package:yumyum/features/chat/controllers/chat_controller.dart';
 import 'package:yumyum/features/chat/domain/entities/conversacion_model.dart';
 import 'package:yumyum/features/chat/domain/repositories/chat_repository.dart';
 import 'package:yumyum/features/chat/providers/chat_repository_provider.dart';
+
+import '../../../helpers/auth_test_utils.dart';
 
 void main() {
   group('ChatController', () {
     test('ignora mensajes vacios', () async {
       final chatRepository = _ChatRepositoryFake();
       final container = _crearContainer(
-        usuario: _usuario(),
+        usuario: usuarioTest(),
         chatRepository: chatRepository,
       );
       addTearDown(container.dispose);
@@ -52,7 +54,7 @@ void main() {
     test('envia mensaje con el usuario actual', () async {
       final chatRepository = _ChatRepositoryFake();
       final container = _crearContainer(
-        usuario: _usuario(),
+        usuario: usuarioTest(),
         chatRepository: chatRepository,
       );
       addTearDown(container.dispose);
@@ -81,23 +83,12 @@ ProviderContainer _crearContainer({
 }) {
   return ProviderContainer(
     overrides: [
-      autenticacionProvider.overrideWith(
-        (ref) => AutenticacionNotifier(
-          _AuthRepositoryFake(usuarioActual: usuario),
-          SupabaseClient('https://example.supabase.co', 'anon-key'),
-        ),
+      autenticacionRepositoryProvider.overrideWithValue(
+        AuthRepositoryFake(usuarioActual: usuario),
       ),
+      supabaseClientProvider.overrideWithValue(supabaseTestClient()),
       chatRepositoryProvider.overrideWithValue(chatRepository),
     ],
-  );
-}
-
-UsuarioModel _usuario() {
-  return const UsuarioModel(
-    id: 'usuario-1',
-    nombre: 'Ana',
-    correo: 'ana@example.com',
-    urlImagenPerfil: '',
   );
 }
 
@@ -123,61 +114,5 @@ class _ChatRepositoryFake implements ChatRepository {
   Future<void> enviarMensaje(
       String conversacionId, MensajeModel mensaje) async {
     mensajesEnviados.add(_MensajeEnviado(conversacionId, mensaje));
-  }
-}
-
-class _AuthRepositoryFake implements AuthRepository {
-  final UsuarioModel? usuarioActual;
-
-  const _AuthRepositoryFake({required this.usuarioActual});
-
-  @override
-  Future<UsuarioModel> iniciarSesion(String correo, String password) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<UsuarioModel> registrarUsuario(
-    String nombre,
-    String correo,
-    String password,
-  ) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> cerrarSesion() async {}
-
-  @override
-  Future<UsuarioModel?> obtenerUsuarioActual() async => usuarioActual;
-
-  @override
-  Future<UsuarioModel> actualizarPerfil(UsuarioModel usuario) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<UsuarioModel> actualizarUbicacionPredeterminada(UsuarioModel usuario) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> enviarEmailRecuperacion(String correo) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> verificarRecuperacionPassword(String tokenHash) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> verificarCodigoRecuperacionPassword(String codigo) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> restablecerPassword(String nuevaPassword) {
-    throw UnimplementedError();
   }
 }

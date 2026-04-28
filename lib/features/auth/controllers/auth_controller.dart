@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_client_provider.dart';
@@ -14,13 +13,8 @@ import '../providers/auth_repository_provider.dart';
 /// Arranca resolviendo la sesión actual y expone operaciones de entrada,
 /// registro y cierre de sesión para el resto de la UI.
 final autenticacionProvider =
-    StateNotifierProvider<AutenticacionNotifier, EstadoAutenticacion>(
-  (ref) {
-    return AutenticacionNotifier(
-      ref.watch(autenticacionRepositoryProvider),
-      ref.watch(supabaseClientProvider),
-    );
-  },
+    NotifierProvider<AutenticacionNotifier, EstadoAutenticacion>(
+  AutenticacionNotifier.new,
 );
 
 /// Estado completo de autenticación.
@@ -59,22 +53,26 @@ class EstadoAutenticacion {
 }
 
 /// Orquesta los flujos de autenticación desde la capa application.
-class AutenticacionNotifier extends StateNotifier<EstadoAutenticacion> {
-  final AuthRepository _repository;
-  final SupabaseClient _client;
-  late final StreamSubscription<AuthState> _suscripcion;
+class AutenticacionNotifier extends Notifier<EstadoAutenticacion> {
+  late AuthRepository _repository;
+  late SupabaseClient _client;
+  StreamSubscription<AuthState>? _suscripcion;
 
-  AutenticacionNotifier(this._repository, this._client)
-      : super(const EstadoAutenticacion.inicial()) {
+  @override
+  EstadoAutenticacion build() {
+    _repository = ref.watch(autenticacionRepositoryProvider);
+    _client = ref.watch(supabaseClientProvider);
+
+    _suscripcion?.cancel();
     _suscripcion = _client.auth.onAuthStateChange.listen(
       _manejarCambioAutenticacion,
     );
-    _init();
-  }
+    ref.onDispose(() => _suscripcion?.cancel());
 
-  /// Carga la sesión persistida al iniciar la app.
-  Future<void> _init() async {
-    await _sincronizarUsuarioActual();
+    // La lectura inicial se resuelve en segundo plano para que el estado
+    // conserve el loading inicial hasta que el repositorio responda.
+    unawaited(_sincronizarUsuarioActual());
+    return const EstadoAutenticacion.inicial();
   }
 
   /// Reacciona a los cambios de sesión publicados por Supabase Auth.
@@ -210,11 +208,5 @@ class AutenticacionNotifier extends StateNotifier<EstadoAutenticacion> {
     await _repository.restablecerPassword(nuevaPassword);
     state = state.copyWith(enRecuperacion: false);
     await _repository.cerrarSesion();
-  }
-
-  @override
-  void dispose() {
-    _suscripcion.cancel();
-    super.dispose();
   }
 }

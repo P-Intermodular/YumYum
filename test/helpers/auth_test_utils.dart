@@ -1,5 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:yumyum/features/auth/controllers/auth_controller.dart';
 import 'package:yumyum/features/auth/domain/entities/usuario_model.dart';
 import 'package:yumyum/features/auth/domain/repositories/auth_repository.dart';
 
@@ -12,13 +11,8 @@ UsuarioModel usuarioTest({String id = 'usuario-1'}) {
   );
 }
 
-AutenticacionNotifier crearAutenticacionNotifier({
-  required UsuarioModel? usuario,
-}) {
-  return AutenticacionNotifier(
-    AuthRepositoryFake(usuarioActual: usuario),
-    SupabaseClient('https://example.supabase.co', 'anon-key'),
-  );
+SupabaseClient supabaseTestClient() {
+  return SupabaseClient('https://example.supabase.co', 'anon-key');
 }
 
 class AuthRepositoryFake implements AuthRepository {

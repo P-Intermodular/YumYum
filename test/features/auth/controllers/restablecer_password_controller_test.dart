@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:yumyum/core/supabase/supabase_client_provider.dart';
 import 'package:yumyum/features/auth/controllers/auth_controller.dart';
 import 'package:yumyum/features/auth/controllers/restablecer_password_controller.dart';
 import 'package:yumyum/features/auth/domain/entities/usuario_model.dart';
 import 'package:yumyum/features/auth/domain/repositories/auth_repository.dart';
 import 'package:yumyum/features/auth/providers/auth_repository_provider.dart';
+
+import '../../../helpers/auth_test_utils.dart';
 
 void main() {
   group('crearEstadoInicialRestablecerPassword', () {
@@ -66,18 +68,18 @@ void main() {
       final repository = _AuthRepositoryFake();
       repository.restablecerPasswordCompleter = Completer<void>();
 
-      final autenticacion = AutenticacionNotifier(
-        repository,
-        SupabaseClient('https://example.supabase.co', 'anon-key'),
-      )..activarRecuperacionPassword();
-
       final container = ProviderContainer(
         overrides: [
-          autenticacionProvider.overrideWith((ref) => autenticacion),
           autenticacionRepositoryProvider.overrideWithValue(repository),
+          supabaseClientProvider.overrideWithValue(supabaseTestClient()),
         ],
       );
       addTearDown(container.dispose);
+      container.read(autenticacionProvider);
+      await container.pump();
+      container
+          .read(autenticacionProvider.notifier)
+          .activarRecuperacionPassword();
 
       const parametros = ParametrosRestablecerPassword(
         tokenHash: null,

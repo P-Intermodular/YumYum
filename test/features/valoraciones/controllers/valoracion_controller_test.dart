@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yumyum/core/constants/estados_app.dart';
+import 'package:yumyum/core/supabase/supabase_client_provider.dart';
 import 'package:yumyum/features/auth/controllers/auth_controller.dart';
+import 'package:yumyum/features/auth/providers/auth_repository_provider.dart';
 import 'package:yumyum/features/pedidos/domain/entities/transaccion_model.dart';
 import 'package:yumyum/features/valoraciones/controllers/valoracion_controller.dart';
 import 'package:yumyum/features/valoraciones/domain/entities/valoracion_model.dart';
@@ -16,9 +18,10 @@ void main() {
       final repository = _ValoracionRepositoryFake();
       final container = ProviderContainer(
         overrides: [
-          autenticacionProvider.overrideWith(
-            (ref) => crearAutenticacionNotifier(usuario: usuarioTest()),
+          autenticacionRepositoryProvider.overrideWithValue(
+            AuthRepositoryFake(usuarioActual: usuarioTest()),
           ),
+          supabaseClientProvider.overrideWithValue(supabaseTestClient()),
           valoracionRepositoryProvider.overrideWithValue(repository),
         ],
       );

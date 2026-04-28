@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:yumyum/core/constants/estados_app.dart';
+import 'package:yumyum/core/supabase/supabase_client_provider.dart';
 import 'package:yumyum/features/auth/controllers/auth_controller.dart';
+import 'package:yumyum/features/auth/providers/auth_repository_provider.dart';
 import 'package:yumyum/features/producto/controllers/contacto_producto_controller.dart';
 import 'package:yumyum/features/producto/domain/entities/producto_model.dart';
 import 'package:yumyum/features/producto/domain/repositories/producto_repository.dart';
@@ -77,9 +79,10 @@ ProviderContainer _crearContainer({
 }) {
   return ProviderContainer(
     overrides: [
-      autenticacionProvider.overrideWith(
-        (ref) => crearAutenticacionNotifier(usuario: usuarioTest()),
+      autenticacionRepositoryProvider.overrideWithValue(
+        AuthRepositoryFake(usuarioActual: usuarioTest()),
       ),
+      supabaseClientProvider.overrideWithValue(supabaseTestClient()),
       productoRepositoryProvider.overrideWithValue(productoRepository),
       solicitudOfertaRepositoryProvider.overrideWithValue(solicitudRepository),
     ],

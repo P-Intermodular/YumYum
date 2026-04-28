@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 import '../providers/auth_repository_provider.dart';
 import 'auth_controller.dart';
@@ -77,26 +76,22 @@ class EstadoRestablecerPassword {
 }
 
 /// Gestiona la validación y cierre del flujo recovery.
-final restablecerPasswordControllerProvider = StateNotifierProvider.autoDispose
+final restablecerPasswordControllerProvider = NotifierProvider.autoDispose
     .family<RestablecerPasswordController, EstadoRestablecerPassword,
-        ParametrosRestablecerPassword>((ref, parametros) {
-  final enRecuperacion = ref.read(autenticacionProvider).enRecuperacion;
-  return RestablecerPasswordController(ref, parametros, enRecuperacion);
-});
+        ParametrosRestablecerPassword>(RestablecerPasswordController.new);
 
 /// Orquesta la validación del token hash y el guardado de la nueva contraseña.
 class RestablecerPasswordController
-    extends StateNotifier<EstadoRestablecerPassword> {
-  final Ref _ref;
+    extends Notifier<EstadoRestablecerPassword> {
   final ParametrosRestablecerPassword _parametros;
 
-  RestablecerPasswordController(
-    this._ref,
-    this._parametros,
-    bool enRecuperacion,
-  ) : super(
-          crearEstadoInicialRestablecerPassword(_parametros, enRecuperacion),
-        );
+  RestablecerPasswordController(this._parametros);
+
+  @override
+  EstadoRestablecerPassword build() {
+    final enRecuperacion = ref.read(autenticacionProvider).enRecuperacion;
+    return crearEstadoInicialRestablecerPassword(_parametros, enRecuperacion);
+  }
 
   /// Verifica el token hash del correo antes de mostrar el formulario.
   Future<void> validarEnlace() async {
@@ -111,16 +106,16 @@ class RestablecerPasswordController
     }
 
     state = state.copyWith(paso: PasoRestablecerPassword.validandoToken);
-    final autenticacion = _ref.read(autenticacionProvider.notifier);
+    final autenticacion = ref.read(autenticacionProvider.notifier);
     autenticacion.activarRecuperacionPassword();
 
     try {
       if (_parametros.tieneTokenHashRecovery) {
-        await _ref
+        await ref
             .read(autenticacionRepositoryProvider)
             .verificarRecuperacionPassword(_parametros.tokenHash!);
       } else {
-        await _ref
+        await ref
             .read(autenticacionRepositoryProvider)
             .verificarCodigoRecuperacionPassword(_parametros.codigo!);
       }
@@ -138,7 +133,7 @@ class RestablecerPasswordController
 
     state = state.copyWith(paso: PasoRestablecerPassword.guardandoPassword);
     try {
-      await _ref
+      await ref
           .read(autenticacionProvider.notifier)
           .restablecerPassword(nuevaPassword);
       state = state.copyWith(paso: PasoRestablecerPassword.passwordActualizada);
