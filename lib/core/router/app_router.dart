@@ -1,5 +1,6 @@
-import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../constants/rutas_app.dart';
 import '../../features/auth/controllers/auth_controller.dart';
@@ -25,33 +26,20 @@ import '../../features/valoraciones/screens/valorar_transaccion_screen.dart';
 /// El router observa el estado de autenticación para redirigir automáticamente
 /// entre las rutas públicas y privadas.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final autenticacion = ref.watch(autenticacionProvider);
+  final refresh = ref.watch(_appRouterRefreshProvider);
 
   return GoRouter(
     initialLocation: RutasApp.iniciarSesion,
+    refreshListenable: refresh,
     redirect: (context, state) {
-      if (autenticacion.isLoading) return null;
+      final autenticacion = ref.read(autenticacionProvider);
 
-      final path = state.uri.path;
-      final autenticado = autenticacion.valueOrNull != null;
-      final rutaPublica = RutasApp.esRutaPublica(path);
-      final esRutaRestablecer = path == RutasApp.restablecerPassword;
-
-      if (esRutaRestablecer) {
-        return null;
-      }
-
-      // Protege todas las rutas internas mientras la sesión sea anónima.
-      if (!autenticado && !rutaPublica) {
-        return RutasApp.iniciarSesion;
-      }
-
-      // Evita que un usuario autenticado vuelva a login o registro.
-      if (autenticado && rutaPublica) {
-        return RutasApp.inicio;
-      }
-
-      return null;
+      return resolverRedireccionAutenticacion(
+        uri: state.uri,
+        autenticacionCargando: autenticacion.isLoading,
+        autenticado: autenticacion.valueOrNull != null,
+        enRecuperacion: autenticacion.enRecuperacion,
+      );
     },
     routes: [
       GoRoute(
@@ -75,6 +63,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => RestablecerPasswordScreen(
           tokenHash: state.uri.queryParameters['token_hash'],
           tipo: state.uri.queryParameters['type'],
+          codigo: state.uri.queryParameters['code'],
         ),
       ),
       GoRoute(
@@ -175,3 +164,71 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+final _appRouterRefreshProvider = Provider<ValueNotifier<int>>((ref) {
+  final refresh = ValueNotifier(0);
+
+  ref.listen<EstadoAutenticacion>(autenticacionProvider, (previous, next) {
+    refresh.value++;
+  });
+
+  ref.onDispose(refresh.dispose);
+  return refresh;
+});
+
+/// Decide la redirección de autenticación sin depender de [GoRouter].
+///
+/// Es una función pura para poder cubrir los casos delicados de recovery en
+/// tests sin levantar toda la navegación de la aplicación.
+String? resolverRedireccionAutenticacion({
+  required Uri uri,
+  required bool autenticacionCargando,
+  required bool autenticado,
+  required bool enRecuperacion,
+}) {
+  final path = uri.path;
+  final esRutaRestablecer = path == RutasApp.restablecerPassword;
+
+  if (_tieneParametrosRecuperacion(uri) && !esRutaRestablecer) {
+    return _rutaRestablecerPasswordConQuery(uri);
+  }
+
+  // El formulario de recovery siempre gana sobre cualquier sesión temporal que
+  // Supabase haya abierto al validar el enlace.
+  if (esRutaRestablecer) {
+    return null;
+  }
+
+  if (autenticacionCargando) return null;
+
+  if (enRecuperacion) {
+    return RutasApp.restablecerPassword;
+  }
+
+  final rutaPublica = RutasApp.esRutaPublica(path);
+
+  if (!autenticado && !rutaPublica) {
+    return RutasApp.iniciarSesion;
+  }
+
+  if (autenticado && rutaPublica) {
+    return RutasApp.inicio;
+  }
+
+  return null;
+}
+
+bool _tieneParametrosRecuperacion(Uri uri) {
+  final code = uri.queryParameters['code'];
+  final tokenHash = uri.queryParameters['token_hash'];
+  final tipo = uri.queryParameters['type'];
+
+  return (code != null && code.isNotEmpty) ||
+      (tipo == 'recovery' && tokenHash != null && tokenHash.isNotEmpty);
+}
+
+String _rutaRestablecerPasswordConQuery(Uri uri) {
+  final query = Uri(queryParameters: uri.queryParameters).query;
+  if (query.isEmpty) return RutasApp.restablecerPassword;
+  return '${RutasApp.restablecerPassword}?$query';
+}

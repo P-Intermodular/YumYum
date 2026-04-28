@@ -11,6 +11,7 @@ import '../../../core/errors/app_exception.dart';
 import '../../../core/location/formato_distancia.dart';
 import '../../../core/location/ubicacion_actual.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
+import '../../../core/providers_refresher.dart';
 import '../../producto/domain/entities/producto_model.dart';
 import '../../producto/providers/producto_providers.dart';
 import '../../producto/widgets/selector_radio_busqueda.dart';
@@ -173,8 +174,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                       ? const _OverlaySelectorRadio()
                       : _OverlaySinUbicacion(
                           onReintentar: () {
-                            ref.invalidate(ubicacionActualProvider);
-                            ref.invalidate(productosCercanosProvider);
+                            ref.refrescarUbicacionYProductosCercanos();
                           },
                         ),
                 ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/location/ubicacion_actual.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
+import '../../../core/providers_refresher.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../producto/providers/producto_providers.dart';
 import '../../producto/widgets/selector_radio_busqueda.dart';
@@ -26,8 +27,7 @@ class InicioScreen extends ConsumerWidget {
       body: productosAsync.when(
         data: (productos) => RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(ubicacionActualProvider);
-            ref.invalidate(productosCercanosProvider);
+            ref.refrescarUbicacionYProductosCercanos();
             await ref.read(productosCercanosProvider.future);
           },
           child: ListView.builder(
@@ -110,8 +110,7 @@ class _CabeceraProximidad extends ConsumerWidget {
             ),
             TextButton(
               onPressed: () {
-                ref.invalidate(ubicacionActualProvider);
-                ref.invalidate(productosCercanosProvider);
+                ref.refrescarUbicacionYProductosCercanos();
               },
               child: const Text('Reintentar'),
             ),

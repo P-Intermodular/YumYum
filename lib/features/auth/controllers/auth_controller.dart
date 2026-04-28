@@ -13,7 +13,7 @@ import '../providers/auth_repository_provider.dart';
 /// Arranca resolviendo la sesión actual y expone operaciones de entrada,
 /// registro y cierre de sesión para el resto de la UI.
 final autenticacionProvider =
-    StateNotifierProvider<AutenticacionNotifier, AsyncValue<UsuarioModel?>>(
+    StateNotifierProvider<AutenticacionNotifier, EstadoAutenticacion>(
   (ref) {
     return AutenticacionNotifier(
       ref.watch(autenticacionRepositoryProvider),
@@ -22,14 +22,49 @@ final autenticacionProvider =
   },
 );
 
+/// Estado completo de autenticación.
+///
+/// Mantiene el usuario como [AsyncValue] para conservar carga/error, y añade
+/// una señal reactiva para distinguir la sesión temporal de recovery.
+class EstadoAutenticacion {
+  final AsyncValue<UsuarioModel?> usuario;
+  final bool enRecuperacion;
+
+  const EstadoAutenticacion({
+    required this.usuario,
+    this.enRecuperacion = false,
+  });
+
+  const EstadoAutenticacion.inicial()
+      : usuario = const AsyncValue.loading(),
+        enRecuperacion = false;
+
+  EstadoAutenticacion copyWith({
+    AsyncValue<UsuarioModel?>? usuario,
+    bool? enRecuperacion,
+  }) {
+    return EstadoAutenticacion(
+      usuario: usuario ?? this.usuario,
+      enRecuperacion: enRecuperacion ?? this.enRecuperacion,
+    );
+  }
+
+  /// Getters de compatibilidad para los consumidores existentes.
+  bool get isLoading => usuario.isLoading;
+  bool get hasError => usuario.hasError;
+  Object? get error => usuario.error;
+  UsuarioModel? get value => usuario.value;
+  UsuarioModel? get valueOrNull => usuario.valueOrNull;
+}
+
 /// Orquesta los flujos de autenticación desde la capa application.
-class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
+class AutenticacionNotifier extends StateNotifier<EstadoAutenticacion> {
   final AuthRepository _repository;
   final SupabaseClient _client;
   late final StreamSubscription<AuthState> _suscripcion;
 
   AutenticacionNotifier(this._repository, this._client)
-      : super(const AsyncValue.loading()) {
+      : super(const EstadoAutenticacion.inicial()) {
     _suscripcion = _client.auth.onAuthStateChange.listen(
       _manejarCambioAutenticacion,
     );
@@ -48,11 +83,16 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
       case AuthChangeEvent.signedIn:
       case AuthChangeEvent.tokenRefreshed:
       case AuthChangeEvent.userUpdated:
-      case AuthChangeEvent.passwordRecovery:
         await _sincronizarUsuarioActual();
         break;
+      case AuthChangeEvent.passwordRecovery:
+        await _sincronizarUsuarioActual(enRecuperacion: true);
+        break;
       case AuthChangeEvent.signedOut:
-        state = const AsyncValue.data(null);
+        state = state.copyWith(
+          usuario: const AsyncValue.data(null),
+          enRecuperacion: false,
+        );
         break;
       default:
         break;
@@ -60,23 +100,38 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
   }
 
   /// Resuelve el usuario actual sin pasar por un estado de carga global.
-  Future<void> _sincronizarUsuarioActual() async {
+  Future<void> _sincronizarUsuarioActual({bool? enRecuperacion}) async {
     try {
       final usuario = await _repository.obtenerUsuarioActual();
-      state = AsyncValue.data(usuario);
+      state = state.copyWith(
+        usuario: AsyncValue.data(usuario),
+        enRecuperacion: enRecuperacion ?? state.enRecuperacion,
+      );
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      state = state.copyWith(
+        usuario: AsyncValue.error(error, stackTrace),
+        enRecuperacion: enRecuperacion ?? state.enRecuperacion,
+      );
     }
   }
 
   /// Inicia sesión y actualiza el estado compartido de autenticación.
   Future<void> iniciarSesion(String correo, String password) async {
-    state = const AsyncValue.loading();
+    state = state.copyWith(
+      usuario: const AsyncValue.loading(),
+      enRecuperacion: false,
+    );
     try {
       final usuario = await _repository.iniciarSesion(correo, password);
-      state = AsyncValue.data(usuario);
+      state = state.copyWith(
+        usuario: AsyncValue.data(usuario),
+        enRecuperacion: false,
+      );
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      state = state.copyWith(
+        usuario: AsyncValue.error(error, stackTrace),
+        enRecuperacion: false,
+      );
     }
   }
 
@@ -86,13 +141,22 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
     String correo,
     String password,
   ) async {
-    state = const AsyncValue.loading();
+    state = state.copyWith(
+      usuario: const AsyncValue.loading(),
+      enRecuperacion: false,
+    );
     try {
       final usuario =
           await _repository.registrarUsuario(nombre, correo, password);
-      state = AsyncValue.data(usuario);
+      state = state.copyWith(
+        usuario: AsyncValue.data(usuario),
+        enRecuperacion: false,
+      );
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      state = state.copyWith(
+        usuario: AsyncValue.error(error, stackTrace),
+        enRecuperacion: false,
+      );
     }
   }
 
@@ -101,13 +165,29 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
     await _repository.cerrarSesion();
   }
 
+  /// Marca que la sesión actual pertenece al flujo temporal de recovery.
+  void activarRecuperacionPassword() {
+    state = state.copyWith(enRecuperacion: true);
+  }
+
+  /// Limpia el modo recovery sin tocar la sesión actual.
+  void limpiarRecuperacionPassword() {
+    state = state.copyWith(enRecuperacion: false);
+  }
+
+  /// Cancela recovery y cierra la sesión temporal abierta por Supabase.
+  Future<void> cancelarRecuperacionPassword() async {
+    state = state.copyWith(enRecuperacion: false);
+    await _repository.cerrarSesion();
+  }
+
   /// Actualiza los datos del perfil del usuario y refresca el estado.
   Future<void> actualizarPerfil(UsuarioModel usuario) async {
     try {
       final usuarioActualizado = await _repository.actualizarPerfil(usuario);
-      state = AsyncValue.data(usuarioActualizado);
+      state = state.copyWith(usuario: AsyncValue.data(usuarioActualizado));
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      state = state.copyWith(usuario: AsyncValue.error(error, stackTrace));
       rethrow;
     }
   }
@@ -117,9 +197,9 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
     try {
       final actualizado =
           await _repository.actualizarUbicacionPredeterminada(usuario);
-      state = AsyncValue.data(actualizado);
+      state = state.copyWith(usuario: AsyncValue.data(actualizado));
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      state = state.copyWith(usuario: AsyncValue.error(error, stackTrace));
       rethrow;
     }
   }
@@ -127,6 +207,7 @@ class AutenticacionNotifier extends StateNotifier<AsyncValue<UsuarioModel?>> {
   /// Guarda la nueva contraseña y cierra la sesión temporal de recovery.
   Future<void> restablecerPassword(String nuevaPassword) async {
     await _repository.restablecerPassword(nuevaPassword);
+    state = state.copyWith(enRecuperacion: false);
     await _repository.cerrarSesion();
   }
 

@@ -13,7 +13,7 @@ final listaChatsProvider = FutureProvider<List<ConversacionModel>>((ref) async {
 });
 
 /// Stream de mensajes para una conversación concreta.
-final mensajesProvider =
-    StreamProvider.family<List<MensajeModel>, String>((ref, chatId) {
+final mensajesProvider = StreamProvider.autoDispose
+    .family<List<MensajeModel>, String>((ref, chatId) {
   return ref.watch(chatRepositoryProvider).obtenerMensajes(chatId);
 });

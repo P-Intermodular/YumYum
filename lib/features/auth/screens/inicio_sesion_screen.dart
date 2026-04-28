@@ -43,15 +43,15 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
     final theme = Theme.of(context);
 
     ref.listen(autenticacionProvider, (previous, next) {
-      if (next is AsyncData && next.value != null) {
+      if (!next.enRecuperacion && next.usuario.valueOrNull != null) {
         context.go(RutasApp.inicio);
-      } else if (next is AsyncError) {
-        mostrarError(context, next.error);
+      } else if (next.usuario.hasError) {
+        mostrarError(context, next.usuario.error!);
       }
     });
 
     final estadoAutenticacion = ref.watch(autenticacionProvider);
-    final cargando = estadoAutenticacion is AsyncLoading;
+    final cargando = estadoAutenticacion.isLoading;
 
     return Scaffold(
       body: SafeArea(

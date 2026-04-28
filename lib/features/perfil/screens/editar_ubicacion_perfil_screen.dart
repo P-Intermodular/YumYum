@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/feedback/app_feedback.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
+import '../../../core/providers_refresher.dart';
 import '../../../core/widgets/selector_ubicacion_mapa.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -39,7 +40,7 @@ class _EditarUbicacionPerfilScreenState
   }
 
   Future<void> _usarUbicacionActual() async {
-    ref.invalidate(ubicacionActualProvider);
+    ref.refrescarUbicacionActual();
     final ubicacionActual = await ref.read(ubicacionActualProvider.future);
     if (!mounted) return;
 
@@ -48,7 +49,8 @@ class _EditarUbicacionPerfilScreenState
       setState(() => _ubicacionElegida = punto);
       _mapController.move(punto, _zoomMapa);
     } else {
-      mostrarError(context, Exception('No se pudo obtener la ubicación actual.'));
+      mostrarError(
+          context, Exception('No se pudo obtener la ubicación actual.'));
     }
   }
 
@@ -141,9 +143,8 @@ class _EditarUbicacionPerfilScreenState
             ),
             const SizedBox(height: 32),
             ElevatedButton(
-              onPressed: (_guardando || _ubicacionElegida == null)
-                  ? null
-                  : _guardar,
+              onPressed:
+                  (_guardando || _ubicacionElegida == null) ? null : _guardar,
               child: _guardando
                   ? const SizedBox(
                       width: 20,

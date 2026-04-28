@@ -160,10 +160,31 @@ class SupabaseAuthRepository implements AuthRepository {
   /// Verifica el token hash del enlace y abre una sesión recovery válida.
   Future<void> verificarRecuperacionPassword(String tokenHash) async {
     try {
-      await _client.auth.verifyOTP(
+      final response = await _client.auth.verifyOTP(
         type: OtpType.recovery,
         tokenHash: tokenHash,
       );
+      if (response.session == null || response.user == null) {
+        throw const AppException(
+          'El enlace de recuperación ya no es válido. Solicita uno nuevo.',
+        );
+      }
+    } on AuthException catch (error) {
+      throw AppException(error.message);
+    }
+  }
+
+  @override
+
+  /// Intercambia el codigo PKCE del enlace y abre una sesión recovery válida.
+  Future<void> verificarCodigoRecuperacionPassword(String codigo) async {
+    try {
+      await _client.auth.exchangeCodeForSession(codigo);
+      if (_client.auth.currentUser == null) {
+        throw const AppException(
+          'El enlace de recuperación ya no es válido. Solicita uno nuevo.',
+        );
+      }
     } on AuthException catch (error) {
       throw AppException(error.message);
     }
@@ -192,7 +213,9 @@ class SupabaseAuthRepository implements AuthRepository {
 
     if (kIsWeb) {
       final baseUrl = appBaseUrl.isNotEmpty ? appBaseUrl : Uri.base.origin;
-      return Uri.parse(baseUrl).resolve(RutasApp.restablecerPassword).toString();
+      return Uri.parse(baseUrl)
+          .resolve(RutasApp.restablecerPassword)
+          .toString();
     }
 
     return 'yumyum://restablecer-password';

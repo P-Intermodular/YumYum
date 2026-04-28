@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../chat/providers/chat_providers.dart';
-import '../../pedidos/providers/panel_pedidos_provider.dart';
-import '../../producto/providers/producto_providers.dart';
+import '../../../core/providers_refresher.dart';
 import '../providers/solicitud_oferta_repository_provider.dart';
 
 /// Gestiona las decisiones del usuario sobre solicitudes recibidas.
@@ -48,8 +46,8 @@ class SolicitudOfertaController extends StateNotifier<AsyncValue<void>> {
 
   /// Invalida las consultas que reflejan solicitudes, catálogo y conversaciones.
   void _refrescarDatos() {
-    _ref.invalidate(panelPedidosProvider);
-    _ref.invalidate(productosProvider);
-    _ref.invalidate(listaChatsProvider);
+    _ref.refrescarPedidos();
+    _ref.refrescarCatalogo();
+    _ref.refrescarChats();
   }
 }

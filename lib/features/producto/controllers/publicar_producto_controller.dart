@@ -5,10 +5,9 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/estados_app.dart';
 import '../../../core/errors/app_exception.dart';
-import '../../perfil/providers/perfil_providers.dart';
+import '../../../core/providers_refresher.dart';
 import '../domain/entities/producto_model.dart';
 import '../../auth/controllers/auth_controller.dart';
-import '../providers/producto_providers.dart';
 import '../providers/producto_repository_provider.dart';
 import 'datos_publicacion_producto.dart';
 
@@ -54,10 +53,8 @@ class PublicarProductoController extends StateNotifier<AsyncValue<void>> {
             extensionImagen: datos.extensionImagen,
           );
 
-      // Tras publicar, el inicio y el mapa deben resolver de nuevo el catálogo.
-      _ref.invalidate(productosProvider);
-      _ref.invalidate(productosCercanosProvider);
-      _ref.invalidate(misProductosProvider);
+      // Tras publicar, el inicio, mapa y perfil deben resolver de nuevo datos.
+      _ref.refrescarCatalogo();
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

@@ -5,7 +5,7 @@ import 'valoracion_repository_provider.dart';
 
 /// Comprueba si el usuario ya ha valorado una transacción concreta.
 final valoracionUsuarioProvider =
-    FutureProvider.family<ValoracionModel?, (String, String)>(
+    FutureProvider.autoDispose.family<ValoracionModel?, (String, String)>(
   (ref, params) async {
     final (transaccionId, valoradorId) = params;
     return ref
@@ -16,7 +16,7 @@ final valoracionUsuarioProvider =
 
 /// Lista las valoraciones recibidas por un usuario.
 final valoracionesRecibidasProvider =
-    FutureProvider.family<List<ValoracionModel>, String>(
+    FutureProvider.autoDispose.family<List<ValoracionModel>, String>(
   (ref, valoradoId) async {
     return ref
         .watch(valoracionRepositoryProvider)

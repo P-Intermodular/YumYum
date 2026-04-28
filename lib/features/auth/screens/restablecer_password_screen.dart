@@ -5,17 +5,20 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/restablecer_password_controller.dart';
 
 /// Pantalla para validar el enlace y definir una nueva contraseña.
 class RestablecerPasswordScreen extends ConsumerStatefulWidget {
   final String? tokenHash;
   final String? tipo;
+  final String? codigo;
 
   const RestablecerPasswordScreen({
     super.key,
     required this.tokenHash,
     required this.tipo,
+    required this.codigo,
   });
 
   @override
@@ -43,6 +46,7 @@ class _RestablecerPasswordScreenState
       ParametrosRestablecerPassword(
         tokenHash: widget.tokenHash,
         tipo: widget.tipo,
+        codigo: widget.codigo,
       );
 
   Future<void> _continuarRecuperacion() async {
@@ -64,8 +68,8 @@ class _RestablecerPasswordScreenState
           .guardarNuevaPassword(_nuevaPasswordController.text.trim());
 
       if (!mounted) return;
-      mostrarExito(context, 'Contraseña actualizada correctamente');
-      context.go(RutasApp.iniciarSesion);
+      _nuevaPasswordController.clear();
+      _confirmarPasswordController.clear();
     } catch (error) {
       if (mounted) {
         mostrarError(context, error);
@@ -73,10 +77,28 @@ class _RestablecerPasswordScreenState
     }
   }
 
+  Future<void> _cancelarRecuperacion() async {
+    final estado = ref.read(restablecerPasswordControllerProvider(_parametros));
+    final enRecuperacion = ref.read(autenticacionProvider).enRecuperacion;
+
+    if (enRecuperacion ||
+        estado.paso == PasoRestablecerPassword.formularioListo ||
+        estado.paso == PasoRestablecerPassword.guardandoPassword) {
+      await ref
+          .read(autenticacionProvider.notifier)
+          .cancelarRecuperacionPassword();
+    }
+
+    if (mounted) {
+      context.go(RutasApp.iniciarSesion);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final estado = ref.watch(restablecerPasswordControllerProvider(_parametros));
+    final estado =
+        ref.watch(restablecerPasswordControllerProvider(_parametros));
     final paso = estado.paso;
     final validando = paso == PasoRestablecerPassword.validandoToken;
     final guardando = paso == PasoRestablecerPassword.guardandoPassword;
@@ -120,6 +142,8 @@ class _RestablecerPasswordScreenState
                 _buildEstadoConfirmacion()
               else if (validando)
                 _buildEstadoValidando()
+              else if (paso == PasoRestablecerPassword.passwordActualizada)
+                _buildEstadoPasswordActualizada()
               else
                 _buildFormulario(guardando),
             ],
@@ -140,6 +164,8 @@ class _RestablecerPasswordScreenState
       case PasoRestablecerPassword.formularioListo:
       case PasoRestablecerPassword.guardandoPassword:
         return 'Escribe tu nueva contraseña para completar la recuperación de tu cuenta.';
+      case PasoRestablecerPassword.passwordActualizada:
+        return 'Tu contraseña se ha modificado correctamente. Ya puedes iniciar sesión con tus nuevas credenciales.';
     }
   }
 
@@ -228,7 +254,7 @@ class _RestablecerPasswordScreenState
         ),
         const SizedBox(height: 8),
         TextButton(
-          onPressed: () => context.go(RutasApp.iniciarSesion),
+          onPressed: _cancelarRecuperacion,
           child: const Text('Cancelar'),
         ),
       ],
@@ -259,6 +285,47 @@ class _RestablecerPasswordScreenState
     );
   }
 
+  Widget _buildEstadoPasswordActualizada() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.green.shade200),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                color: Colors.green.shade800,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Tu contraseña se ha modificado correctamente. Vuelve al inicio de sesión para entrar con tus nuevas credenciales.',
+                  style: TextStyle(
+                    color: Colors.green.shade900,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: () => context.go(RutasApp.iniciarSesion),
+          child: const Text('Ir al inicio de sesión'),
+        ),
+      ],
+    );
+  }
+
   Widget _buildFormulario(bool guardando) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -282,8 +349,8 @@ class _RestablecerPasswordScreenState
                     onPressed: guardando
                         ? null
                         : () => setState(
-                              () =>
-                                  _ocultarNuevaPassword = !_ocultarNuevaPassword,
+                              () => _ocultarNuevaPassword =
+                                  !_ocultarNuevaPassword,
                             ),
                   ),
                 ),
@@ -350,7 +417,7 @@ class _RestablecerPasswordScreenState
         ),
         const SizedBox(height: 8),
         TextButton(
-          onPressed: guardando ? null : () => context.go(RutasApp.iniciarSesion),
+          onPressed: guardando ? null : _cancelarRecuperacion,
           child: const Text('Cancelar'),
         ),
       ],

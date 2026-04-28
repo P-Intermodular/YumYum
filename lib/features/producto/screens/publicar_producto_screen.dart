@@ -11,6 +11,7 @@ import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
+import '../../../core/providers_refresher.dart';
 import '../../../core/widgets/selector_ubicacion_mapa.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -118,7 +119,7 @@ class _PublicarProductoScreenState
 
   /// Establece la ubicacion elegida a la ubicacion actual del GPS.
   Future<void> _usarUbicacionActual() async {
-    ref.invalidate(ubicacionActualProvider);
+    ref.refrescarUbicacionActual();
     final ubicacionActual = await ref.read(ubicacionActualProvider.future);
     if (!mounted) return;
 

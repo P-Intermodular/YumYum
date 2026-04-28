@@ -41,7 +41,7 @@ final productosCercanosProvider = FutureProvider<List<ProductoModel>>(
 );
 
 /// Carga el detalle de un producto concreto a partir de su identificador.
-final productoDetalleProvider =
-    FutureProvider.family<ProductoModel?, String>((ref, productoId) async {
+final productoDetalleProvider = FutureProvider.autoDispose
+    .family<ProductoModel?, String>((ref, productoId) async {
   return ref.watch(productoRepositoryProvider).obtenerProductoPorId(productoId);
 });

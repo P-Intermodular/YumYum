@@ -1,16 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/estados_app.dart';
+import '../../../core/providers_refresher.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../pedidos/domain/entities/transaccion_model.dart';
-import '../../pedidos/providers/panel_pedidos_provider.dart';
-import '../../pedidos/providers/transaccion_providers.dart';
-import '../providers/valoracion_providers.dart';
 import '../providers/valoracion_repository_provider.dart';
 
 /// Gestiona el envío de valoraciones sobre transacciones completadas.
-final valoracionControllerProvider = StateNotifierProvider.autoDispose<
-    ValoracionController, AsyncValue<void>>((ref) {
+final valoracionControllerProvider =
+    StateNotifierProvider.autoDispose<ValoracionController, AsyncValue<void>>(
+        (ref) {
   return ValoracionController(ref);
 });
 
@@ -42,12 +41,13 @@ class ValoracionController extends StateNotifier<AsyncValue<void>> {
             comentario: comentario?.trim().isEmpty == true ? null : comentario,
           );
 
-      _ref.invalidate(panelPedidosProvider);
-      _ref.invalidate(transaccionDetalleProvider(transaccion.id));
-      _ref.invalidate(
-        valoracionUsuarioProvider((transaccion.id, usuario.id)),
+      _ref.refrescarPedidos();
+      _ref.refrescarTransaccionDetalle(transaccion.id);
+      _ref.refrescarValoracionUsuario(
+        transaccionId: transaccion.id,
+        usuarioId: usuario.id,
       );
-      _ref.invalidate(valoracionesRecibidasProvider(valoradoId));
+      _ref.refrescarValoracionesRecibidas(valoradoId);
 
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {

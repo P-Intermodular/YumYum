@@ -33,6 +33,9 @@ abstract class AuthRepository {
   /// Verifica el token hash del correo antes de mostrar el formulario recovery.
   Future<void> verificarRecuperacionPassword(String tokenHash);
 
+  /// Intercambia el codigo PKCE del correo por una sesion recovery valida.
+  Future<void> verificarCodigoRecuperacionPassword(String codigo);
+
   /// Actualiza la contraseña del usuario autenticado dentro del flujo recovery.
   Future<void> restablecerPassword(String nuevaPassword);
 }
