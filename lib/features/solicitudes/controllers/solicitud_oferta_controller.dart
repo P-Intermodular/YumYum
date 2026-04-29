@@ -15,6 +15,7 @@ class SolicitudOfertaController extends Notifier<AsyncValue<void>> {
   AsyncValue<void> build() => const AsyncValue.data(null);
 
   Future<void> aceptar(String solicitudId) async {
+    final keepAlive = ref.keepAlive();
     state = const AsyncValue.loading();
     try {
       await ref
@@ -25,11 +26,14 @@ class SolicitudOfertaController extends Notifier<AsyncValue<void>> {
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       rethrow;
+    } finally {
+      keepAlive.close();
     }
   }
 
   /// Deniega la solicitud indicada y refresca las vistas afectadas.
   Future<void> denegar(String solicitudId) async {
+    final keepAlive = ref.keepAlive();
     state = const AsyncValue.loading();
     try {
       await ref
@@ -40,6 +44,8 @@ class SolicitudOfertaController extends Notifier<AsyncValue<void>> {
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       rethrow;
+    } finally {
+      keepAlive.close();
     }
   }
 

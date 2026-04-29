@@ -95,13 +95,16 @@ class RestablecerPasswordController
 
   /// Verifica el token hash del correo antes de mostrar el formulario.
   Future<void> validarEnlace() async {
+    final keepAlive = ref.keepAlive();
     if (!_parametros.puedeValidarse) {
       state = state.copyWith(paso: PasoRestablecerPassword.enlaceInvalido);
+      keepAlive.close();
       return;
     }
 
     if (state.paso == PasoRestablecerPassword.validandoToken ||
         state.paso == PasoRestablecerPassword.guardandoPassword) {
+      keepAlive.close();
       return;
     }
 
@@ -124,12 +127,18 @@ class RestablecerPasswordController
       autenticacion.limpiarRecuperacionPassword();
       state = state.copyWith(paso: PasoRestablecerPassword.enlaceInvalido);
       rethrow;
+    } finally {
+      keepAlive.close();
     }
   }
 
   /// Guarda la nueva contraseña dentro de una sesión recovery ya validada.
   Future<void> guardarNuevaPassword(String nuevaPassword) async {
-    if (state.paso != PasoRestablecerPassword.formularioListo) return;
+    final keepAlive = ref.keepAlive();
+    if (state.paso != PasoRestablecerPassword.formularioListo) {
+      keepAlive.close();
+      return;
+    }
 
     state = state.copyWith(paso: PasoRestablecerPassword.guardandoPassword);
     try {
@@ -140,6 +149,8 @@ class RestablecerPasswordController
     } catch (_) {
       state = state.copyWith(paso: PasoRestablecerPassword.formularioListo);
       rethrow;
+    } finally {
+      keepAlive.close();
     }
   }
 }

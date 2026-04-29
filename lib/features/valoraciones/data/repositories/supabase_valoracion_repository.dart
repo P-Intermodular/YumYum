@@ -10,7 +10,7 @@ class SupabaseValoracionRepository implements ValoracionRepository {
   /// Select con join al perfil del valorador para mostrar nombre y avatar.
   static const _selectConValorador = '''
     *,
-    valorador:valorador_id(nombre, url_avatar)
+    valorador:perfiles!valoraciones_valorador_id_fkey(nombre, url_avatar)
   ''';
 
   final SupabaseClient _client;

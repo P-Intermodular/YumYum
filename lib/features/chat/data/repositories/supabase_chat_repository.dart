@@ -14,7 +14,7 @@ class SupabaseChatRepository implements ChatRepository {
     comprador_id,
     vendedor_id,
     creado_en,
-    comprador:comprador_id(
+    comprador:perfiles!conversaciones_comprador_id_fkey(
       id,
       nombre,
       email,
@@ -26,7 +26,7 @@ class SupabaseChatRepository implements ChatRepository {
       valoracion_media,
       numero_valoraciones
     ),
-    vendedor:vendedor_id(
+    vendedor:perfiles!conversaciones_vendedor_id_fkey(
       id,
       nombre,
       email,

@@ -21,8 +21,10 @@ class ChatController extends Notifier<AsyncValue<void>> {
     final contenido = texto.trim();
     if (contenido.isEmpty) return;
 
+    final keepAlive = ref.keepAlive();
     final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) {
+      keepAlive.close();
       throw const AppException('Debes iniciar sesión');
     }
 
@@ -42,6 +44,8 @@ class ChatController extends Notifier<AsyncValue<void>> {
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       rethrow;
+    } finally {
+      keepAlive.close();
     }
   }
 }

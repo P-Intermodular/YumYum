@@ -23,7 +23,7 @@ class SupabaseProductoRepository implements ProductoRepository {
     latitud_publica,
     longitud_publica,
     creado_en,
-    perfiles:propietario_id(
+    perfiles:perfiles!productos_propietario_id_fkey(
       id,
       nombre,
       email,
@@ -131,7 +131,8 @@ class SupabaseProductoRepository implements ProductoRepository {
   }) async {
     final inserted = await _client
         .from(TablasSupabase.productos)
-        .insert(ProductoDto.aInsercion(producto, ubicacionExacta: ubicacionExacta))
+        .insert(
+            ProductoDto.aInsercion(producto, ubicacionExacta: ubicacionExacta))
         .select('id')
         .single();
 

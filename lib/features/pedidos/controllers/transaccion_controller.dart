@@ -17,6 +17,7 @@ class TransaccionController extends Notifier<AsyncValue<void>> {
 
   /// Marca la transacción como completada y refresca las vistas afectadas.
   Future<void> completar(String transaccionId) async {
+    final keepAlive = ref.keepAlive();
     state = const AsyncValue.loading();
     try {
       final transaccion =
@@ -43,6 +44,8 @@ class TransaccionController extends Notifier<AsyncValue<void>> {
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       rethrow;
+    } finally {
+      keepAlive.close();
     }
   }
 }

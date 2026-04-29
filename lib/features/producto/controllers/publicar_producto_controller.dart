@@ -23,8 +23,10 @@ class PublicarProductoController extends Notifier<AsyncValue<void>> {
   AsyncValue<void> build() => const AsyncValue.data(null);
 
   Future<void> publicar(DatosPublicacionProducto datos) async {
+    final keepAlive = ref.keepAlive();
     final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) {
+      keepAlive.close();
       throw const AppException('Debes iniciar sesión');
     }
 
@@ -58,6 +60,8 @@ class PublicarProductoController extends Notifier<AsyncValue<void>> {
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       rethrow;
+    } finally {
+      keepAlive.close();
     }
   }
 

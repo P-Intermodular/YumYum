@@ -13,9 +13,9 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
   /// Select base con el título del producto y la contraparte visible.
   static const _solicitudSelect = '''
     *,
-    producto:producto_id(titulo),
-    solicitante:solicitante_id(nombre),
-    propietario:propietario_id(nombre)
+    producto:productos!solicitudes_oferta_producto_id_fkey(titulo),
+    solicitante:perfiles!solicitudes_oferta_solicitante_id_fkey(nombre),
+    propietario:perfiles!solicitudes_oferta_propietario_id_fkey(nombre)
   ''';
 
   final SupabaseClient _client;

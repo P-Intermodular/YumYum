@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,6 +70,38 @@ void main() {
       expect(solicitudRepository.tipoSolicitud, TipoOferta.venta);
       expect(
           container.read(contactoProductoControllerProvider).hasError, false);
+    });
+
+    test('mantiene vivo el provider durante una solicitud sin listeners',
+        () async {
+      final solicitudRepository = _SolicitudOfertaRepositoryFake();
+      solicitudRepository.crearSolicitudCompleter =
+          Completer<SolicitudOfertaCreadaModel>();
+      final container = _crearContainer(
+        productoRepository: _ProductoRepositoryFake(),
+        solicitudRepository: solicitudRepository,
+      );
+      addTearDown(container.dispose);
+
+      container.read(autenticacionProvider);
+      await container.pump();
+
+      final future = container
+          .read(contactoProductoControllerProvider.notifier)
+          .crearSolicitud(
+            producto: _producto(id: 'producto-1', tipo: TipoOferta.venta),
+          );
+
+      await container.pump();
+
+      solicitudRepository.crearSolicitudCompleter!.complete(
+        const SolicitudOfertaCreadaModel(
+          solicitudId: 'solicitud-async',
+          conversacionId: 'chat-async',
+        ),
+      );
+
+      await expectLater(future, completion('chat-async'));
     });
   });
 }
@@ -147,6 +180,7 @@ class _ProductoRepositoryFake implements ProductoRepository {
 }
 
 class _SolicitudOfertaRepositoryFake implements SolicitudOfertaRepository {
+  Completer<SolicitudOfertaCreadaModel>? crearSolicitudCompleter;
   String? productoId;
   String? tipoSolicitud;
 
@@ -173,6 +207,9 @@ class _SolicitudOfertaRepositoryFake implements SolicitudOfertaRepository {
   }) async {
     this.productoId = productoId;
     this.tipoSolicitud = tipoSolicitud;
+    if (crearSolicitudCompleter != null) {
+      return crearSolicitudCompleter!.future;
+    }
     return const SolicitudOfertaCreadaModel(
       solicitudId: 'solicitud-1',
       conversacionId: 'chat-1',

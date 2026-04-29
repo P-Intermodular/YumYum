@@ -22,32 +22,40 @@ class ContactoProductoController extends Notifier<AsyncValue<void>> {
   Future<List<ProductoModel>> obtenerProductosIntercambioDisponibles(
     ProductoModel producto,
   ) async {
+    final keepAlive = ref.keepAlive();
     final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) {
+      keepAlive.close();
       throw const AppException('Debes iniciar sesión');
     }
 
-    final productos = await ref
-        .read(productoRepositoryProvider)
-        .obtenerMisProductosDisponibles(usuario.id);
+    try {
+      final productos = await ref
+          .read(productoRepositoryProvider)
+          .obtenerMisProductosDisponibles(usuario.id);
 
-    // Un trueque solo puede proponerse con productos propios, disponibles y
-    // distintos al producto que se quiere solicitar.
-    return productos
-        .where(
-          (candidate) =>
-              candidate.id != producto.id &&
-              candidate.tipo == TipoOferta.intercambio,
-        )
-        .toList();
+      // Un trueque solo puede proponerse con productos propios, disponibles y
+      // distintos al producto que se quiere solicitar.
+      return productos
+          .where(
+            (candidate) =>
+                candidate.id != producto.id &&
+                candidate.tipo == TipoOferta.intercambio,
+          )
+          .toList();
+    } finally {
+      keepAlive.close();
+    }
   }
 
   Future<String> crearSolicitud({
     required ProductoModel producto,
     String? productoOfrecidoId,
   }) async {
+    final keepAlive = ref.keepAlive();
     final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) {
+      keepAlive.close();
       throw const AppException('Debes iniciar sesión');
     }
 
@@ -74,6 +82,8 @@ class ContactoProductoController extends Notifier<AsyncValue<void>> {
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       rethrow;
+    } finally {
+      keepAlive.close();
     }
   }
 }

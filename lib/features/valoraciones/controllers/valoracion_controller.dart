@@ -23,6 +23,7 @@ class ValoracionController extends Notifier<AsyncValue<void>> {
     required int puntuacion,
     String? comentario,
   }) async {
+    final keepAlive = ref.keepAlive();
     state = const AsyncValue.loading();
     try {
       final usuario = ref.read(autenticacionProvider).value!;
@@ -51,6 +52,8 @@ class ValoracionController extends Notifier<AsyncValue<void>> {
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       rethrow;
+    } finally {
+      keepAlive.close();
     }
   }
 
