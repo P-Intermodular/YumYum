@@ -30,6 +30,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
 
   late final MapController _mapController;
   ProviderSubscription<AsyncValue<UbicacionActual?>>? _suscripcionUbicacion;
+  bool _mapaListo = false;
 
   @override
   void initState() {
@@ -42,7 +43,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
       ubicacionActualProvider,
       (anterior, actual) {
         final ubicacion = actual.value;
-        if (ubicacion == null) return;
+        if (ubicacion == null || !_mapaListo) return;
 
         final previa = anterior?.value;
         final cambio = previa == null ||
@@ -57,6 +58,21 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
         );
       },
     );
+  }
+
+  /// Fuerza un re-render del viewport tras el primer frame del mapa.
+  ///
+  /// FlutterMap puede montar con dimensiones incompletas dentro de un
+  /// ShellRoute, causando que los tiles no carguen hasta una interacción.
+  /// Un move al mismo centro tras un post-frame callback fuerza la
+  /// recarga del tile layer.
+  void _alMapaListo() {
+    _mapaListo = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final camera = _mapController.camera;
+      _mapController.move(camera.center, camera.zoom);
+    });
   }
 
   @override
@@ -155,6 +171,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                 options: MapOptions(
                   initialCenter: centroInicial,
                   initialZoom: _zoomInicial,
+                  onMapReady: _alMapaListo,
                 ),
                 children: [
                   TileLayer(
