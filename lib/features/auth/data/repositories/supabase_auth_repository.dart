@@ -86,14 +86,12 @@ class SupabaseAuthRepository implements AuthRepository {
   /// Actualiza los datos del perfil del usuario en la base de datos.
   Future<UsuarioModel> actualizarPerfil(UsuarioModel usuario) async {
     final payload = UsuarioDto.aActualizacionPerfil(usuario);
-    final response = await _client
+    await _client
         .from(TablasSupabase.perfiles)
         .update(payload)
-        .eq('id', usuario.id)
-        .select()
-        .single();
+        .eq('id', usuario.id);
 
-    return UsuarioDto.desdePerfil(response);
+    return _perfilParaUsuario(usuario.id, correoRespaldo: usuario.correo);
   }
 
   @override
@@ -103,14 +101,12 @@ class SupabaseAuthRepository implements AuthRepository {
     UsuarioModel usuario,
   ) async {
     final payload = UsuarioDto.aActualizacionUbicacion(usuario);
-    final response = await _client
+    await _client
         .from(TablasSupabase.perfiles)
         .update(payload)
-        .eq('id', usuario.id)
-        .select()
-        .single();
+        .eq('id', usuario.id);
 
-    return UsuarioDto.desdePerfil(response);
+    return _perfilParaUsuario(usuario.id, correoRespaldo: usuario.correo);
   }
 
   Future<UsuarioModel> _perfilParaUsuario(
@@ -120,11 +116,8 @@ class SupabaseAuthRepository implements AuthRepository {
   }) async {
     for (var intento = 0; intento < 3; intento++) {
       // El trigger que crea perfiles puede tardar unos milisegundos tras signUp.
-      final perfil = await _client
-          .from(TablasSupabase.perfiles)
-          .select()
-          .eq('id', usuarioId)
-          .maybeSingle();
+      final perfil =
+          await _client.rpc(RpcsSupabase.obtenerMiPerfil).maybeSingle();
 
       if (perfil != null) {
         return UsuarioDto.desdePerfil(perfil);

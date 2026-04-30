@@ -26,18 +26,12 @@ class SupabaseProductoRepository implements ProductoRepository {
     perfiles:perfiles!productos_propietario_id_fkey(
       id,
       nombre,
-      email,
       url_avatar,
-      ciudad,
-      preferencias,
-      certificacion_sanitaria,
-      es_moderador,
       valoracion_media,
       numero_valoraciones
     ),
     imagenes_producto(
       url_publica,
-      ruta_storage,
       posicion
     )
   ''';

@@ -9,7 +9,7 @@ import '../dtos/mensaje_dto.dart';
 /// Implementación de [ChatRepository] apoyada en tablas y realtime de Supabase.
 class SupabaseChatRepository implements ChatRepository {
   /// Select enriquecido para resolver la contraparte y el último mensaje.
-  static const _conversacionSelect = '''
+  static const conversacionSelect = '''
     id,
     comprador_id,
     vendedor_id,
@@ -17,24 +17,14 @@ class SupabaseChatRepository implements ChatRepository {
     comprador:perfiles!conversaciones_comprador_id_fkey(
       id,
       nombre,
-      email,
       url_avatar,
-      ciudad,
-      preferencias,
-      certificacion_sanitaria,
-      es_moderador,
       valoracion_media,
       numero_valoraciones
     ),
     vendedor:perfiles!conversaciones_vendedor_id_fkey(
       id,
       nombre,
-      email,
       url_avatar,
-      ciudad,
-      preferencias,
-      certificacion_sanitaria,
-      es_moderador,
       valoracion_media,
       numero_valoraciones
     ),
@@ -56,7 +46,7 @@ class SupabaseChatRepository implements ChatRepository {
   Future<List<ConversacionModel>> obtenerChats(String usuarioId) async {
     final rows = await _client
         .from(TablasSupabase.conversaciones)
-        .select(_conversacionSelect)
+        .select(conversacionSelect)
         .or('comprador_id.eq.$usuarioId,vendedor_id.eq.$usuarioId')
         .order('creado_en', ascending: false);
 
