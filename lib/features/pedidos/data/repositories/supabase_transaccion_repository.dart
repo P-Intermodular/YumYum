@@ -13,12 +13,12 @@ class SupabaseTransaccionRepository implements TransaccionRepository {
 
   @override
 
-  /// Recupera las transacciones del usuario como comprador o vendedor.
+  /// Recupera las transacciones donde participa el usuario.
   Future<List<TransaccionModel>> obtenerTransacciones(String usuarioId) async {
     final rows = await _client
         .from(TablasSupabase.transacciones)
         .select(TransaccionDto.selectBasico)
-        .or('comprador_id.eq.$usuarioId,vendedor_id.eq.$usuarioId')
+        .or('solicitante_id.eq.$usuarioId,propietario_id.eq.$usuarioId')
         .order('creado_en', ascending: false);
 
     return _mapearTransacciones(
@@ -67,16 +67,16 @@ class SupabaseTransaccionRepository implements TransaccionRepository {
     final perfiles = await _obtenerPerfilesPorId(
       rows.expand(
         (row) => [
-          row['comprador_id'] as String,
-          row['vendedor_id'] as String,
+          row['solicitante_id'] as String,
+          row['propietario_id'] as String,
         ],
       ),
     );
 
     return rows.map((row) {
-      final esComprador = row['comprador_id'] == usuarioId;
+      final esSolicitante = row['solicitante_id'] == usuarioId;
       final contraparteId =
-          row[esComprador ? 'vendedor_id' : 'comprador_id'] as String;
+          row[esSolicitante ? 'propietario_id' : 'solicitante_id'] as String;
 
       return TransaccionDto.desdeSupabase(
         row,

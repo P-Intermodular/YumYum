@@ -6,8 +6,8 @@ void main() {
     test('conversacionSelect solo pide campos publicos de participantes', () {
       const select = SupabaseChatRepository.conversacionSelect;
 
-      expect(select, contains('comprador:perfiles!'));
-      expect(select, contains('vendedor:perfiles!'));
+      expect(select, contains('solicitante:perfiles!'));
+      expect(select, contains('propietario:perfiles!'));
       expect(select, contains('nombre'));
       expect(select, contains('url_avatar'));
       expect(select, contains('valoracion_media'));

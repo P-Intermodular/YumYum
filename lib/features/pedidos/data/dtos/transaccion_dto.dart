@@ -11,8 +11,8 @@ abstract final class TransaccionDto {
     tipo,
     producto_id,
     producto_ofrecido_id,
-    comprador_id,
-    vendedor_id,
+    solicitante_id,
+    propietario_id,
     total,
     estado,
     creado_en,
@@ -28,9 +28,9 @@ abstract final class TransaccionDto {
   }) {
     final productoRow =
         producto ?? transaccion['producto'] as Map<String, dynamic>?;
-    final esComprador = transaccion['comprador_id'] == usuarioId;
+    final esSolicitante = transaccion['solicitante_id'] == usuarioId;
     final contraparteRow = contraparte ??
-        transaccion[esComprador ? 'vendedor' : 'comprador']
+        transaccion[esSolicitante ? 'propietario' : 'solicitante']
             as Map<String, dynamic>?;
 
     return TransaccionModel(
@@ -39,8 +39,8 @@ abstract final class TransaccionDto {
       estado: transaccion['estado'] as String? ?? EstadoTransaccion.aceptada,
       productoId: transaccion['producto_id'] as String,
       productoOfrecidoId: transaccion['producto_ofrecido_id'] as String?,
-      compradorId: transaccion['comprador_id'] as String,
-      vendedorId: transaccion['vendedor_id'] as String,
+      solicitanteId: transaccion['solicitante_id'] as String,
+      propietarioId: transaccion['propietario_id'] as String,
       tituloProducto: productoRow?['titulo'] as String? ?? 'Oferta YumYum',
       nombreContraparte:
           contraparteRow?['nombre'] as String? ?? 'Usuario YumYum',

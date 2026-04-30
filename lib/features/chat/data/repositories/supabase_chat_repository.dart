@@ -11,17 +11,17 @@ class SupabaseChatRepository implements ChatRepository {
   /// Select enriquecido para resolver la contraparte y el último mensaje.
   static const conversacionSelect = '''
     id,
-    comprador_id,
-    vendedor_id,
+    solicitante_id,
+    propietario_id,
     creado_en,
-    comprador:perfiles!conversaciones_comprador_id_fkey(
+    solicitante:perfiles!conversaciones_solicitante_id_fkey(
       id,
       nombre,
       url_avatar,
       valoracion_media,
       numero_valoraciones
     ),
-    vendedor:perfiles!conversaciones_vendedor_id_fkey(
+    propietario:perfiles!conversaciones_propietario_id_fkey(
       id,
       nombre,
       url_avatar,
@@ -42,12 +42,12 @@ class SupabaseChatRepository implements ChatRepository {
 
   @override
 
-  /// Recupera las conversaciones donde el usuario participa como comprador o vendedor.
+  /// Recupera las conversaciones donde participa el usuario.
   Future<List<ConversacionModel>> obtenerChats(String usuarioId) async {
     final rows = await _client
         .from(TablasSupabase.conversaciones)
         .select(conversacionSelect)
-        .or('comprador_id.eq.$usuarioId,vendedor_id.eq.$usuarioId')
+        .or('solicitante_id.eq.$usuarioId,propietario_id.eq.$usuarioId')
         .order('creado_en', ascending: false);
 
     return rows

@@ -6,12 +6,14 @@ void main() {
     test('usa un select base sin relaciones embebidas', () {
       expect(
         TransaccionDto.selectBasico,
-        contains('comprador_id'),
+        contains('solicitante_id'),
       );
       expect(
         TransaccionDto.selectBasico,
-        contains('vendedor_id'),
+        contains('propietario_id'),
       );
+      expect(TransaccionDto.selectBasico, isNot(contains('comprador_id')));
+      expect(TransaccionDto.selectBasico, isNot(contains('vendedor_id')));
       expect(TransaccionDto.selectBasico, isNot(contains('perfiles!')));
       expect(TransaccionDto.selectBasico, isNot(contains('productos!')));
     });
@@ -24,8 +26,8 @@ void main() {
           'estado': 'aceptada',
           'producto_id': 'producto-1',
           'producto_ofrecido_id': 'producto-2',
-          'comprador_id': 'usuario-1',
-          'vendedor_id': 'usuario-2',
+          'solicitante_id': 'usuario-1',
+          'propietario_id': 'usuario-2',
           'total': null,
           'creado_en': '2026-04-29T10:00:00Z',
           'completado_en': null,
@@ -46,6 +48,8 @@ void main() {
       expect(transaccion.urlAvatarContraparte, 'avatar.png');
       expect(transaccion.valoracionMediaContraparte, 4.5);
       expect(transaccion.numeroValoracionesContraparte, 3);
+      expect(transaccion.solicitanteId, 'usuario-1');
+      expect(transaccion.propietarioId, 'usuario-2');
     });
   });
 }

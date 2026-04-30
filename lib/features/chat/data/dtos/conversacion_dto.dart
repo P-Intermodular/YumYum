@@ -10,9 +10,9 @@ abstract final class ConversacionDto {
     Map<String, dynamic> json,
     String usuarioId,
   ) {
-    final esComprador = json['comprador_id'] == usuarioId;
-    final participanteJson =
-        json[esComprador ? 'vendedor' : 'comprador'] as Map<String, dynamic>?;
+    final esSolicitante = json['solicitante_id'] == usuarioId;
+    final participanteJson = json[esSolicitante ? 'propietario' : 'solicitante']
+        as Map<String, dynamic>?;
     final mensajesJson = json['mensajes'] as List<dynamic>? ?? const [];
     final mensajes = mensajesJson
         .cast<Map<String, dynamic>>()

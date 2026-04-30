@@ -5,8 +5,8 @@ class TransaccionModel {
   final String estado;
   final String productoId;
   final String? productoOfrecidoId;
-  final String compradorId;
-  final String vendedorId;
+  final String solicitanteId;
+  final String propietarioId;
   final String tituloProducto;
   final String nombreContraparte;
   final String urlAvatarContraparte;
@@ -22,8 +22,8 @@ class TransaccionModel {
     required this.estado,
     required this.productoId,
     this.productoOfrecidoId,
-    required this.compradorId,
-    required this.vendedorId,
+    required this.solicitanteId,
+    required this.propietarioId,
     required this.tituloProducto,
     required this.nombreContraparte,
     this.urlAvatarContraparte = '',
@@ -36,5 +36,5 @@ class TransaccionModel {
 
   /// Devuelve el ID de la contraparte en la transacción.
   String contraparte(String usuarioId) =>
-      usuarioId == compradorId ? vendedorId : compradorId;
+      usuarioId == solicitanteId ? propietarioId : solicitanteId;
 }

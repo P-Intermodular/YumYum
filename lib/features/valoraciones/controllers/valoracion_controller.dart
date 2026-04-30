@@ -62,8 +62,8 @@ class ValoracionController extends Notifier<AsyncValue<void>> {
     TransaccionModel transaccion,
     String usuarioId,
   ) {
-    final esComprador = transaccion.compradorId == usuarioId;
-    if (esComprador) return transaccion.productoId;
+    final esSolicitante = transaccion.solicitanteId == usuarioId;
+    if (esSolicitante) return transaccion.productoId;
     if (transaccion.tipo == TipoOferta.intercambio) {
       return transaccion.productoOfrecidoId;
     }
