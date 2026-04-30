@@ -48,6 +48,45 @@ class _DetalleTransaccionScreenState
     }
   }
 
+  Future<void> _cancelar(String transaccionId) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar transacción'),
+        content: const Text(
+          '¿Seguro que quieres cancelar esta transacción? '
+          'Los productos volverán a estar disponibles.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Volver'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cancelar transacción'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true || !mounted) return;
+
+    try {
+      await ref
+          .read(transaccionControllerProvider.notifier)
+          .cancelar(transaccionId);
+
+      if (!mounted) return;
+      mostrarExito(context, 'Transacción cancelada');
+    } catch (error) {
+      if (mounted) {
+        mostrarError(context, error);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final transaccionAsync =
@@ -168,6 +207,20 @@ class _DetalleTransaccionScreenState
                     : const Text('Marcar como realizado'),
               ),
             ),
+          if (esAceptada) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: cargando ? null : () => _cancelar(transaccion.id),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
+                  side: BorderSide(color: Colors.red.shade300),
+                ),
+                child: const Text('Cancelar transacción'),
+              ),
+            ),
+          ],
           if (esCompletada && !yaValoro)
             SizedBox(
               width: double.infinity,

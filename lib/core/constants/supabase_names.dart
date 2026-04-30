@@ -31,4 +31,5 @@ abstract final class RpcsSupabase {
   static const obtenerUbicacionExactaProducto =
       'obtener_ubicacion_exacta_producto';
   static const cancelarSolicitudOferta = 'cancelar_solicitud_oferta';
+  static const cancelarTransaccion = 'cancelar_transaccion';
 }

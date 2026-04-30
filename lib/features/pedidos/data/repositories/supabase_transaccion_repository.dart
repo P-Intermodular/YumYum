@@ -55,6 +55,16 @@ class SupabaseTransaccionRepository implements TransaccionRepository {
     );
   }
 
+  @override
+
+  /// Ejecuta la RPC que cancela una transacción aceptada.
+  Future<void> cancelarTransaccion(String transaccionId) async {
+    await _client.rpc(
+      RpcsSupabase.cancelarTransaccion,
+      params: {'p_transaccion_id': transaccionId},
+    );
+  }
+
   Future<List<TransaccionModel>> _mapearTransacciones(
     List<Map<String, dynamic>> rows,
     String usuarioId,

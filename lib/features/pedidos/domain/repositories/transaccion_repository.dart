@@ -13,4 +13,7 @@ abstract class TransaccionRepository {
 
   /// Marca una transacción como completada mediante la RPC correspondiente.
   Future<void> completarTransaccion(String transaccionId);
+
+  /// Cancela una transacción aceptada y devuelve los productos a disponible.
+  Future<void> cancelarTransaccion(String transaccionId);
 }

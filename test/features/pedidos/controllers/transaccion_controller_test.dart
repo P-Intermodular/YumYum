@@ -39,6 +39,32 @@ void main() {
       expect(container.read(transaccionControllerProvider).isLoading, false);
       expect(container.read(transaccionControllerProvider).hasError, false);
     });
+
+    test('cancela una transaccion aceptada y vuelve a estado data', () async {
+      final repository = _TransaccionRepositoryFake(_transaccion());
+      final container = ProviderContainer(
+        overrides: [
+          autenticacionRepositoryProvider.overrideWithValue(
+            AuthRepositoryFake(usuarioActual: usuarioTest()),
+          ),
+          supabaseClientProvider.overrideWithValue(supabaseTestClient()),
+          transaccionRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(autenticacionProvider);
+      await container.pump();
+      await container.read(transaccionDetalleProvider('transaccion-1').future);
+
+      await container
+          .read(transaccionControllerProvider.notifier)
+          .cancelar('transaccion-1');
+
+      expect(repository.transaccionCanceladaId, 'transaccion-1');
+      expect(container.read(transaccionControllerProvider).isLoading, false);
+      expect(container.read(transaccionControllerProvider).hasError, false);
+    });
   });
 }
 
@@ -60,6 +86,7 @@ TransaccionModel _transaccion() {
 class _TransaccionRepositoryFake implements TransaccionRepository {
   final TransaccionModel transaccion;
   String? transaccionCompletadaId;
+  String? transaccionCanceladaId;
 
   _TransaccionRepositoryFake(this.transaccion);
 
@@ -80,4 +107,10 @@ class _TransaccionRepositoryFake implements TransaccionRepository {
   Future<void> completarTransaccion(String transaccionId) async {
     transaccionCompletadaId = transaccionId;
   }
+
+  @override
+  Future<void> cancelarTransaccion(String transaccionId) async {
+    transaccionCanceladaId = transaccionId;
+  }
 }
+
