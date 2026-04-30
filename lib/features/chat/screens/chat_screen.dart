@@ -7,6 +7,7 @@ import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../providers/chat_providers.dart';
+import '../providers/chat_repository_provider.dart';
 
 /// Pantalla de conversación en tiempo real entre dos usuarios.
 class ChatScreen extends ConsumerStatefulWidget {
@@ -20,6 +21,31 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _mensajeController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _marcarMensajesComoLeidos();
+  }
+
+  /// Marca los mensajes ajenos de esta conversación como leídos.
+  Future<void> _marcarMensajesComoLeidos() async {
+    final usuario = ref.read(autenticacionProvider).value;
+    if (usuario == null) return;
+    try {
+      await ref
+          .read(chatRepositoryProvider)
+          .marcarMensajesLeidos(widget.chatId, usuario.id);
+    } catch (_) {
+      // Fallo silencioso: no es crítico para la experiencia de chat.
+    }
+  }
+
+  @override
+  void dispose() {
+    _mensajeController.dispose();
+    super.dispose();
+  }
 
   /// Envía el contenido actual del campo de texto y limpia la caja al terminar.
   Future<void> _enviarMensaje() async {

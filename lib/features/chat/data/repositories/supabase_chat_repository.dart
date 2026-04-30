@@ -32,7 +32,8 @@ class SupabaseChatRepository implements ChatRepository {
       id,
       contenido,
       remitente_id,
-      creado_en
+      creado_en,
+      leido_en
     )
   ''';
 
@@ -83,5 +84,22 @@ class SupabaseChatRepository implements ChatRepository {
     await _client
         .from(TablasSupabase.mensajes)
         .insert(MensajeDto.aInsercion(mensaje, conversacionId));
+  }
+
+  @override
+
+  /// Marca como leídos todos los mensajes recibidos por [usuarioId] en la
+  /// conversación indicada. Solo afecta a los mensajes ajenos que aún no
+  /// tienen `leido_en`.
+  Future<void> marcarMensajesLeidos(
+    String conversacionId,
+    String usuarioId,
+  ) async {
+    await _client
+        .from(TablasSupabase.mensajes)
+        .update({'leido_en': DateTime.now().toIso8601String()})
+        .eq('conversacion_id', conversacionId)
+        .neq('remitente_id', usuarioId)
+        .isFilter('leido_en', null);
   }
 }

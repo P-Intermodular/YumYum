@@ -9,6 +9,7 @@ abstract final class TablasSupabase {
   static const mensajes = 'mensajes';
   static const valoraciones = 'valoraciones';
   static const reportes = 'reportes';
+  static const notificaciones = 'notificaciones';
 }
 
 /// Buckets de Storage definidos por YumYum para recursos subidos por usuarios.

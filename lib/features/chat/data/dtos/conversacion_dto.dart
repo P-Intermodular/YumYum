@@ -20,6 +20,14 @@ abstract final class ConversacionDto {
         .toList()
       ..sort((a, b) => b.creadoEn.compareTo(a.creadoEn));
 
+    // Mensajes no leídos: los que envió la otra persona y el usuario actual
+    // aún no ha marcado como leídos.
+    final noLeidos = mensajesJson
+        .cast<Map<String, dynamic>>()
+        .where((m) =>
+            m['remitente_id'] != usuarioId && m['leido_en'] == null)
+        .length;
+
     return ConversacionModel(
       id: json['id'] as String,
       // La lista de chats siempre debe mostrar "la otra persona", nunca al
@@ -33,6 +41,7 @@ abstract final class ConversacionDto {
             )
           : UsuarioDto.desdePerfil(participanteJson),
       ultimoMensaje: mensajes.isEmpty ? null : mensajes.first,
+      mensajesNoLeidos: noLeidos,
     );
   }
 }

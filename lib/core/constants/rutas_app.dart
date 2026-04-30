@@ -14,6 +14,7 @@ abstract final class RutasApp {
   static const recuperarPassword = '/recuperar-password';
   static const restablecerPassword = '/restablecer-password';
   static const chats = '/chats';
+  static const notificaciones = '/notificaciones';
 
   static const aliasLogin = '/login';
   static const aliasSignup = '/signup';

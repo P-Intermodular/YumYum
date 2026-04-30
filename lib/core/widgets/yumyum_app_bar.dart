@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../constants/rutas_app.dart';
+import '../../features/notificaciones/providers/notificacion_providers.dart';
 
 /// AppBar reutilizable para las pantallas de YumYum.
 ///
 /// Centraliza la navegación secundaria y mantiene el mismo lenguaje visual en
 /// inicio, detalle, perfil y el resto de secciones principales.
-class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
+class YumYumAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String titulo;
   final bool mostrarBotonPerfil;
   final bool mostrarBotonNotificaciones;
@@ -27,8 +29,13 @@ class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const colorCabecera = Color(0xFF1F4A5B);
+    
+    // Solo escuchamos el provider si el botón se va a mostrar
+    final noLeidas = mostrarBotonNotificaciones
+        ? ref.watch(contadorNotificacionesNoLeidasProvider)
+        : 0;
 
     return AppBar(
       automaticallyImplyLeading: false,
@@ -57,24 +64,33 @@ class YumYumAppBar extends StatelessWidget implements PreferredSizeWidget {
         if (mostrarBotonNotificaciones)
           IconButton(
             icon: Stack(
+              clipBehavior: Clip.none,
               children: [
                 const Icon(Icons.notifications_none_rounded,
                     color: colorCabecera),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.redAccent,
-                      shape: BoxShape.circle,
+                if (noLeidas > 0)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        noLeidas > 99 ? '99+' : noLeidas.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
-            onPressed: () {},
+            onPressed: () => context.push(RutasApp.notificaciones),
           ),
         if (mostrarBotonPerfil)
           IconButton(

@@ -10,4 +10,7 @@ abstract class ChatRepository {
 
   /// Inserta un nuevo mensaje en la conversación indicada.
   Future<void> enviarMensaje(String conversacionId, MensajeModel mensaje);
+
+  /// Marca como leídos los mensajes recibidos en la conversación indicada.
+  Future<void> marcarMensajesLeidos(String conversacionId, String usuarioId);
 }
