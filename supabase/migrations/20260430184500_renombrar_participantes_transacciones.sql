@@ -143,6 +143,8 @@ do $$
 declare
   v_constraint text;
 begin
+  -- pg_get_constraintdef refleja los nombres nuevos despues de los rename
+  -- anteriores; por eso buscamos solicitante_id/propietario_id aqui.
   select conname
   into v_constraint
   from pg_constraint
@@ -536,6 +538,7 @@ begin
   set estado = 'completado'
   where id in (
     v_transaccion.producto_id,
+    -- En ventas solo actualiza producto_id; en intercambios actualiza ambos.
     coalesce(v_transaccion.producto_ofrecido_id, v_transaccion.producto_id)
   );
 end;
