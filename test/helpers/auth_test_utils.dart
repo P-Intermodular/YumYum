@@ -46,6 +46,11 @@ class AuthRepositoryFake implements AuthRepository {
   }
 
   @override
+  Future<String> subirAvatar(String usuarioId, dynamic imagen) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<UsuarioModel> actualizarUbicacionPredeterminada(UsuarioModel usuario) {
     throw UnimplementedError();
   }

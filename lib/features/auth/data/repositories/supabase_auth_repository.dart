@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -92,6 +93,23 @@ class SupabaseAuthRepository implements AuthRepository {
         .eq('id', usuario.id);
 
     return _perfilParaUsuario(usuario.id, correoRespaldo: usuario.correo);
+  }
+
+  @override
+  /// Sube un nuevo avatar al bucket público y devuelve la URL.
+  Future<String> subirAvatar(String usuarioId, File imagen) async {
+    // Generamos un nombre único para evitar caché en la misma URL
+    final extension = imagen.path.split('.').last;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final ruta = '$usuarioId/avatar_$timestamp.$extension';
+
+    await _client.storage.from(BucketsSupabase.avatares).upload(
+          ruta,
+          imagen,
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+        );
+
+    return _client.storage.from(BucketsSupabase.avatares).getPublicUrl(ruta);
   }
 
   @override

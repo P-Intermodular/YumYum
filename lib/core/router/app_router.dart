@@ -12,6 +12,7 @@ import '../../features/inicio/screens/inicio_screen.dart';
 import '../../features/principal/screens/principal_screen.dart';
 import '../../features/mapa/screens/mapa_screen.dart';
 import '../../features/chat/screens/lista_chats_screen.dart';
+import '../../features/perfil/screens/editar_perfil_screen.dart';
 import '../../features/perfil/screens/perfil_screen.dart';
 import '../../features/notificaciones/screens/notificaciones_screen.dart';
 import '../../features/perfil/screens/editar_ubicacion_perfil_screen.dart';
@@ -113,6 +114,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RutasApp.perfil,
             builder: (context, state) => const PerfilScreen(),
+          ),
+          GoRoute(
+            path: RutasApp.perfilEditar,
+            builder: (context, state) => const EditarPerfilScreen(),
           ),
           GoRoute(
             path: RutasApp.notificaciones,

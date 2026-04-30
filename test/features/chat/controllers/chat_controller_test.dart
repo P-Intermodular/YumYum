@@ -115,4 +115,7 @@ class _ChatRepositoryFake implements ChatRepository {
       String conversacionId, MensajeModel mensaje) async {
     mensajesEnviados.add(_MensajeEnviado(conversacionId, mensaje));
   }
+
+  @override
+  Future<void> marcarMensajesLeidos(String conversacionId, String usuarioId) async {}
 }

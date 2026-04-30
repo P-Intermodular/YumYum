@@ -30,10 +30,23 @@ class PerfilScreen extends ConsumerWidget {
     final topColor = Colors.green.shade200;
 
     return Scaffold(
-      appBar: const YumYumAppBar(
+      appBar: YumYumAppBar(
         titulo: 'Perfil',
         mostrarBotonVolver: true,
         mostrarBotonPerfil: false,
+        accionesExtra: [
+          TextButton(
+            onPressed: () => context.push(RutasApp.perfilEditar),
+            child: const Text(
+              'Editar',
+              style: TextStyle(
+                color: Color(0xFF1F4A5B),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(

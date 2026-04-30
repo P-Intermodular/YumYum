@@ -178,7 +178,7 @@ class _NotificacionesScreenState extends ConsumerState<NotificacionesScreen> {
                     ? Container(
                         width: 10,
                         height: 10,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.green,
                           shape: BoxShape.circle,
                         ),

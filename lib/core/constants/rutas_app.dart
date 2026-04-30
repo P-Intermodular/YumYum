@@ -10,6 +10,7 @@ abstract final class RutasApp {
   static const publicar = '/publicar';
   static const pedidos = '/pedidos';
   static const perfil = '/perfil';
+  static const perfilEditar = '/perfil/editar';
   static const perfilUbicacion = '/perfil/ubicacion';
   static const recuperarPassword = '/recuperar-password';
   static const restablecerPassword = '/restablecer-password';

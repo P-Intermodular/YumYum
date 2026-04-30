@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../entities/usuario_model.dart';
 
 /// Contrato de autenticación de la aplicación.
@@ -23,6 +25,9 @@ abstract class AuthRepository {
 
   /// Actualiza los datos del perfil del usuario en la base de datos.
   Future<UsuarioModel> actualizarPerfil(UsuarioModel usuario);
+
+  /// Sube un nuevo avatar para el usuario y devuelve la URL pública.
+  Future<String> subirAvatar(String usuarioId, File imagen);
 
   /// Actualiza solo la ubicacion predeterminada del perfil.
   Future<UsuarioModel> actualizarUbicacionPredeterminada(UsuarioModel usuario);
