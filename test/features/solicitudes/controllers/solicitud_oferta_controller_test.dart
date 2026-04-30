@@ -46,12 +46,32 @@ void main() {
           container.read(solicitudOfertaControllerProvider).isLoading, false);
       expect(container.read(solicitudOfertaControllerProvider).hasError, false);
     });
+
+    test('cancela una solicitud pendiente y vuelve a estado data', () async {
+      final repository = _SolicitudOfertaRepositoryFake();
+      final container = ProviderContainer(
+        overrides: [
+          solicitudOfertaRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(solicitudOfertaControllerProvider.notifier)
+          .cancelar('solicitud-3');
+
+      expect(repository.solicitudCanceladaId, 'solicitud-3');
+      expect(
+          container.read(solicitudOfertaControllerProvider).isLoading, false);
+      expect(container.read(solicitudOfertaControllerProvider).hasError, false);
+    });
   });
 }
 
 class _SolicitudOfertaRepositoryFake implements SolicitudOfertaRepository {
   String? solicitudAceptadaId;
   String? solicitudDenegadaId;
+  String? solicitudCanceladaId;
 
   @override
   Future<List<SolicitudOfertaModel>> obtenerSolicitudesRecibidas(
@@ -92,4 +112,10 @@ class _SolicitudOfertaRepositoryFake implements SolicitudOfertaRepository {
   Future<void> denegarSolicitudOferta(String solicitudId) async {
     solicitudDenegadaId = solicitudId;
   }
+
+  @override
+  Future<void> cancelarSolicitudOferta(String solicitudId) async {
+    solicitudCanceladaId = solicitudId;
+  }
 }
+

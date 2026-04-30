@@ -49,6 +49,24 @@ class SolicitudOfertaController extends Notifier<AsyncValue<void>> {
     }
   }
 
+  /// Cancela una solicitud pendiente enviada por el usuario y refresca.
+  Future<void> cancelar(String solicitudId) async {
+    final keepAlive = ref.keepAlive();
+    state = const AsyncValue.loading();
+    try {
+      await ref
+          .read(solicitudOfertaRepositoryProvider)
+          .cancelarSolicitudOferta(solicitudId);
+      _refrescarDatos();
+      state = const AsyncValue.data(null);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      rethrow;
+    } finally {
+      keepAlive.close();
+    }
+  }
+
   /// Invalida las consultas que reflejan solicitudes, catálogo y conversaciones.
   void _refrescarDatos() {
     ref.refrescarPedidos();
@@ -56,3 +74,4 @@ class SolicitudOfertaController extends Notifier<AsyncValue<void>> {
     ref.refrescarChats();
   }
 }
+

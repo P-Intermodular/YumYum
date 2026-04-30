@@ -94,6 +94,16 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
     );
   }
 
+  @override
+
+  /// Ejecuta la RPC que cancela una solicitud pendiente del solicitante.
+  Future<void> cancelarSolicitudOferta(String solicitudId) async {
+    await _client.rpc(
+      RpcsSupabase.cancelarSolicitudOferta,
+      params: {'p_solicitud_id': solicitudId},
+    );
+  }
+
   /// Normaliza la respuesta de las RPCs a una única fila de datos.
   Map<String, dynamic> _firstRpcRow(dynamic response) {
     if (response is List && response.isNotEmpty) {

@@ -137,6 +137,22 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
                 ],
               ),
             ],
+            if (!puedeResponder &&
+                !solicitud.esEntrante &&
+                solicitud.estado == EstadoSolicitud.pendiente) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => _cancelar(context, ref),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade300),
+                  ),
+                  child: const Text('Cancelar solicitud'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -169,6 +185,23 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
 
       if (context.mounted) {
         mostrarExito(context, 'Solicitud denegada');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        mostrarError(context, error);
+      }
+    }
+  }
+
+  /// Cancela una solicitud enviada y muestra feedback inmediato en la UI.
+  Future<void> _cancelar(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref
+          .read(solicitudOfertaControllerProvider.notifier)
+          .cancelar(solicitud.id);
+
+      if (context.mounted) {
+        mostrarExito(context, 'Solicitud cancelada');
       }
     } catch (error) {
       if (context.mounted) {

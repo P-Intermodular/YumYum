@@ -29,4 +29,7 @@ abstract class SolicitudOfertaRepository {
 
   /// Deniega una solicitud ya existente.
   Future<void> denegarSolicitudOferta(String solicitudId);
+
+  /// Cancela una solicitud pendiente creada por el usuario autenticado.
+  Future<void> cancelarSolicitudOferta(String solicitudId);
 }
