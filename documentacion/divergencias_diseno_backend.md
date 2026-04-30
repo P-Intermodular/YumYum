@@ -37,7 +37,7 @@ Este documento recoge las decisiones tomadas al implementar el backend de YumYum
 
 - `propietario_id`: usuario propietario de un producto.
 - `solicitante_id`: usuario que crea una solicitud.
-- `comprador_id` y `vendedor_id`: participantes de una transaccion o conversacion.
+- `solicitante_id` y `propietario_id`: participantes de una transaccion o conversacion.
 - `tipo_oferta`, `tipo_solicitud` y `tipo`: distinguen `venta` e `intercambio`.
 - `producto_ofrecido_id`: producto propuesto por el solicitante en un intercambio.
 - `producto_valorado_id`: producto concreto al que se asocia una valoracion cuando aplica.
