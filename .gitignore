@@ -53,3 +53,8 @@ app.*.map.json
 /documentacion/*
 !/documentacion/
 !/documentacion/divergencias_diseno_backend.md
+!/documentacion/documentacion_tecnica.md
+
+# Residuos de symlinks de WSL (creados por scripts/run_local.sh).
+/build.reparsepoint.bak
+/scripts/build
