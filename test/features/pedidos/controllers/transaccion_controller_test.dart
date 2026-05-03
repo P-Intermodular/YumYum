@@ -96,6 +96,11 @@ class _TransaccionRepositoryFake implements TransaccionRepository {
   }
 
   @override
+  Stream<List<TransaccionModel>> escucharTransacciones(String usuarioId) {
+    return Stream.value([transaccion]);
+  }
+
+  @override
   Future<TransaccionModel?> obtenerTransaccionPorId(
     String transaccionId,
     String usuarioId,

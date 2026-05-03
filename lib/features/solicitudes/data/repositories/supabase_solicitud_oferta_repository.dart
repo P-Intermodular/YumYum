@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/constants/supabase_names.dart';
@@ -38,6 +40,74 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
     String usuarioId,
   ) {
     return _obtenerSolicitudes(usuarioId: usuarioId, esEntrante: false);
+  }
+
+  @override
+
+  /// Escucha en tiempo real las solicitudes que el usuario recibe.
+  Stream<List<SolicitudOfertaModel>> escucharSolicitudesRecibidas(
+    String usuarioId,
+  ) async* {
+    yield await obtenerSolicitudesRecibidas(usuarioId);
+
+    final ctrl = StreamController<void>();
+    final channel = _client
+        .channel('solicitudes-recibidas-$usuarioId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: TablasSupabase.solicitudesOferta,
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'propietario_id',
+            value: usuarioId,
+          ),
+          callback: (_) => ctrl.add(null),
+        )
+        .subscribe();
+
+    try {
+      await for (final _ in ctrl.stream) {
+        yield await obtenerSolicitudesRecibidas(usuarioId);
+      }
+    } finally {
+      await _client.removeChannel(channel);
+      await ctrl.close();
+    }
+  }
+
+  @override
+
+  /// Escucha en tiempo real las solicitudes creadas por el usuario.
+  Stream<List<SolicitudOfertaModel>> escucharSolicitudesEnviadas(
+    String usuarioId,
+  ) async* {
+    yield await obtenerSolicitudesEnviadas(usuarioId);
+
+    final ctrl = StreamController<void>();
+    final channel = _client
+        .channel('solicitudes-enviadas-$usuarioId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: TablasSupabase.solicitudesOferta,
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'solicitante_id',
+            value: usuarioId,
+          ),
+          callback: (_) => ctrl.add(null),
+        )
+        .subscribe();
+
+    try {
+      await for (final _ in ctrl.stream) {
+        yield await obtenerSolicitudesEnviadas(usuarioId);
+      }
+    } finally {
+      await _client.removeChannel(channel);
+      await ctrl.close();
+    }
   }
 
   @override

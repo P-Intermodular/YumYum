@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/constants/supabase_names.dart';
@@ -25,6 +27,33 @@ class SupabaseTransaccionRepository implements TransaccionRepository {
       rows.cast<Map<String, dynamic>>().toList(),
       usuarioId,
     );
+  }
+
+  @override
+
+  /// Escucha en tiempo real las transacciones donde participa el usuario.
+  Stream<List<TransaccionModel>> escucharTransacciones(String usuarioId) async* {
+    yield await obtenerTransacciones(usuarioId);
+
+    final ctrl = StreamController<void>();
+    final channel = _client
+        .channel('transacciones-$usuarioId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: TablasSupabase.transacciones,
+          callback: (_) => ctrl.add(null),
+        )
+        .subscribe();
+
+    try {
+      await for (final _ in ctrl.stream) {
+        yield await obtenerTransacciones(usuarioId);
+      }
+    } finally {
+      await _client.removeChannel(channel);
+      await ctrl.close();
+    }
   }
 
   @override

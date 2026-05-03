@@ -5,6 +5,9 @@ abstract class ChatRepository {
   /// Obtiene la lista de conversaciones en las que participa el usuario.
   Future<List<ConversacionModel>> obtenerChats(String usuarioId);
 
+  /// Escucha en tiempo real la lista de conversaciones del usuario.
+  Stream<List<ConversacionModel>> escucharChats(String usuarioId);
+
   /// Escucha en tiempo real los mensajes de una conversación.
   Stream<List<MensajeModel>> obtenerMensajes(String conversacionId);
 

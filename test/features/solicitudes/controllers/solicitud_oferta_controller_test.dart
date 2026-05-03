@@ -88,6 +88,20 @@ class _SolicitudOfertaRepositoryFake implements SolicitudOfertaRepository {
   }
 
   @override
+  Stream<List<SolicitudOfertaModel>> escucharSolicitudesRecibidas(
+    String usuarioId,
+  ) {
+    return Stream.value([]);
+  }
+
+  @override
+  Stream<List<SolicitudOfertaModel>> escucharSolicitudesEnviadas(
+    String usuarioId,
+  ) {
+    return Stream.value([]);
+  }
+
+  @override
   Future<SolicitudOfertaCreadaModel> crearSolicitudOferta({
     required String productoId,
     required String tipoSolicitud,

@@ -36,8 +36,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await ref
           .read(chatRepositoryProvider)
           .marcarMensajesLeidos(widget.chatId, usuario.id);
-    } catch (_) {
-      // Fallo silencioso: no es crítico para la experiencia de chat.
+    } catch (e) {
+      // Fallo silencioso en la UI, pero lo logueamos en consola para debug.
+      debugPrint('Error al marcar mensajes como leídos: $e');
     }
   }
 

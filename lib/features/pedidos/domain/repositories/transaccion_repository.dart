@@ -5,6 +5,9 @@ abstract class TransaccionRepository {
   /// Recupera las transacciones donde participa el usuario indicado.
   Future<List<TransaccionModel>> obtenerTransacciones(String usuarioId);
 
+  /// Escucha en tiempo real las transacciones donde participa el usuario.
+  Stream<List<TransaccionModel>> escucharTransacciones(String usuarioId);
+
   /// Recupera una transacción concreta por su identificador.
   Future<TransaccionModel?> obtenerTransaccionPorId(
     String transaccionId,

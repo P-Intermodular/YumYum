@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/constants/supabase_names.dart';
@@ -55,6 +57,45 @@ class SupabaseChatRepository implements ChatRepository {
         .cast<Map<String, dynamic>>()
         .map((row) => ConversacionDto.desdeSupabase(row, usuarioId))
         .toList();
+  }
+
+  @override
+
+  /// Escucha en tiempo real la lista de conversaciones del usuario.
+  Stream<List<ConversacionModel>> escucharChats(String usuarioId) async* {
+    yield await obtenerChats(usuarioId);
+
+    final ctrl = StreamController<void>();
+    final channel = _client
+        .channel('chats-$usuarioId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: TablasSupabase.conversaciones,
+          callback: (_) => ctrl.add(null),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: TablasSupabase.mensajes,
+          callback: (_) => ctrl.add(null),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: TablasSupabase.mensajes,
+          callback: (_) => ctrl.add(null),
+        )
+        .subscribe();
+
+    try {
+      await for (final _ in ctrl.stream) {
+        yield await obtenerChats(usuarioId);
+      }
+    } finally {
+      await _client.removeChannel(channel);
+      await ctrl.close();
+    }
   }
 
   @override

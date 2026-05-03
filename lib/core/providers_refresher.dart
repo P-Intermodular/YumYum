@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/chat/providers/chat_providers.dart';
-import '../features/pedidos/providers/panel_pedidos_provider.dart';
 import '../features/pedidos/providers/transaccion_providers.dart';
 import '../features/perfil/providers/perfil_providers.dart';
+import '../features/solicitudes/providers/solicitud_oferta_providers.dart';
 import '../features/producto/providers/producto_providers.dart';
 import '../features/valoraciones/providers/valoracion_providers.dart';
 import 'location/ubicacion_actual_provider.dart';
@@ -17,7 +17,9 @@ extension RefrescarProviders on Ref {
   }
 
   void refrescarPedidos() {
-    invalidate(panelPedidosProvider);
+    invalidate(solicitudesRecibidasProvider);
+    invalidate(solicitudesEnviadasProvider);
+    invalidate(transaccionesListProvider);
   }
 
   void refrescarChats() {

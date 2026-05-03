@@ -16,3 +16,14 @@ final transaccionDetalleProvider =
         .obtenerTransaccionPorId(transaccionId, usuario.id);
   },
 );
+
+/// Escucha en tiempo real la lista de transacciones en las que participa el usuario.
+final transaccionesListProvider =
+    StreamProvider.autoDispose<List<TransaccionModel>>((ref) {
+  final usuario = ref.watch(autenticacionProvider).value;
+  if (usuario == null) return const Stream.empty();
+
+  return ref
+      .watch(transaccionRepositoryProvider)
+      .escucharTransacciones(usuario.id);
+});

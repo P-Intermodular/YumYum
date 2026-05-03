@@ -106,6 +106,11 @@ class _ChatRepositoryFake implements ChatRepository {
   Future<List<ConversacionModel>> obtenerChats(String usuarioId) async => [];
 
   @override
+  Stream<List<ConversacionModel>> escucharChats(String usuarioId) {
+    return Stream.value([]);
+  }
+
+  @override
   Stream<List<MensajeModel>> obtenerMensajes(String conversacionId) {
     return const Stream.empty();
   }

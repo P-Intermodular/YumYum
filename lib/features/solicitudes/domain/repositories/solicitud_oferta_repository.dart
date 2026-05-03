@@ -9,8 +9,18 @@ abstract class SolicitudOfertaRepository {
     String usuarioId,
   );
 
+  /// Escucha en tiempo real las solicitudes que el usuario recibe.
+  Stream<List<SolicitudOfertaModel>> escucharSolicitudesRecibidas(
+    String usuarioId,
+  );
+
   /// Lista las solicitudes creadas por el usuario autenticado.
   Future<List<SolicitudOfertaModel>> obtenerSolicitudesEnviadas(
+    String usuarioId,
+  );
+
+  /// Escucha en tiempo real las solicitudes creadas por el usuario.
+  Stream<List<SolicitudOfertaModel>> escucharSolicitudesEnviadas(
     String usuarioId,
   );
 

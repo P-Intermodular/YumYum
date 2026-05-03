@@ -5,8 +5,10 @@ import '../../../core/constants/estados_app.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../solicitudes/domain/entities/solicitud_oferta_model.dart';
+import '../../solicitudes/providers/solicitud_oferta_providers.dart';
 import '../domain/entities/transaccion_model.dart';
 import '../providers/panel_pedidos_provider.dart';
+import '../providers/transaccion_providers.dart';
 import '../widgets/tarjeta_solicitud_oferta.dart';
 import '../widgets/tarjeta_transaccion.dart';
 import '../widgets/titulo_seccion.dart';
@@ -56,7 +58,11 @@ class PedidosScreen extends ConsumerWidget {
 
           return RefreshIndicator(
             // Permite resincronizar el panel completo tras cambios externos.
-            onRefresh: () => ref.refresh(panelPedidosProvider.future),
+            onRefresh: () async {
+              ref.invalidate(solicitudesRecibidasProvider);
+              ref.invalidate(solicitudesEnviadasProvider);
+              ref.invalidate(transaccionesListProvider);
+            },
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [

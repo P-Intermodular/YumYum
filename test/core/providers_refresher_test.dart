@@ -4,8 +4,8 @@ import 'package:yumyum/core/location/ubicacion_actual_provider.dart';
 import 'package:yumyum/core/providers_refresher.dart';
 import 'package:yumyum/features/chat/domain/entities/conversacion_model.dart';
 import 'package:yumyum/features/chat/providers/chat_providers.dart';
-import 'package:yumyum/features/pedidos/domain/entities/panel_pedidos_model.dart';
-import 'package:yumyum/features/pedidos/providers/panel_pedidos_provider.dart';
+import 'package:yumyum/features/pedidos/providers/transaccion_providers.dart';
+import 'package:yumyum/features/solicitudes/providers/solicitud_oferta_providers.dart';
 import 'package:yumyum/features/perfil/providers/perfil_providers.dart';
 import 'package:yumyum/features/producto/domain/entities/producto_model.dart';
 import 'package:yumyum/features/producto/providers/producto_providers.dart';
@@ -63,26 +63,36 @@ void main() {
       });
       final container = ProviderContainer(
         overrides: [
-          panelPedidosProvider.overrideWith((ref) async {
+          solicitudesRecibidasProvider.overrideWith((ref) {
             lecturas++;
-            return const PanelPedidosModel(
-              solicitudesRecibidas: [],
-              solicitudesEnviadas: [],
-              transacciones: [],
-            );
+            return Stream.value([]);
+          }),
+          solicitudesEnviadasProvider.overrideWith((ref) {
+            return Stream.value([]);
+          }),
+          transaccionesListProvider.overrideWith((ref) {
+            return Stream.value([]);
           }),
         ],
       );
       addTearDown(container.dispose);
 
-      await container.read(panelPedidosProvider.future);
+      final sub1 = container.listen(solicitudesRecibidasProvider, (_, __) {});
+      final sub2 = container.listen(solicitudesEnviadasProvider, (_, __) {});
+      final sub3 = container.listen(transaccionesListProvider, (_, __) {});
+
+      await container.read(solicitudesRecibidasProvider.future);
       expect(lecturas, 1);
 
       container.read(refrescarProvider)();
       await container.pump();
 
-      await container.read(panelPedidosProvider.future);
+      await container.read(solicitudesRecibidasProvider.future);
       expect(lecturas, 2);
+
+      sub1.close();
+      sub2.close();
+      sub3.close();
     });
 
     test('refresca chats', () async {
@@ -92,14 +102,15 @@ void main() {
       });
       final container = ProviderContainer(
         overrides: [
-          listaChatsProvider.overrideWith((ref) async {
+          listaChatsProvider.overrideWith((ref) {
             lecturas++;
-            return const <ConversacionModel>[];
+            return Stream.value(const <ConversacionModel>[]);
           }),
         ],
       );
       addTearDown(container.dispose);
 
+      final sub = container.listen(listaChatsProvider, (_, __) {});
       await container.read(listaChatsProvider.future);
       expect(lecturas, 1);
 
@@ -108,6 +119,7 @@ void main() {
 
       await container.read(listaChatsProvider.future);
       expect(lecturas, 2);
+      sub.close();
     });
 
     test('refresca ubicacion actual', () async {
