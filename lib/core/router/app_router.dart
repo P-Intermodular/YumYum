@@ -74,6 +74,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RutasApp.aliasSignup,
         redirect: (context, state) => RutasApp.registro,
       ),
+      
+      // ----------------------------------------------------------------------
+      // RUTAS CON NAVEGACIÓN INFERIOR (ShellRoute)
+      // ----------------------------------------------------------------------
       ShellRoute(
         builder: (context, state, child) => PrincipalScreen(child: child),
         routes: [
@@ -130,17 +134,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AjustesScreen(),
           ),
           GoRoute(
-            path: RutasApp.perfilUsuarioParametro,
-            builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return PerfilPublicoScreen(usuarioId: id);
-            },
-          ),
-          GoRoute(
             path: RutasApp.aliasProfile,
             redirect: (context, state) => RutasApp.perfil,
           ),
         ],
+      ),
+
+      // ----------------------------------------------------------------------
+      // RUTAS DE DETALLE A PANTALLA COMPLETA (Fuera del ShellRoute)
+      // Estas rutas se empujan sobre el RootNavigator para evitar conflictos 
+      // de claves con Hero Animations y ocultar la barra inferior de la UI.
+      // ----------------------------------------------------------------------
+      GoRoute(
+        path: RutasApp.perfilUsuarioParametro,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PerfilPublicoScreen(usuarioId: id);
+        },
       ),
       GoRoute(
         path: RutasApp.productoParametro,
