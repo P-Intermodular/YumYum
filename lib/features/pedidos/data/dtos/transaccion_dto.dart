@@ -4,7 +4,9 @@ import '../../domain/entities/transaccion_model.dart';
 /// Adapta la tabla `transacciones` al modelo de dominio de la app.
 abstract final class TransaccionDto {
   /// Select base sin joins embebidos para no depender de la cache de relaciones
-  /// de PostgREST entre `transacciones` y `perfiles`.
+  /// de PostgREST entre `transacciones` y `perfiles`. La imagen y el precio
+  /// del producto se resuelven en una segunda consulta agrupada (ver
+  /// `SupabaseTransaccionRepository._obtenerProductosPorId`).
   static const selectBasico = '''
     id,
     solicitud_id,
@@ -58,7 +60,22 @@ abstract final class TransaccionDto {
           DateTime.tryParse(transaccion['completado_en']?.toString() ?? ''),
       cantidad: transaccion['cantidad'] as int? ?? 1,
       cantidadOfrecida: transaccion['cantidad_ofrecida'] as int?,
+      solicitudId: transaccion['solicitud_id'] as String?,
+      urlImagenProducto: _primeraImagen(productoRow),
+      precioUnitario: _toDoubleOrNull(productoRow?['precio']),
     );
+  }
+
+  /// Devuelve la URL pública de la primera imagen ordenada por `posicion`.
+  static String _primeraImagen(Map<String, dynamic>? productoJson) {
+    final imagenes =
+        (productoJson?['imagenes_producto'] as List<dynamic>? ?? const [])
+            .cast<Map<String, dynamic>>();
+    if (imagenes.isEmpty) return '';
+    final ordenadas = [...imagenes]
+      ..sort((a, b) =>
+          (a['posicion'] as int? ?? 0).compareTo(b['posicion'] as int? ?? 0));
+    return (ordenadas.first['url_publica'] as String?) ?? '';
   }
 
   /// Normaliza valores numéricos obligatorios.

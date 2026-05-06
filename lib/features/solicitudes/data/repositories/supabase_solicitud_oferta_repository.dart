@@ -12,10 +12,15 @@ import '../dtos/solicitud_oferta_dto.dart';
 
 /// Implementación de [SolicitudOfertaRepository] apoyada en RPCs y consultas SQL.
 class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
-  /// Select base con el título del producto y la contraparte visible.
+  /// Select base con el título del producto, la contraparte visible y la
+  /// primera imagen del plato (para pintar la card del listado de pedidos).
   static const _solicitudSelect = '''
     *,
-    producto:productos!solicitudes_oferta_producto_id_fkey(titulo),
+    producto:productos!solicitudes_oferta_producto_id_fkey(
+      titulo,
+      precio,
+      imagenes_producto(url_publica, posicion)
+    ),
     solicitante:perfiles!solicitudes_oferta_solicitante_id_fkey(nombre),
     propietario:perfiles!solicitudes_oferta_propietario_id_fkey(nombre)
   ''';
