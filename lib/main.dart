@@ -86,7 +86,7 @@ class SupabaseConfigMissingApp extends StatelessWidget {
     return MaterialApp(
       title: 'YumYum',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme(YumColors.light),
+      theme: AppTheme.lightTheme(YumColors.huertoModerno),
       home: const Scaffold(
         body: SafeArea(
           child: Center(

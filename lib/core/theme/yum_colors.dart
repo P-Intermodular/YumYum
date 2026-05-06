@@ -89,7 +89,7 @@ class YumColors extends ThemeExtension<YumColors> {
     );
   }
 
-  /// "Mesa de Barrio": calido, arcilla y mostaza. Tema por defecto.
+  /// "Mesa de Barrio": calido, arcilla y mostaza. Tema alternativo.
   static const light = YumColors(
     cream: Color(0xFFFBF6EC),
     cream2: Color(0xFFF3EADB),
@@ -106,7 +106,8 @@ class YumColors extends ThemeExtension<YumColors> {
   );
 
   /// "Huerto Moderno": minimal nordico, verdes salvia y arcilla suave.
-  /// Origen: prototipo-figma `theme-b` en `theme.css:127-161`.
+  /// Tema por defecto. Origen: prototipo-figma `theme-b` en
+  /// `theme.css:127-161`.
   static const huertoModerno = YumColors(
     cream: Color(0xFFF4F3EC),
     cream2: Color(0xFFE7E5D9),
