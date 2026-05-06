@@ -29,6 +29,12 @@ abstract final class ConversacionDto {
         .length;
 
     final productoJson = json['producto'] as Map<String, dynamic>?;
+    final solicitudJson = json['solicitud'] as Map<String, dynamic>?;
+    // PostgREST puede devolver `transaccion` como objeto (al detectar el
+    // UNIQUE de `transacciones.solicitud_id`) o como lista (cuando lo trata
+    // como 1:N). Cubrimos ambos casos para no acoplarnos a esa heurística.
+    final transaccionId =
+        _idDeRelacionSingular(solicitudJson?['transaccion']);
 
     return ConversacionModel(
       id: json['id'] as String,
@@ -45,6 +51,9 @@ abstract final class ConversacionDto {
       producto: productoJson == null ? null : _productoDesdeJson(productoJson),
       ultimoMensaje: mensajes.isEmpty ? null : mensajes.first,
       mensajesNoLeidos: noLeidos,
+      solicitudId: json['solicitud_id'] as String?,
+      estadoSolicitud: solicitudJson?['estado'] as String?,
+      transaccionId: transaccionId,
     );
   }
 
@@ -75,5 +84,18 @@ abstract final class ConversacionDto {
     if (value == null) return null;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString());
+  }
+
+  /// Extrae el `id` de una relación que PostgREST puede devolver como objeto
+  /// o como lista (depende de cómo detecta la cardinalidad).
+  static String? _idDeRelacionSingular(dynamic raw) {
+    if (raw is Map) {
+      return raw['id'] as String?;
+    }
+    if (raw is List && raw.isNotEmpty) {
+      final first = raw.first;
+      if (first is Map) return first['id'] as String?;
+    }
+    return null;
   }
 }

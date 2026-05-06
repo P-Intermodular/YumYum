@@ -67,6 +67,7 @@ class TransaccionController extends Notifier<AsyncValue<void>> {
   ) {
     ref.refrescarPedidos();
     ref.refrescarTransaccionDetalle(transaccionId);
+    ref.refrescarPedidoUnificado();
     ref.refrescarCatalogo();
 
     if (transaccion != null) {

@@ -44,11 +44,27 @@ class ConversacionModel {
   final MensajeModel? ultimoMensaje;
   final int mensajesNoLeidos;
 
+  /// Id de la solicitud asociada al chat. Existe siempre (la conversación se
+  /// crea junto con la solicitud), pero se deja anulable para tolerar datos
+  /// antiguos sin solicitud.
+  final String? solicitudId;
+
+  /// Estado actual de la solicitud (pendiente / aceptada / denegada / ...).
+  /// Permite decidir el destino del banner del chat.
+  final String? estadoSolicitud;
+
+  /// Id de la transacción cuando la solicitud ya fue aceptada. Null mientras
+  /// la solicitud está pendiente o si fue denegada/cancelada.
+  final String? transaccionId;
+
   const ConversacionModel({
     required this.id,
     required this.participante,
     this.producto,
     this.ultimoMensaje,
     this.mensajesNoLeidos = 0,
+    this.solicitudId,
+    this.estadoSolicitud,
+    this.transaccionId,
   });
 }

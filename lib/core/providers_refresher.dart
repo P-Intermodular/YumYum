@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/chat/providers/chat_providers.dart';
 import '../features/mapa/providers/mapa_providers.dart';
+import '../features/pedidos/providers/pedido_unificado_provider.dart';
 import '../features/pedidos/providers/transaccion_providers.dart';
 import '../features/perfil/providers/perfil_providers.dart';
 import '../features/solicitudes/providers/solicitud_oferta_providers.dart';
@@ -44,6 +45,12 @@ extension RefrescarProviders on Ref {
 
   void refrescarTransaccionDetalle(String transaccionId) {
     invalidate(transaccionDetalleProvider(transaccionId));
+  }
+
+  /// Invalida todas las instancias del VM unificado de pedido para que la
+  /// pantalla de detalle pinte el nuevo estado tras una acción.
+  void refrescarPedidoUnificado() {
+    invalidate(pedidoUnificadoProvider);
   }
 
   void refrescarValoracionUsuario({

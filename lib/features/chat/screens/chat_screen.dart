@@ -140,7 +140,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Column(
           children: [
             if (chatActual?.producto != null)
-              _BannerProducto(producto: chatActual!.producto!),
+              _BannerProducto(conversacion: chatActual!),
             Expanded(
               child: mensajesAsync.when(
                 data: (mensajesBase) {
@@ -320,21 +320,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 /// Banner pinned bajo el AppBar con el plato negociado en la conversación.
 ///
 /// Replica del patrón figma (`screens-b.tsx#L104-L111`): miniatura del plato +
-/// título + precio · código de pedido. Tap → detalle del producto.
+/// título + precio · código de pedido. Tap → detalle del pedido (transacción
+/// si ya está aceptada, solicitud en otro caso). El producto detalle queda
+/// como fallback para conversaciones sin solicitud.
 class _BannerProducto extends StatelessWidget {
-  final ProductoEnChat producto;
+  final ConversacionModel conversacion;
 
-  const _BannerProducto({required this.producto});
+  const _BannerProducto({required this.conversacion});
+
+  /// Decide a dónde llevar al usuario al pulsar el banner.
+  ///
+  /// El chat trata de un pedido concreto, no de la ficha pública del producto.
+  /// Si la solicitud ya fue aceptada vamos al detalle de transacción; si está
+  /// en cualquier otro estado (pendiente, denegada, cancelada) vamos a la
+  /// pantalla de pedido por solicitud, que pinta su timeline correspondiente.
+  String _resolverDestino() {
+    final transaccionId = conversacion.transaccionId;
+    if (transaccionId != null) return RutasApp.transaccionDetalle(transaccionId);
+
+    final solicitudId = conversacion.solicitudId;
+    if (solicitudId != null) return RutasApp.pedidoPorSolicitud(solicitudId);
+
+    return RutasApp.productoDetalle(conversacion.producto!.id);
+  }
+
+  /// Código humano del pedido (últimos 6 caracteres del id de transacción /
+  /// solicitud). Si por algún motivo no hay ninguno, cae al id del producto
+  /// para no romper el render.
+  String _resolverCodigo() {
+    final fuente = conversacion.transaccionId ??
+        conversacion.solicitudId ??
+        conversacion.producto!.id;
+    return fuente.length >= 6
+        ? fuente.substring(fuente.length - 6).toUpperCase()
+        : fuente.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.yumColors;
+    final producto = conversacion.producto!;
     final precioTexto = producto.tipoOferta == 'intercambio' || producto.precio == null
         ? 'Intercambio'
         : '${producto.precio!.toStringAsFixed(2)} €';
-    final codigoCorto = producto.id.length >= 6
-        ? producto.id.substring(producto.id.length - 6).toUpperCase()
-        : producto.id.toUpperCase();
+    final codigoCorto = _resolverCodigo();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -342,7 +371,7 @@ class _BannerProducto extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => context.push(RutasApp.productoDetalle(producto.id)),
+          onTap: () => context.push(_resolverDestino()),
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(

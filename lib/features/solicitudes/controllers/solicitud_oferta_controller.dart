@@ -72,6 +72,7 @@ class SolicitudOfertaController extends Notifier<AsyncValue<void>> {
     ref.refrescarPedidos();
     ref.refrescarCatalogo();
     ref.refrescarChats();
+    ref.refrescarPedidoUnificado();
   }
 }
 

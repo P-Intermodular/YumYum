@@ -31,6 +31,7 @@ abstract final class RutasApp {
   static const productoParametro = '/producto/:id';
   static const chatParametro = '/chat/:id';
   static const transaccionParametro = '/transaccion/:id';
+  static const pedidoSolicitudParametro = '/pedido/solicitud/:id';
   static const valorarParametro = '/valorar/:transaccionId';
   static const perfilUsuarioParametro = '/usuario/:id';
 
@@ -42,6 +43,11 @@ abstract final class RutasApp {
 
   /// Construye la ruta de detalle de una transacción.
   static String transaccionDetalle(String id) => '/transaccion/$id';
+
+  /// Construye la ruta de detalle del pedido cuando aún no existe transacción
+  /// y solo se conoce la solicitud (estado pendiente / denegada / cancelada).
+  static String pedidoPorSolicitud(String solicitudId) =>
+      '/pedido/solicitud/$solicitudId';
 
   /// Construye la ruta para valorar una transacción completada.
   static String valorarTransaccion(String transaccionId) =>

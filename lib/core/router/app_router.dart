@@ -174,7 +174,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RutasApp.transaccionParametro,
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          return DetalleTransaccionScreen(transaccionId: id);
+          return DetalleTransaccionScreen.porTransaccion(id);
+        },
+      ),
+      GoRoute(
+        path: RutasApp.pedidoSolicitudParametro,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return DetalleTransaccionScreen.porSolicitud(id);
         },
       ),
       GoRoute(

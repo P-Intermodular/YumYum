@@ -14,6 +14,7 @@ class SupabaseChatRepository implements ChatRepository {
   /// el último mensaje de la conversación.
   static const conversacionSelect = '''
     id,
+    solicitud_id,
     solicitante_id,
     propietario_id,
     producto_id,
@@ -41,6 +42,11 @@ class SupabaseChatRepository implements ChatRepository {
         url_publica,
         posicion
       )
+    ),
+    solicitud:solicitudes_oferta!conversaciones_solicitud_id_fkey(
+      id,
+      estado,
+      transaccion:transacciones!transacciones_solicitud_id_fkey(id)
     ),
     mensajes(
       id,
@@ -96,6 +102,21 @@ class SupabaseChatRepository implements ChatRepository {
           event: PostgresChangeEvent.update,
           schema: 'public',
           table: TablasSupabase.mensajes,
+          callback: (_) => ctrl.add(null),
+        )
+        // Cambios en estado de la solicitud (aceptar/denegar/cancelar)
+        // re-disparan el fetch para que el banner del chat refleje a dónde
+        // navegar y cómo etiquetar el pedido.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: TablasSupabase.solicitudesOferta,
+          callback: (_) => ctrl.add(null),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: TablasSupabase.transacciones,
           callback: (_) => ctrl.add(null),
         )
         .subscribe();
