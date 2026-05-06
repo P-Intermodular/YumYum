@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
+import '../../../core/theme/yum_colors.dart';
+import '../../../core/widgets/ui/yum_background.dart';
+import '../../../core/widgets/ui/yum_button.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/restablecer_password_controller.dart';
+import '../widgets/auth_decor.dart';
 
 /// Pantalla para validar el enlace y definir una nueva contraseña.
 class RestablecerPasswordScreen extends ConsumerStatefulWidget {
@@ -96,7 +99,7 @@ class _RestablecerPasswordScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.yumColors;
     final estado =
         ref.watch(restablecerPasswordControllerProvider(_parametros));
     final paso = estado.paso;
@@ -104,50 +107,47 @@ class _RestablecerPasswordScreenState
     final guardando = paso == PasoRestablecerPassword.guardandoPassword;
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 48),
-              Image.asset(
-                AppAssets.logo,
-                height: 80,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Restablecer contraseña',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
+      body: YumBackground(
+        child: Stack(
+          children: [
+            OrbeGlow(
+              top: -50,
+              right: -50,
+              size: 280,
+              color: colors.terracotta.withValues(alpha: 0.15),
+            ),
+            OrbeGlow(
+              top: 160,
+              left: -60,
+              size: 220,
+              color: colors.mustard.withValues(alpha: 0.18),
+            ),
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CabeceraAuth(
+                      titulo: 'Restablecer contraseña',
+                      subtitulo: _descripcionPorPaso(paso),
+                    ),
+                    const SizedBox(height: 32),
+                    if (paso == PasoRestablecerPassword.enlaceInvalido)
+                      _buildEstadoInvalido()
+                    else if (paso == PasoRestablecerPassword.esperandoConfirmacion)
+                      _buildEstadoConfirmacion()
+                    else if (validando)
+                      _buildEstadoValidando()
+                    else if (paso == PasoRestablecerPassword.passwordActualizada)
+                      _buildEstadoPasswordActualizada()
+                    else
+                      _buildFormulario(guardando),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                _descripcionPorPaso(paso),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey.shade700,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 32),
-              if (paso == PasoRestablecerPassword.enlaceInvalido)
-                _buildEstadoInvalido()
-              else if (paso == PasoRestablecerPassword.esperandoConfirmacion)
-                _buildEstadoConfirmacion()
-              else if (validando)
-                _buildEstadoValidando()
-              else if (paso == PasoRestablecerPassword.passwordActualizada)
-                _buildEstadoPasswordActualizada()
-              else
-                _buildFormulario(guardando),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -156,14 +156,14 @@ class _RestablecerPasswordScreenState
   String _descripcionPorPaso(PasoRestablecerPassword paso) {
     switch (paso) {
       case PasoRestablecerPassword.enlaceInvalido:
-        return 'Este enlace no es válido o ha caducado. Puedes volver al inicio de sesión o solicitar uno nuevo.';
+        return 'Este enlace no es válido o ha caducado. Vuelve al inicio o solicita uno nuevo.';
       case PasoRestablecerPassword.esperandoConfirmacion:
         return 'Antes de mostrar el formulario vamos a validar el enlace de recuperación.';
       case PasoRestablecerPassword.validandoToken:
         return 'Estamos comprobando que el enlace siga activo y pertenezca a tu cuenta.';
       case PasoRestablecerPassword.formularioListo:
       case PasoRestablecerPassword.guardandoPassword:
-        return 'Escribe tu nueva contraseña para completar la recuperación de tu cuenta.';
+        return 'Escribe tu nueva contraseña para terminar la recuperación.';
       case PasoRestablecerPassword.passwordActualizada:
         return 'Tu contraseña se ha modificado correctamente. Ya puedes iniciar sesión con tus nuevas credenciales.';
     }
@@ -173,43 +173,24 @@ class _RestablecerPasswordScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.orange.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange.shade200),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.link_off_rounded,
-                color: Colors.orange.shade800,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'El enlace de recuperación ya no puede utilizarse. Solicita otro desde la pantalla de acceso.',
-                  style: TextStyle(
-                    color: Colors.orange.shade900,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        const BannerAuth(
+          tono: BannerAuthTono.atencion,
+          icono: Icons.link_off_rounded,
+          texto:
+              'El enlace de recuperación ya no puede utilizarse. Solicita otro desde la pantalla de acceso.',
         ),
         const SizedBox(height: 24),
-        OutlinedButton(
-          onPressed: () => context.go(RutasApp.iniciarSesion),
-          child: const Text('Volver al inicio de sesión'),
+        YumButton(
+          text: 'Solicitar un nuevo enlace',
+          fullWidth: true,
+          onPressed: () => context.go(RutasApp.recuperarPassword),
         ),
         const SizedBox(height: 8),
-        ElevatedButton(
-          onPressed: () => context.go(RutasApp.recuperarPassword),
-          child: const Text('Solicitar un nuevo enlace'),
+        YumButton(
+          text: 'Volver al inicio de sesión',
+          fullWidth: true,
+          variant: YumButtonVariant.ghost,
+          onPressed: () => context.go(RutasApp.iniciarSesion),
         ),
       ],
     );
@@ -219,64 +200,52 @@ class _RestablecerPasswordScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue.shade100),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.verified_user_outlined,
-                color: Colors.blue.shade800,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Pulsa en continuar para validar el enlace y abrir el formulario de cambio de contraseña.',
-                  style: TextStyle(
-                    color: Colors.blue.shade900,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        const BannerAuth(
+          tono: BannerAuthTono.info,
+          icono: Icons.verified_user_outlined,
+          texto:
+              'Pulsa en continuar para validar el enlace y abrir el formulario de cambio de contraseña.',
         ),
         const SizedBox(height: 24),
-        ElevatedButton(
+        YumButton(
+          text: 'Continuar recuperación',
+          fullWidth: true,
           onPressed: _continuarRecuperacion,
-          child: const Text('Continuar recuperación'),
         ),
         const SizedBox(height: 8),
-        TextButton(
-          onPressed: _cancelarRecuperacion,
-          child: const Text('Cancelar'),
+        Center(
+          child: TextButton(
+            onPressed: _cancelarRecuperacion,
+            style: TextButton.styleFrom(
+              foregroundColor: context.yumColors.inkSoft,
+            ),
+            child: const Text('Cancelar'),
+          ),
         ),
       ],
     );
   }
 
   Widget _buildEstadoValidando() {
+    final colors = context.yumColors;
     return SizedBox(
       height: 180,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 28,
             height: 28,
-            child: CircularProgressIndicator(strokeWidth: 3),
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(colors.terracotta),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
-            'Validando enlace de recuperación...',
+            'Validando enlace de recuperación…',
             style: TextStyle(
-              color: Colors.grey.shade800,
+              color: colors.ink,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -289,44 +258,24 @@ class _RestablecerPasswordScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.green.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green.shade200),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.check_circle_outline,
-                color: Colors.green.shade800,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Tu contraseña se ha modificado correctamente. Vuelve al inicio de sesión para entrar con tus nuevas credenciales.',
-                  style: TextStyle(
-                    color: Colors.green.shade900,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        const BannerAuth(
+          tono: BannerAuthTono.exito,
+          icono: Icons.check_circle_outline_rounded,
+          texto:
+              'Tu contraseña se ha modificado correctamente. Vuelve al inicio de sesión para entrar con tus nuevas credenciales.',
         ),
         const SizedBox(height: 24),
-        ElevatedButton(
+        YumButton(
+          text: 'Ir al inicio de sesión',
+          fullWidth: true,
           onPressed: () => context.go(RutasApp.iniciarSesion),
-          child: const Text('Ir al inicio de sesión'),
         ),
       ],
     );
   }
 
   Widget _buildFormulario(bool guardando) {
+    final colors = context.yumColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -338,19 +287,20 @@ class _RestablecerPasswordScreenState
               TextFormField(
                 controller: _nuevaPasswordController,
                 decoration: InputDecoration(
-                  labelText: 'Nueva contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  hintText: 'Nueva contraseña',
+                  prefixIcon: Icon(Icons.lock_outline, color: colors.inkSoft, size: 20),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _ocultarNuevaPassword
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
+                      color: colors.inkSoft,
+                      size: 20,
                     ),
                     onPressed: guardando
                         ? null
                         : () => setState(
-                              () => _ocultarNuevaPassword =
-                                  !_ocultarNuevaPassword,
+                              () => _ocultarNuevaPassword = !_ocultarNuevaPassword,
                             ),
                   ),
                 ),
@@ -362,23 +312,24 @@ class _RestablecerPasswordScreenState
                     ? 'Mínimo 6 caracteres'
                     : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _confirmarPasswordController,
                 decoration: InputDecoration(
-                  labelText: 'Repetir contraseña',
-                  prefixIcon: const Icon(Icons.lock_reset_outlined),
+                  hintText: 'Repetir contraseña',
+                  prefixIcon: Icon(Icons.lock_reset_outlined, color: colors.inkSoft, size: 20),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _ocultarConfirmacion
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
+                      color: colors.inkSoft,
+                      size: 20,
                     ),
                     onPressed: guardando
                         ? null
                         : () => setState(
-                              () =>
-                                  _ocultarConfirmacion = !_ocultarConfirmacion,
+                              () => _ocultarConfirmacion = !_ocultarConfirmacion,
                             ),
                   ),
                 ),
@@ -402,23 +353,18 @@ class _RestablecerPasswordScreenState
           ),
         ),
         const SizedBox(height: 24),
-        ElevatedButton(
+        YumButton(
+          text: guardando ? 'Guardando…' : 'Guardar nueva contraseña',
+          fullWidth: true,
           onPressed: guardando ? null : _guardarNuevaPassword,
-          child: guardando
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Text('Guardar nueva contraseña'),
         ),
         const SizedBox(height: 8),
-        TextButton(
-          onPressed: guardando ? null : _cancelarRecuperacion,
-          child: const Text('Cancelar'),
+        Center(
+          child: TextButton(
+            onPressed: guardando ? null : _cancelarRecuperacion,
+            style: TextButton.styleFrom(foregroundColor: colors.inkSoft),
+            child: const Text('Cancelar'),
+          ),
         ),
       ],
     );

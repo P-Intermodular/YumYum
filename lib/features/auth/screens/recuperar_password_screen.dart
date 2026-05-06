@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_assets.dart';
 import '../../../core/feedback/app_feedback.dart';
+import '../../../core/theme/yum_colors.dart';
+import '../../../core/widgets/ui/yum_background.dart';
+import '../../../core/widgets/ui/yum_button.dart';
 import '../providers/auth_repository_provider.dart';
+import '../widgets/auth_decor.dart';
 
 /// Pantalla para solicitar un correo de restablecimiento de contraseña.
 class RecuperarPasswordScreen extends ConsumerStatefulWidget {
@@ -48,115 +51,88 @@ class _RecuperarPasswordScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.yumColors;
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 48),
-              Image.asset(
-                AppAssets.logo,
-                height: 80,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Recuperar contraseña',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _enviado
-                    ? 'Revisa tu bandeja de entrada y sigue las instrucciones del correo para restablecer tu contraseña.'
-                    : 'Introduce el correo con el que te registraste y te enviaremos un enlace para restablecer tu contraseña.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey.shade700,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 32),
-              if (_enviado) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.mark_email_read_rounded,
-                        color: Colors.green.shade700,
-                        size: 28,
+      body: YumBackground(
+        child: Stack(
+          children: [
+            OrbeGlow(
+              top: -40,
+              right: -40,
+              size: 260,
+              color: colors.terracotta.withValues(alpha: 0.15),
+            ),
+            OrbeGlow(
+              top: 160,
+              left: -60,
+              size: 200,
+              color: colors.mustard.withValues(alpha: 0.18),
+            ),
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CabeceraAuth(
+                      titulo: 'Recuperar contraseña',
+                      subtitulo: _enviado
+                          ? 'Revisa tu bandeja de entrada y sigue las instrucciones del correo.'
+                          : 'Introduce el correo con el que te registraste y te enviaremos un enlace para restablecerla.',
+                    ),
+                    const SizedBox(height: 32),
+                    if (_enviado) ...[
+                      BannerAuth(
+                        tono: BannerAuthTono.exito,
+                        icono: Icons.mark_email_read_rounded,
+                        texto: 'Correo enviado a ${_correoController.text.trim()}',
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Correo enviado a ${_correoController.text.trim()}',
-                          style: TextStyle(
-                            color: Colors.green.shade800,
-                            fontWeight: FontWeight.w600,
+                      const SizedBox(height: 24),
+                      YumButton(
+                        text: 'Volver al inicio de sesión',
+                        fullWidth: true,
+                        variant: YumButtonVariant.ghost,
+                        onPressed: () => context.pop(),
+                      ),
+                    ] else ...[
+                      Form(
+                        key: _formKey,
+                        child: TextFormField(
+                          controller: _correoController,
+                          decoration: InputDecoration(
+                            hintText: 'hola@vecindario.es',
+                            prefixIcon:
+                                Icon(Icons.mail_outline, color: colors.inkSoft, size: 20),
                           ),
+                          keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [AutofillHints.email],
+                          validator: (value) =>
+                              value == null || !value.contains('@')
+                                  ? 'Introduce un correo válido'
+                                  : null,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      YumButton(
+                        text: _enviando ? 'Enviando…' : 'Enviar enlace',
+                        fullWidth: true,
+                        onPressed: _enviando ? null : _enviarRecuperacion,
+                      ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => context.pop(),
+                          style: TextButton.styleFrom(foregroundColor: colors.inkSoft),
+                          child: const Text('Volver'),
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                OutlinedButton(
-                  onPressed: () => context.pop(),
-                  child: const Text('Volver al inicio de sesión'),
-                ),
-              ] else ...[
-                Form(
-                  key: _formKey,
-                  child: TextFormField(
-                    controller: _correoController,
-                    decoration: const InputDecoration(
-                      labelText: 'Correo electrónico',
-                      prefixIcon: Icon(Icons.email_outlined),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    validator: (value) =>
-                        value == null || !value.contains('@')
-                            ? 'Introduce un correo válido'
-                            : null,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _enviando ? null : _enviarRecuperacion,
-                  child: _enviando
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text('Enviar enlace'),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => context.pop(),
-                  child: const Text('Volver'),
-                ),
-              ],
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );

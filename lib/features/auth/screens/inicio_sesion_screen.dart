@@ -90,7 +90,7 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                 ),
               ),
             ),
-            
+
             // Contenido principal
             SafeArea(
               child: SingleChildScrollView(
@@ -100,10 +100,10 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Header con Logo
+                      // Header con logo
                       Row(
                         children: [
-                          Icon(Icons.restaurant, color: colors.terracotta, size: 28), // TODO: Usar YumLogo SVG real
+                          Icon(Icons.restaurant, color: colors.terracotta, size: 28),
                           const SizedBox(width: 8),
                           Text(
                             'YumYum',
@@ -111,9 +111,9 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 48),
-                      
+
                       // Titulares
                       Text.rich(
                         TextSpan(
@@ -130,18 +130,18 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                           ],
                         ),
                         style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          fontSize: 40,
-                          height: 1.05,
-                        ),
+                              fontSize: 40,
+                              height: 1.05,
+                            ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         'Descubre, comparte e intercambia platos cocinados con cariño por vecinos reales.',
                         style: TextStyle(color: colors.inkSoft, fontSize: 14),
                       ),
-                      
+
                       const SizedBox(height: 32),
-                      
+
                       // Formulario
                       TextFormField(
                         controller: _correoController,
@@ -182,9 +182,9 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                             ? 'Mínimo 6 caracteres'
                             : null,
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       // Recuperar contraseña
                       Align(
                         alignment: Alignment.centerRight,
@@ -202,58 +202,18 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
-                      
+
                       // Botón Entrar
                       YumButton(
                         text: cargando ? 'Entrando...' : 'Entrar',
                         fullWidth: true,
                         onPressed: cargando ? null : _iniciarSesion,
                       ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Separador
-                      Row(
-                        children: [
-                          Expanded(child: Container(height: 1, color: colors.line)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'o continúa con',
-                              style: TextStyle(color: colors.inkSoft, fontSize: 12),
-                            ),
-                          ),
-                          Expanded(child: Container(height: 1, color: colors.line)),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Botones sociales
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _SocialButton(
-                              icon: 'G',
-                              text: 'Google',
-                              onPressed: () {},
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _SocialButton(
-                              icon: '',
-                              text: 'Apple',
-                              onPressed: () {},
-                            ),
-                          ),
-                        ],
-                      ),
-                      
+
                       const SizedBox(height: 48),
-                      
+
                       // Crear cuenta
                       Center(
                         child: GestureDetector(
@@ -282,59 +242,6 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final String icon;
-  final String text;
-  final VoidCallback onPressed;
-
-  const _SocialButton({
-    required this.icon,
-    required this.text,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.yumColors;
-    
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: 48,
-        decoration: BoxDecoration(
-          color: colors.paper,
-          border: Border.all(color: colors.line),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                color: colors.ink,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                icon,
-                style: TextStyle(color: colors.paper, fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: TextStyle(color: colors.ink, fontSize: 14, fontWeight: FontWeight.w500),
             ),
           ],
         ),
