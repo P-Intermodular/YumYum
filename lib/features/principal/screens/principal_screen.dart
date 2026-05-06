@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/rutas_app.dart';
+import '../../../core/widgets/ui/yum_bottom_nav.dart';
 
 /// Shell principal con la navegación inferior compartida de la app.
 class PrincipalScreen extends StatelessWidget {
@@ -12,70 +13,47 @@ class PrincipalScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Necesario para el efecto flotante sobre el contenido
       body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _calculateSelectedIndex(context),
-        onDestinationSelected: (int index) => _onItemTapped(index, context),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Inicio',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
-            label: 'Mapa',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle),
-            label: 'Publicar',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.shopping_bag_outlined),
-            selectedIcon: Icon(Icons.shopping_bag),
-            label: 'Pedidos',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Chats',
-          ),
-        ],
+      bottomNavigationBar: YumBottomNav(
+        currentTab: _calculateSelectedTab(context),
+        onTabSelected: (tab) => _onTabSelected(tab, context),
       ),
     );
   }
 
-  /// Traduce la ruta actual al índice activo de la barra inferior.
-  static int _calculateSelectedIndex(BuildContext context) {
+  static YumNavTab _calculateSelectedTab(BuildContext context) {
     final String location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith(RutasApp.inicio)) return 0;
-    if (location.startsWith(RutasApp.mapa)) return 1;
-    if (location.startsWith(RutasApp.publicar)) return 2;
-    if (location.startsWith(RutasApp.pedidos)) return 3;
-    if (location.startsWith(RutasApp.chats)) return 4;
-    return 0;
+    if (location.startsWith(RutasApp.inicio)) return YumNavTab.home;
+    if (location.startsWith(RutasApp.mapa)) return YumNavTab.map;
+    if (location.startsWith(RutasApp.publicar)) return YumNavTab.publish;
+    if (location.startsWith(RutasApp.chats)) return YumNavTab.chats;
+    // Pedidos pasa a ser una pantalla derivada del perfil; al estar en
+    // /pedidos resaltamos la pestaña Perfil para mantener coherencia visual.
+    if (location.startsWith(RutasApp.pedidos)) return YumNavTab.profile;
+    if (location.startsWith(RutasApp.perfil)) return YumNavTab.profile;
+    return YumNavTab.home;
   }
 
-  /// Navega a la sección seleccionada preservando la shell principal.
-  void _onItemTapped(int index, BuildContext context) {
-    switch (index) {
-      case 0:
+  void _onTabSelected(YumNavTab tab, BuildContext context) {
+    switch (tab) {
+      case YumNavTab.home:
         context.go(RutasApp.inicio);
         break;
-      case 1:
+      case YumNavTab.map:
         context.go(RutasApp.mapa);
         break;
-      case 2:
+      case YumNavTab.publish:
         context.go(RutasApp.publicar);
         break;
-      case 3:
-        context.go(RutasApp.pedidos);
-        break;
-      case 4:
+      case YumNavTab.chats:
         context.go(RutasApp.chats);
+        break;
+      case YumNavTab.profile:
+        context.go(RutasApp.perfil);
         break;
     }
   }
+
+
 }

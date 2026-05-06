@@ -10,11 +10,13 @@ import '../dtos/mensaje_dto.dart';
 
 /// Implementación de [ChatRepository] apoyada en tablas y realtime de Supabase.
 class SupabaseChatRepository implements ChatRepository {
-  /// Select enriquecido para resolver la contraparte y el último mensaje.
+  /// Select enriquecido para resolver la contraparte, el plato negociado y
+  /// el último mensaje de la conversación.
   static const conversacionSelect = '''
     id,
     solicitante_id,
     propietario_id,
+    producto_id,
     creado_en,
     solicitante:perfiles!conversaciones_solicitante_id_fkey(
       id,
@@ -29,6 +31,16 @@ class SupabaseChatRepository implements ChatRepository {
       url_avatar,
       valoracion_media,
       numero_valoraciones
+    ),
+    producto:productos!conversaciones_producto_id_fkey(
+      id,
+      titulo,
+      precio,
+      tipo_oferta,
+      imagenes_producto(
+        url_publica,
+        posicion
+      )
     ),
     mensajes(
       id,

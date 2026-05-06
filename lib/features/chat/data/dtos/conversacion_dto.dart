@@ -28,6 +28,8 @@ abstract final class ConversacionDto {
             m['remitente_id'] != usuarioId && m['leido_en'] == null)
         .length;
 
+    final productoJson = json['producto'] as Map<String, dynamic>?;
+
     return ConversacionModel(
       id: json['id'] as String,
       // La lista de chats siempre debe mostrar "la otra persona", nunca al
@@ -40,8 +42,38 @@ abstract final class ConversacionDto {
               urlImagenPerfil: '',
             )
           : UsuarioDto.desdePerfil(participanteJson),
+      producto: productoJson == null ? null : _productoDesdeJson(productoJson),
       ultimoMensaje: mensajes.isEmpty ? null : mensajes.first,
       mensajesNoLeidos: noLeidos,
     );
+  }
+
+  static ProductoEnChat _productoDesdeJson(Map<String, dynamic> json) {
+    final imagenes = (json['imagenes_producto'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
+    String urlImagen = '';
+    if (imagenes.isNotEmpty) {
+      // Tomamos la primera imagen ordenada por posicion ascendente.
+      final ordenadas = [...imagenes]
+        ..sort((a, b) =>
+            (a['posicion'] as int? ?? 0).compareTo(b['posicion'] as int? ?? 0));
+      urlImagen = (ordenadas.first['url_publica'] as String?) ?? '';
+    }
+
+    return ProductoEnChat(
+      id: json['id'] as String,
+      titulo: (json['titulo'] as String?)?.trim().isNotEmpty == true
+          ? json['titulo'] as String
+          : 'Plato',
+      urlImagen: urlImagen,
+      precio: _toDoubleOrNull(json['precio']),
+      tipoOferta: (json['tipo_oferta'] as String?) ?? 'venta',
+    );
+  }
+
+  static double? _toDoubleOrNull(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 }
