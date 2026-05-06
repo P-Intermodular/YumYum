@@ -164,7 +164,7 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
               text: 'Cancelar solicitud',
               fullWidth: true,
               variant: YumButtonVariant.ghost,
-              fgColor: Colors.red.shade700,
+              fgColor: context.yumColors.terracottaDeep,
               onPressed: () => _cancelar(context, ref),
             ),
           ],
@@ -204,13 +204,13 @@ class TarjetaSolicitudOferta extends ConsumerWidget {
     final colors = context.yumColors;
     switch (estado) {
       case EstadoSolicitud.aceptada:
-        return (Colors.green.shade100, Colors.green.shade800);
+        return (colors.olive.withValues(alpha: 0.18), colors.oliveDeep);
       case EstadoSolicitud.denegada:
       case EstadoSolicitud.autoDenegada:
       case EstadoSolicitud.cancelada:
         return (colors.line, colors.inkSoft);
       default:
-        return (colors.mustard.withValues(alpha: 0.2), colors.ink);
+        return (colors.mustard.withValues(alpha: 0.22), colors.ink);
     }
   }
 

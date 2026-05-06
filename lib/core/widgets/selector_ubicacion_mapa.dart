@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../constants/ubicaciones_app.dart';
 import '../location/ubicacion_actual.dart';
+import '../theme/yum_colors.dart';
 
 /// Mapa interactivo donde el usuario fija un punto exacto en el mapa.
 ///
@@ -34,7 +35,7 @@ class SelectorUbicacionMapa extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colors = context.yumColors;
 
     final centroInicial = ubicacionElegida ??
         (ubicacionUsuario == null
@@ -46,42 +47,49 @@ class SelectorUbicacionMapa extends StatelessWidget {
       children: [
         Text(
           titulo,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontSize: 16,
+            color: colors.ink,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           subtitulo,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: Colors.grey.shade700,
+          style: TextStyle(
+            color: colors.inkSoft,
+            fontSize: 13,
+            height: 1.4,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         if (gpsFallido)
           Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.shade200),
+              color: colors.mustard.withValues(alpha: 0.20),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colors.mustard.withValues(alpha: 0.45)),
             ),
             child: Row(
               children: [
-                Icon(Icons.location_off, color: Colors.orange.shade800),
-                const SizedBox(width: 8),
+                Icon(Icons.location_off_rounded, color: colors.ink, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'No pudimos leer tu ubicación. Mueve el mapa y toca para fijar el punto.',
-                    style: theme.textTheme.bodySmall,
+                    style: TextStyle(
+                      color: colors.ink,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           child: SizedBox(
             height: 240,
             child: Stack(
@@ -110,7 +118,7 @@ class SelectorUbicacionMapa extends StatelessWidget {
                             height: 44,
                             child: Icon(
                               Icons.location_on,
-                              color: colorScheme.primary,
+                              color: colors.terracotta,
                               size: 40,
                             ),
                           ),
@@ -119,13 +127,17 @@ class SelectorUbicacionMapa extends StatelessWidget {
                   ],
                 ),
                 if (gpsResolviendo)
-                  const Positioned(
+                  Positioned(
                     top: 8,
                     right: 8,
                     child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(colors.terracotta),
+                      ),
                     ),
                   ),
               ],

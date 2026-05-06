@@ -137,11 +137,11 @@ class TarjetaTransaccion extends StatelessWidget {
       case EstadoTransaccion.completada:
         return (colors.line, colors.inkSoft);
       case EstadoTransaccion.aceptada:
-        return (Colors.green.shade100, Colors.green.shade800);
+        return (colors.olive.withValues(alpha: 0.18), colors.oliveDeep);
       case EstadoTransaccion.reportada:
-        return (Colors.red.shade100, Colors.red.shade800);
+        return (colors.tomato.withValues(alpha: 0.18), colors.terracottaDeep);
       default:
-        return (colors.mustard.withValues(alpha: 0.2), colors.ink);
+        return (colors.mustard.withValues(alpha: 0.22), colors.ink);
     }
   }
 

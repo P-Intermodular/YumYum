@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/yum_colors.dart';
+
 /// Insignia compacta que resume la puntuación media del perfil.
 class InsigniaValoracion extends StatelessWidget {
   final double valoracion;
@@ -13,24 +15,26 @@ class InsigniaValoracion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.yumColors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.amber.shade100,
+        color: colors.mustard.withValues(alpha: 0.20),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star, color: Colors.amber, size: 20),
-          const SizedBox(width: 4),
+          Icon(Icons.star_rounded, color: colors.mustard, size: 18),
+          const SizedBox(width: 6),
           Text(
             cantidad == 0
-                ? 'Sin valoraciones'
+                ? 'Nuevo'
                 : '${valoracion.toStringAsFixed(1)} ($cantidad)',
             style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.amber.shade900,
+              fontWeight: FontWeight.w700,
+              color: colors.ink,
+              fontSize: 13,
             ),
           ),
         ],

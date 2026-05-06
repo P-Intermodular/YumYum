@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../constants/rutas_app.dart';
+import '../theme/yum_colors.dart';
 import '../../features/notificaciones/providers/notificacion_providers.dart';
 
 /// AppBar reutilizable para las pantallas de YumYum.
@@ -30,8 +31,8 @@ class YumYumAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const colorCabecera = Color(0xFF1F4A5B);
-    
+    final colors = context.yumColors;
+
     // Solo escuchamos el provider si el botón se va a mostrar
     final noLeidas = mostrarBotonNotificaciones
         ? ref.watch(contadorNotificacionesNoLeidasProvider)
@@ -41,22 +42,22 @@ class YumYumAppBar extends ConsumerWidget implements PreferredSizeWidget {
       automaticallyImplyLeading: false,
       leading: mostrarBotonVolver
           ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: colorCabecera, size: 20),
+              icon: Icon(Icons.arrow_back_ios_new_rounded,
+                  color: colors.ink, size: 20),
               onPressed: () => Navigator.of(context).maybePop(),
             )
           : null,
       title: Text(
         titulo,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          color: colorCabecera,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: colors.ink,
           fontSize: 18,
-          letterSpacing: 0.5,
+          letterSpacing: 0.2,
         ),
       ),
       centerTitle: true,
-      backgroundColor: const Color(0xFFD5ECD4), // Soft sage/mint green
+      backgroundColor: colors.cream,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       actions: [
@@ -66,24 +67,31 @@ class YumYumAppBar extends ConsumerWidget implements PreferredSizeWidget {
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(Icons.notifications_none_rounded,
-                    color: colorCabecera),
+                Icon(Icons.notifications_none_rounded, color: colors.ink),
                 if (noLeidas > 0)
                   Positioned(
                     right: -4,
                     top: -4,
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
+                      decoration: BoxDecoration(
+                        color: colors.terracotta,
                         shape: BoxShape.circle,
+                        border: Border.all(color: colors.cream, width: 1.5),
                       ),
-                      child: Text(
-                        noLeidas > 99 ? '99+' : noLeidas.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Center(
+                        child: Text(
+                          noLeidas > 99 ? '99+' : noLeidas.toString(),
+                          style: TextStyle(
+                            color: colors.paper,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            height: 1,
+                          ),
                         ),
                       ),
                     ),
@@ -95,7 +103,7 @@ class YumYumAppBar extends ConsumerWidget implements PreferredSizeWidget {
         if (mostrarBotonPerfil)
           IconButton(
             icon:
-                const Icon(Icons.person_outline_rounded, color: colorCabecera),
+                Icon(Icons.person_outline_rounded, color: colors.ink),
             onPressed: () => context.push(RutasApp.perfil),
           ),
       ],
