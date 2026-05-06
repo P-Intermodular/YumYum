@@ -218,6 +218,8 @@ class _SolicitudOfertaRepositoryFake implements SolicitudOfertaRepository {
     required String tipoSolicitud,
     String? productoOfrecidoId,
     String? mensaje,
+    int cantidad = 1,
+    int? cantidadOfrecida,
   }) async {
     this.productoId = productoId;
     this.tipoSolicitud = tipoSolicitud;

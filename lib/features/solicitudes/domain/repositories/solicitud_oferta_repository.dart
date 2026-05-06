@@ -25,11 +25,17 @@ abstract class SolicitudOfertaRepository {
   );
 
   /// Crea una nueva solicitud de venta o intercambio.
+  ///
+  /// La [cantidad] es el número de raciones del producto solicitado. La
+  /// [cantidadOfrecida] solo aplica a intercambios y representa cuántas
+  /// raciones del producto propio se entregan a cambio.
   Future<SolicitudOfertaCreadaModel> crearSolicitudOferta({
     required String productoId,
     required String tipoSolicitud,
     String? productoOfrecidoId,
     String? mensaje,
+    int cantidad = 1,
+    int? cantidadOfrecida,
   });
 
   /// Acepta una solicitud y devuelve la transacción generada.

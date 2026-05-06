@@ -24,6 +24,8 @@ abstract final class SolicitudOfertaDto {
       creadoEn: DateTime.tryParse(solicitud['creado_en']?.toString() ?? '') ??
           DateTime.now(),
       esEntrante: esEntrante,
+      cantidad: solicitud['cantidad'] as int? ?? 1,
+      cantidadOfrecida: solicitud['cantidad_ofrecida'] as int?,
     );
   }
 }

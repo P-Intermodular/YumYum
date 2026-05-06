@@ -8,6 +8,7 @@ abstract final class TipoOferta {
 abstract final class EstadoProducto {
   static const disponible = 'disponible';
   static const reservado = 'reservado';
+  static const agotado = 'agotado';
   static const completado = 'completado';
   static const cancelado = 'cancelado';
 }

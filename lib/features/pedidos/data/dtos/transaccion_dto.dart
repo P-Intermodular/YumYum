@@ -15,6 +15,8 @@ abstract final class TransaccionDto {
     propietario_id,
     total,
     estado,
+    cantidad,
+    cantidad_ofrecida,
     creado_en,
     completado_en
   ''';
@@ -54,6 +56,8 @@ abstract final class TransaccionDto {
           DateTime.now(),
       completadoEn:
           DateTime.tryParse(transaccion['completado_en']?.toString() ?? ''),
+      cantidad: transaccion['cantidad'] as int? ?? 1,
+      cantidadOfrecida: transaccion['cantidad_ofrecida'] as int?,
     );
   }
 

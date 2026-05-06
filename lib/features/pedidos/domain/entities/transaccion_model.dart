@@ -15,6 +15,8 @@ class TransaccionModel {
   final double? total;
   final DateTime creadoEn;
   final DateTime? completadoEn;
+  final int cantidad;
+  final int? cantidadOfrecida;
 
   const TransaccionModel({
     required this.id,
@@ -32,6 +34,8 @@ class TransaccionModel {
     this.total,
     required this.creadoEn,
     this.completadoEn,
+    this.cantidad = 1,
+    this.cantidadOfrecida,
   });
 
   /// Devuelve el ID de la contraparte en la transacción.

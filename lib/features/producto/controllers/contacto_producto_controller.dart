@@ -51,6 +51,8 @@ class ContactoProductoController extends Notifier<AsyncValue<void>> {
   Future<String> crearSolicitud({
     required ProductoModel producto,
     String? productoOfrecidoId,
+    int cantidad = 1,
+    int? cantidadOfrecida,
   }) async {
     final keepAlive = ref.keepAlive();
     final usuario = ref.read(autenticacionProvider).value;
@@ -72,6 +74,8 @@ class ContactoProductoController extends Notifier<AsyncValue<void>> {
             tipoSolicitud: tipoSolicitud,
             productoOfrecidoId: productoOfrecidoId,
             mensaje: 'Hola, me interesa tu oferta.',
+            cantidad: cantidad,
+            cantidadOfrecida: cantidadOfrecida,
           );
 
       // La creación de una solicitud impacta al panel y a las conversaciones.

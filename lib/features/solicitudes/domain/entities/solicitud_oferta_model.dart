@@ -10,6 +10,8 @@ class SolicitudOfertaModel {
   final String? mensaje;
   final DateTime creadoEn;
   final bool esEntrante;
+  final int cantidad;
+  final int? cantidadOfrecida;
 
   const SolicitudOfertaModel({
     required this.id,
@@ -22,5 +24,7 @@ class SolicitudOfertaModel {
     this.mensaje,
     required this.creadoEn,
     required this.esEntrante,
+    this.cantidad = 1,
+    this.cantidadOfrecida,
   });
 }

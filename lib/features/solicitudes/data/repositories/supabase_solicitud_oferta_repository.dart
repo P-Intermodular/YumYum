@@ -118,6 +118,8 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
     required String tipoSolicitud,
     String? productoOfrecidoId,
     String? mensaje,
+    int cantidad = 1,
+    int? cantidadOfrecida,
   }) async {
     final response = await _client.rpc(
       RpcsSupabase.crearSolicitudOferta,
@@ -126,6 +128,8 @@ class SupabaseSolicitudOfertaRepository implements SolicitudOfertaRepository {
         'p_tipo_solicitud': tipoSolicitud,
         'p_producto_ofrecido_id': productoOfrecidoId,
         'p_mensaje': mensaje,
+        'p_cantidad': cantidad,
+        'p_cantidad_ofrecida': cantidadOfrecida,
       },
     );
 
