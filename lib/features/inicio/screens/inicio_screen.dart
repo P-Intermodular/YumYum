@@ -115,10 +115,8 @@ class InicioScreen extends ConsumerWidget {
           const SeccionTitulo(titulo: 'Cerca de ti'),
           HeroPlato(producto: productos.first),
           if (productos.length > 1) ...[
-            SeccionTitulo(
+            const SeccionTitulo(
               titulo: 'Recomendados',
-              cta: 'Ordenar',
-              onCtaTap: () => mostrarFiltrosFeed(context),
             ),
             for (final producto in productos.skip(1)) ...[
               FilaPlato(producto: producto),
