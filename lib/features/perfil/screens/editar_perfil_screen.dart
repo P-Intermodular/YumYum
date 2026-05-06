@@ -19,9 +19,10 @@ import '../controllers/editar_perfil_controller.dart';
 
 /// Pantalla de edición del perfil del usuario.
 ///
-/// Sigue el patrón visual ya consolidado en `publicar_producto_screen.dart`:
-/// header sin AppBar tradicional, marcado uniforme de obligatorios/opcionales
-/// con `LabelSeccion`, validación inline y footer sticky.
+/// Sigue el patrón visual del prototipo Figma: header sin AppBar tradicional
+/// con un "Guardar" sutil en la esquina superior derecha, marcado uniforme
+/// de obligatorios/opcionales con `LabelSeccion`, y un CTA grande al final
+/// del scroll (no sticky, para que no tape los chips de alérgenos).
 class EditarPerfilScreen extends ConsumerStatefulWidget {
   const EditarPerfilScreen({super.key});
 
@@ -207,7 +208,12 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
               Form(
                 key: _formKey,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    12,
+                    20,
+                    MediaQuery.of(context).padding.bottom + 28,
+                  ),
                   children: [
                     _Header(),
                     const SizedBox(height: 24),
@@ -244,7 +250,7 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
                     TextFormField(
                       controller: _ciudadController,
                       textCapitalization: TextCapitalization.words,
-                      decoration: _decoracion('Malasaña, Madrid'),
+                      decoration: _decoracion('Ej. Malasaña, Madrid'),
                     ),
                     const SizedBox(height: 18),
                     const LabelSeccion(text: 'Bio', opcional: true),
@@ -322,6 +328,12 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
                     // La sección "Cuenta" (cambiar contraseña, ubicación
                     // predeterminada) vive ahora en Ajustes — son acciones de
                     // cuenta/seguridad, no datos personales editables.
+                    const SizedBox(height: 32),
+                    YumButton(
+                      text: cargando ? 'Guardando…' : 'Guardar cambios',
+                      fullWidth: true,
+                      onPressed: cargando ? null : _guardar,
+                    ),
                   ],
                 ),
               ),
@@ -331,29 +343,13 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
                 left: 12,
                 child: _BotonAtras(),
               ),
-              // Footer sticky con el CTA Guardar.
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    12,
-                    20,
-                    MediaQuery.of(context).padding.bottom + 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: context.yumColors.cream.withValues(alpha: 0.96),
-                    border: Border(
-                      top: BorderSide(
-                        color: context.yumColors.line.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ),
-                  child: YumButton(
-                    text: cargando ? 'Guardando…' : 'Guardar cambios',
-                    fullWidth: true,
-                    onPressed: cargando ? null : _guardar,
-                  ),
+              // "Guardar" sutil en la esquina superior derecha (patrón Figma).
+              Positioned(
+                top: 12,
+                right: 12,
+                child: _BotonGuardarSutil(
+                  cargando: cargando,
+                  onPressed: _guardar,
                 ),
               ),
             ],
@@ -434,6 +430,37 @@ class _BotonAtras extends StatelessWidget {
           child: Icon(Icons.arrow_back_ios_new_rounded,
               size: 16, color: colors.ink),
         ),
+      ),
+    );
+  }
+}
+
+/// Acción "Guardar" sutil en la esquina superior derecha. Replica el patrón
+/// del prototipo Figma para usuarios que no quieren scrollear hasta el CTA.
+class _BotonGuardarSutil extends StatelessWidget {
+  final bool cargando;
+  final VoidCallback onPressed;
+
+  const _BotonGuardarSutil({required this.cargando, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return SizedBox(
+      height: 40,
+      child: TextButton(
+        onPressed: cargando ? null : onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: colors.terracottaDeep,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        child: Text(cargando ? 'Guardando…' : 'Guardar'),
       ),
     );
   }
