@@ -174,4 +174,12 @@ class _AuthRepositoryFake implements AuthRepository {
     ultimaPasswordRestablecida = nuevaPassword;
     return restablecerPasswordCompleter?.future ?? Future.value();
   }
+
+  @override
+  Future<UsuarioModel> actualizarPreferenciasNotificaciones(
+    String usuarioId,
+    Map<String, bool> preferencias,
+  ) {
+    throw UnimplementedError();
+  }
 }

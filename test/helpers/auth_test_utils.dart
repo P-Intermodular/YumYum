@@ -74,4 +74,12 @@ class AuthRepositoryFake implements AuthRepository {
   Future<void> restablecerPassword(String nuevaPassword) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<UsuarioModel> actualizarPreferenciasNotificaciones(
+    String usuarioId,
+    Map<String, bool> preferencias,
+  ) {
+    throw UnimplementedError();
+  }
 }

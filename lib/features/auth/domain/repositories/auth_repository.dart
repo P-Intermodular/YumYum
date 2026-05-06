@@ -32,6 +32,14 @@ abstract class AuthRepository {
   /// Actualiza solo la ubicacion predeterminada del perfil.
   Future<UsuarioModel> actualizarUbicacionPredeterminada(UsuarioModel usuario);
 
+  /// Actualiza solo el mapa de preferencias de notificaciones del usuario.
+  /// Se usa desde la pantalla Ajustes → Notificaciones, que aplica los
+  /// cambios al instante (toggle por toggle) sin botón "Guardar".
+  Future<UsuarioModel> actualizarPreferenciasNotificaciones(
+    String usuarioId,
+    Map<String, bool> preferencias,
+  );
+
   /// Envía un correo de recuperación de contraseña al email indicado.
   Future<void> enviarEmailRecuperacion(String correo);
 
