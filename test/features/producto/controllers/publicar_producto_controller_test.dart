@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:yumyum/core/constants/categorias_producto.dart';
 import 'package:yumyum/core/constants/estados_app.dart';
 import 'package:yumyum/core/supabase/supabase_client_provider.dart';
 import 'package:yumyum/features/auth/controllers/auth_controller.dart';
@@ -43,6 +44,8 @@ void main() {
               descripcion: 'Casera',
               tipo: TipoOferta.venta,
               precio: 12,
+              categoria: CategoriaProducto.postresDulces,
+              sinAlergenosDeclarados: true,
               extensionImagen: 'jpg',
               ubicacionExacta: exacta,
             ),

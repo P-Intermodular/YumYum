@@ -13,6 +13,11 @@ class DatosPublicacionProducto {
   final String descripcion;
   final String tipo;
   final double? precio;
+  final String categoria;
+  final List<String> etiquetas;
+  final List<String> alergenos;
+  final bool sinAlergenosDeclarados;
+  final int raciones;
   final Uint8List? bytesImagen;
   final String extensionImagen;
   final LatLng ubicacionExacta;
@@ -22,6 +27,11 @@ class DatosPublicacionProducto {
     required this.descripcion,
     required this.tipo,
     this.precio,
+    required this.categoria,
+    this.etiquetas = const [],
+    this.alergenos = const [],
+    this.sinAlergenosDeclarados = false,
+    this.raciones = 1,
     this.bytesImagen,
     required this.extensionImagen,
     required this.ubicacionExacta,

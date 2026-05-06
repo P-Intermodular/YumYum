@@ -1,5 +1,6 @@
 import 'package:latlong2/latlong.dart';
 
+import '../../../../core/constants/categorias_producto.dart';
 import '../../../../core/constants/estados_app.dart';
 import '../../../auth/data/dtos/usuario_dto.dart';
 import '../../../auth/domain/entities/usuario_model.dart';
@@ -40,11 +41,26 @@ abstract final class ProductoDto {
       estado: json['estado'] as String? ?? EstadoProducto.disponible,
       precio: _toDoubleOrNull(json['precio']),
       distanciaKm: _toDoubleOrNull(json['distancia_km']),
+      categoria:
+          (json['categoria'] as String?) ?? CategoriaProducto.otros,
+      etiquetas: _toStringList(json['etiquetas']),
+      alergenos: _toStringList(json['alergenos']),
+      sinAlergenosDeclarados:
+          json['sin_alergenos_declarados'] as bool? ?? false,
+      racionesTotales: json['raciones_totales'] as int? ?? 1,
+      racionesDisponibles: json['raciones_disponibles'] as int? ?? 1,
       ubicacionPublica: LatLng(
         _toDouble(json['latitud_publica']),
         _toDouble(json['longitud_publica']),
       ),
     );
+  }
+
+  static List<String> _toStringList(dynamic value) {
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    return const [];
   }
 
   /// Prepara el payload compatible con la tabla `productos`.
@@ -63,6 +79,12 @@ abstract final class ProductoDto {
       'tipo_oferta': producto.tipo,
       'precio': producto.tipo == TipoOferta.venta ? producto.precio : null,
       'estado': producto.estado,
+      'categoria': producto.categoria,
+      'etiquetas': producto.etiquetas,
+      'alergenos': producto.alergenos,
+      'sin_alergenos_declarados': producto.sinAlergenosDeclarados,
+      'raciones_totales': producto.racionesTotales,
+      'raciones_disponibles': producto.racionesDisponibles,
       'latitud_publica': producto.ubicacionPublica.latitude,
       'longitud_publica': producto.ubicacionPublica.longitude,
       'latitud_exacta': ubicacionExacta.latitude,

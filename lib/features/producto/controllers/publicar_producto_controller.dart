@@ -44,6 +44,12 @@ class PublicarProductoController extends Notifier<AsyncValue<void>> {
         tipo: datos.tipo,
         estado: EstadoProducto.disponible,
         precio: datos.tipo == TipoOferta.venta ? datos.precio : null,
+        categoria: datos.categoria,
+        etiquetas: datos.etiquetas,
+        alergenos: datos.alergenos,
+        sinAlergenosDeclarados: datos.sinAlergenosDeclarados,
+        racionesTotales: datos.raciones,
+        racionesDisponibles: datos.raciones,
         ubicacionPublica: ubicacionPublica,
       );
 
