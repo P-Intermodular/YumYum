@@ -70,6 +70,62 @@ class PublicarProductoController extends Notifier<AsyncValue<void>> {
     }
   }
 
+  /// Aplica una edición sobre un producto ya publicado y refresca el catálogo.
+  ///
+  /// La pantalla pasa la lista completa de imágenes que deben quedar tras la
+  /// edición (mezcla de existentes que se conservan + nuevas para subir) y la
+  /// lista de ids de imágenes existentes que el usuario marcó para borrar.
+  /// El repositorio se encarga de mover Storage y `imagenes_producto`
+  /// coherentemente.
+  Future<void> actualizar({
+    required String productoId,
+    required ProductoModel producto,
+    required List<ImagenSeleccionada> imagenesFinales,
+    required List<String> idsImagenesAEliminar,
+  }) async {
+    final keepAlive = ref.keepAlive();
+    state = const AsyncValue.loading();
+    try {
+      await ref.read(productoRepositoryProvider).actualizarProducto(
+            productoId: productoId,
+            producto: producto,
+            imagenesFinales: imagenesFinales,
+            idsImagenesAEliminar: idsImagenesAEliminar,
+          );
+
+      ref.refrescarCatalogo();
+      ref.refrescarProductoDetalle(productoId);
+      state = const AsyncValue.data(null);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      rethrow;
+    } finally {
+      keepAlive.close();
+    }
+  }
+
+  /// Elimina el plato. La RPC decide internamente si es DELETE real (limpia
+  /// Storage cliente-side) o soft delete por tener historial; el resultado
+  /// se devuelve para informar al usuario si quiere mostrar copia distinta.
+  Future<bool> eliminar(String productoId) async {
+    final keepAlive = ref.keepAlive();
+    state = const AsyncValue.loading();
+    try {
+      final fueDeleteReal =
+          await ref.read(productoRepositoryProvider).eliminarProducto(productoId);
+
+      ref.refrescarCatalogo();
+      ref.refrescarProductoDetalle(productoId);
+      state = const AsyncValue.data(null);
+      return fueDeleteReal;
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      rethrow;
+    } finally {
+      keepAlive.close();
+    }
+  }
+
   /// Desplaza la ubicacion exacta entre 100 y 200 metros en una direccion
   /// aleatoria para que el feed muestre una posicion aproximada.
   LatLng _calcularUbicacionPublica(LatLng exacta) {

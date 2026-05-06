@@ -35,4 +35,5 @@ abstract final class RpcsSupabase {
       'obtener_ubicacion_exacta_producto';
   static const cancelarSolicitudOferta = 'cancelar_solicitud_oferta';
   static const cancelarTransaccion = 'cancelar_transaccion';
+  static const eliminarProducto = 'eliminar_producto';
 }

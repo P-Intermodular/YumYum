@@ -20,6 +20,7 @@ import '../../favoritos/providers/favorito_providers.dart';
 import '../../perfil/providers/perfil_providers.dart';
 import '../../valoraciones/domain/entities/valoracion_model.dart';
 import '../../valoraciones/providers/valoracion_providers.dart';
+import '../controllers/publicar_producto_controller.dart';
 import '../domain/entities/producto_model.dart';
 import '../providers/producto_providers.dart';
 import '../widgets/carrusel_imagenes.dart';
@@ -122,7 +123,9 @@ class _Hero extends ConsumerWidget {
     final ancho = MediaQuery.of(context).size.width;
     final altoHero = ancho * 3 / 4; // aspect 4:3 fijo
     final esFavorito = ref.watch(esFavoritoProvider(producto.id));
-    final autenticado = ref.watch(autenticacionProvider).value != null;
+    final usuario = ref.watch(autenticacionProvider).value;
+    final autenticado = usuario != null;
+    final esPropietario = usuario?.id == producto.propietario.id;
 
     return SizedBox(
       width: ancho,
@@ -195,18 +198,131 @@ class _Hero extends ConsumerWidget {
           Positioned(
             top: topPadding + 8,
             right: 12,
-            child: _BotonFlotanteCircular(
-              icon: esFavorito
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              tooltip: esFavorito ? 'Quitar de favoritos' : 'Guardar',
-              iconColor: esFavorito ? colors.terracotta : colors.ink,
-              onTap: () => _toggleFavorito(context, ref, autenticado),
-            ),
+            child: esPropietario
+                ? _BotonFlotanteCircular(
+                    icon: Icons.more_vert_rounded,
+                    tooltip: 'Más opciones',
+                    onTap: () =>
+                        _mostrarMenuPropietario(context, ref, producto),
+                  )
+                : _BotonFlotanteCircular(
+                    icon: esFavorito
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    tooltip: esFavorito ? 'Quitar de favoritos' : 'Guardar',
+                    iconColor: esFavorito ? colors.terracotta : colors.ink,
+                    onTap: () => _toggleFavorito(context, ref, autenticado),
+                  ),
           ),
         ],
       ),
     );
+  }
+
+  /// Bottom sheet con las acciones que solo aplican al propietario del plato.
+  /// Por ahora solo "Eliminar plato"; queda preparado para crecer
+  /// (ej: "Pausar publicación") sin cambiar el patrón de UI.
+  Future<void> _mostrarMenuPropietario(
+    BuildContext context,
+    WidgetRef ref,
+    ProductoModel producto,
+  ) async {
+    final colors = Theme.of(context).extension<YumColors>()!;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: colors.paper,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: colors.line),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  Icons.delete_outline_rounded,
+                  color: colors.terracottaDeep,
+                ),
+                title: Text(
+                  'Eliminar plato',
+                  style: TextStyle(
+                    color: colors.terracottaDeep,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _confirmarEliminacion(context, ref, producto);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmarEliminacion(
+    BuildContext context,
+    WidgetRef ref,
+    ProductoModel producto,
+  ) async {
+    final colors = Theme.of(context).extension<YumColors>()!;
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: colors.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: colors.line),
+        ),
+        title: Text(
+          'Eliminar plato',
+          style: TextStyle(color: colors.ink, fontSize: 18),
+        ),
+        content: Text(
+          'Esta acción no se puede deshacer. Si el plato tiene pedidos en '
+          'curso se ocultará del catálogo y se conservará el histórico.',
+          style: TextStyle(color: colors.inkSoft, fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            style: TextButton.styleFrom(foregroundColor: colors.inkSoft),
+            child: const Text('Volver'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(foregroundColor: colors.terracottaDeep),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true || !context.mounted) return;
+
+    try {
+      await ref
+          .read(publicarProductoControllerProvider.notifier)
+          .eliminar(producto.id);
+      if (!context.mounted) return;
+      mostrarExito(context, 'Plato eliminado');
+      // Tras eliminar, el detalle ya no tiene sentido: salimos.
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        context.go(RutasApp.inicio);
+      }
+    } catch (error) {
+      if (context.mounted) mostrarError(context, error);
+    }
   }
 
   Future<void> _toggleFavorito(
@@ -949,9 +1065,10 @@ class _BarraInferior extends ConsumerWidget {
 
     final String texto;
     final bool habilitado;
+    final bool esCtaEditar = esPropietario;
     if (esPropietario) {
-      texto = 'Es tu publicación';
-      habilitado = false;
+      texto = 'Editar plato';
+      habilitado = true;
     } else if (agotado) {
       texto = 'Sin raciones disponibles';
       habilitado = false;
@@ -1007,10 +1124,18 @@ class _BarraInferior extends ConsumerWidget {
               variant: habilitado
                   ? YumButtonVariant.primary
                   : YumButtonVariant.ghost,
-              icon: habilitado
-                  ? const Icon(Icons.chat_bubble_outline_rounded)
-                  : null,
-              onPressed: habilitado ? () => _contactar(context, ref) : null,
+              icon: !habilitado
+                  ? null
+                  : Icon(
+                      esCtaEditar
+                          ? Icons.edit_rounded
+                          : Icons.chat_bubble_outline_rounded,
+                    ),
+              onPressed: !habilitado
+                  ? null
+                  : esCtaEditar
+                      ? () => context.push(RutasApp.editarPlato(producto.id))
+                      : () => _contactar(context, ref),
             ),
           ),
         ],

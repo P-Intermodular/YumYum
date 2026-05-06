@@ -150,6 +150,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: RutasApp.editarPlatoParametro,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PublicarProductoScreen(productoId: id);
+        },
+      ),
+      GoRoute(
         path: RutasApp.perfilUbicacion,
         builder: (context, state) => const EditarUbicacionPerfilScreen(),
       ),

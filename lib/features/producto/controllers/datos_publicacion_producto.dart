@@ -2,14 +2,38 @@ import 'dart:typed_data';
 
 import 'package:latlong2/latlong.dart';
 
-/// Imagen elegida por el cocinero antes de publicar un producto. Se almacena
-/// en memoria con sus bytes y extension hasta que el repositorio la sube a
-/// Storage como parte del flujo de publicacion.
+/// Imagen elegida por el cocinero en el formulario de publicar/editar.
+///
+/// Tiene dos modalidades:
+///  - **Nueva**: bytes + extension (el repositorio la sube a Storage al
+///    guardar). El constructor por defecto produce una imagen nueva.
+///  - **Existente**: ya está en Storage; conocemos su `id` en la tabla
+///    `imagenes_producto`, su `urlRemota` para pintarla en el grid y su
+///    `rutaStorage` para poder borrar el blob cuando el usuario la quita.
 class ImagenSeleccionada {
   final Uint8List bytes;
   final String extension;
+  final String? id;
+  final String? urlRemota;
+  final String? rutaStorage;
 
-  const ImagenSeleccionada({required this.bytes, required this.extension});
+  /// Imagen recién seleccionada por el usuario.
+  const ImagenSeleccionada({
+    required this.bytes,
+    required this.extension,
+  })  : id = null,
+        urlRemota = null,
+        rutaStorage = null;
+
+  /// Imagen ya persistida que se carga al entrar en modo edición.
+  ImagenSeleccionada.existente({
+    required String this.id,
+    required String this.urlRemota,
+    required String this.rutaStorage,
+  })  : bytes = Uint8List(0),
+        extension = '';
+
+  bool get esExistente => id != null;
 }
 
 /// Datos que la UI necesita reunir antes de publicar una oferta.

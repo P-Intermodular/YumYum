@@ -193,6 +193,132 @@ class SupabaseProductoRepository implements ProductoRepository {
     );
   }
 
+  @override
+  Future<List<ImagenSeleccionada>> obtenerImagenesProducto(
+    String productoId,
+  ) async {
+    final rows = await _client
+        .from(TablasSupabase.imagenesProducto)
+        .select('id, ruta_storage, url_publica, posicion')
+        .eq('producto_id', productoId)
+        .order('posicion', ascending: true);
+
+    return rows.cast<Map<String, dynamic>>().map((row) {
+      return ImagenSeleccionada.existente(
+        id: row['id'] as String,
+        urlRemota: row['url_publica'] as String? ?? '',
+        rutaStorage: row['ruta_storage'] as String? ?? '',
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> actualizarProducto({
+    required String productoId,
+    required ProductoModel producto,
+    required List<ImagenSeleccionada> imagenesFinales,
+    required List<String> idsImagenesAEliminar,
+  }) async {
+    // 1. Actualizar campos editables del producto. No tocamos propietario_id
+    //    ni creado_en (inmutables) ni latitud/longitud_exacta (no editable
+    //    desde aquí en esta versión).
+    await _client.from(TablasSupabase.productos).update({
+      'titulo': producto.titulo,
+      'descripcion': producto.descripcion,
+      'tipo_oferta': producto.tipo,
+      'precio': producto.tipo == 'venta' ? producto.precio : null,
+      'categoria': producto.categoria,
+      'etiquetas': producto.etiquetas,
+      'alergenos': producto.alergenos,
+      'sin_alergenos_declarados': producto.sinAlergenosDeclarados,
+      'raciones_totales': producto.racionesTotales,
+      'raciones_disponibles': producto.racionesDisponibles,
+      'latitud_publica': producto.ubicacionPublica.latitude,
+      'longitud_publica': producto.ubicacionPublica.longitude,
+    }).eq('id', productoId);
+
+    // 2. Eliminar las filas marcadas (recuperando ruta_storage para borrar
+    //    los blobs después). Hacemos antes el SELECT para no perder la ruta
+    //    una vez borrada la fila.
+    if (idsImagenesAEliminar.isNotEmpty) {
+      final rutasABorrar = (await _client
+              .from(TablasSupabase.imagenesProducto)
+              .select('ruta_storage')
+              .inFilter('id', idsImagenesAEliminar))
+          .cast<Map<String, dynamic>>()
+          .map((row) => row['ruta_storage'] as String?)
+          .whereType<String>()
+          .toList();
+
+      await _client
+          .from(TablasSupabase.imagenesProducto)
+          .delete()
+          .inFilter('id', idsImagenesAEliminar);
+
+      if (rutasABorrar.isNotEmpty) {
+        await _client.storage
+            .from(BucketsSupabase.imagenesProductos)
+            .remove(rutasABorrar);
+      }
+    }
+
+    // 3. Subir las nuevas imágenes con posiciones que continúen tras las
+    //    existentes que se mantienen. Mantener el orden del array UI no es
+    //    estrictamente fiable porque no reordenamos las existentes — el
+    //    cliente pinta por `posicion ASC` y la portada (min) sobrevive.
+    final nuevas = imagenesFinales.where((img) => !img.esExistente).toList();
+    if (nuevas.isNotEmpty) {
+      final maxRow = await _client
+          .from(TablasSupabase.imagenesProducto)
+          .select('posicion')
+          .eq('producto_id', productoId)
+          .order('posicion', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      var siguiente = (maxRow?['posicion'] as int? ?? -1) + 1;
+
+      for (final img in nuevas) {
+        if (img.bytes.isEmpty) continue;
+        await _subirImagenProducto(
+          productoId: productoId,
+          propietarioId: producto.propietario.id,
+          bytes: img.bytes,
+          extension: img.extension,
+          posicion: siguiente,
+        );
+        siguiente++;
+      }
+    }
+  }
+
+  @override
+  Future<bool> eliminarProducto(String productoId) async {
+    // Recuperamos las rutas antes de la RPC: si se hace DELETE real, las
+    // filas en imagenes_producto desaparecerán por CASCADE y perderíamos la
+    // referencia a los blobs.
+    final rutas = (await _client
+            .from(TablasSupabase.imagenesProducto)
+            .select('ruta_storage')
+            .eq('producto_id', productoId))
+        .cast<Map<String, dynamic>>()
+        .map((row) => row['ruta_storage'] as String?)
+        .whereType<String>()
+        .toList();
+
+    final fueDeleteReal = await _client.rpc(
+      RpcsSupabase.eliminarProducto,
+      params: {'p_producto_id': productoId},
+    ) as bool;
+
+    if (fueDeleteReal && rutas.isNotEmpty) {
+      await _client.storage
+          .from(BucketsSupabase.imagenesProductos)
+          .remove(rutas);
+    }
+
+    return fueDeleteReal;
+  }
+
   /// Normaliza coordenadas que pueden llegar como `numeric` o como `String`.
   double? _toDoubleOrNull(dynamic value) {
     if (value == null) return null;

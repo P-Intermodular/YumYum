@@ -19,12 +19,26 @@ import '../../../core/widgets/ui/yum_app_bar.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../../core/widgets/ui/yum_button.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../pedidos/providers/panel_pedidos_provider.dart';
+import '../../../core/constants/estados_app.dart' as estados_pedido;
 import '../controllers/datos_publicacion_producto.dart';
 import '../controllers/publicar_producto_controller.dart';
+import '../domain/entities/producto_model.dart';
+import '../providers/producto_providers.dart';
+import '../providers/producto_repository_provider.dart';
 
-/// Pantalla de creación de nuevas ofertas con la estética figma.
+/// Pantalla dual de **publicación** y **edición** de un plato.
+///
+/// Si llega `productoId`, entra en modo edición: carga el producto + sus
+/// imágenes ya persistidas, pre-rellena el formulario, cambia el título y el
+/// CTA, y al guardar llama a `PublicarProductoController.actualizar` en lugar
+/// de `publicar`.
 class PublicarProductoScreen extends ConsumerStatefulWidget {
-  const PublicarProductoScreen({super.key});
+  final String? productoId;
+
+  const PublicarProductoScreen({super.key, this.productoId});
+
+  bool get esEdicion => productoId != null;
 
   @override
   ConsumerState<PublicarProductoScreen> createState() =>
@@ -46,6 +60,9 @@ class _PublicarProductoScreenState
   static const _maxImagenes = 5;
 
   final List<ImagenSeleccionada> _imagenes = [];
+  /// Ids de imágenes ya persistidas que el usuario ha quitado en esta sesión
+  /// de edición. Se aplican al guardar.
+  final Set<String> _idsImagenesAEliminar = {};
   String _tipo = TipoOferta.intercambio;
   String? _categoria;
   final Set<String> _etiquetas = {};
@@ -53,6 +70,77 @@ class _PublicarProductoScreenState
   bool _sinAlergenos = false;
   LatLng? _ubicacionElegida;
   bool _mapaCentradoEnPerfil = false;
+
+  /// Estado de carga del producto en modo edición. `true` mientras se traen
+  /// los datos iniciales para pre-rellenar el formulario.
+  bool _cargandoEdicion = false;
+  ProductoModel? _productoOriginal;
+
+  /// Activa el render de errores en bloques no-Form (fotos, categoría,
+  /// alérgenos) tras un intento de submit fallido. Antes del primer intento
+  /// no mostramos errores para no agredir al usuario mientras aún está
+  /// rellenando.
+  bool _mostrarErroresBloques = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.esEdicion) {
+      _cargandoEdicion = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _cargarParaEditar());
+    }
+  }
+
+  /// Trae el producto y sus imágenes ya persistidas, y pre-rellena los
+  /// campos. Si falla, muestra el error y vuelve atrás.
+  Future<void> _cargarParaEditar() async {
+    final id = widget.productoId!;
+    try {
+      final producto =
+          await ref.read(productoDetalleProvider(id).future);
+      if (!mounted || producto == null) {
+        if (mounted) Navigator.of(context).pop();
+        return;
+      }
+      final imagenes = await ref
+          .read(productoRepositoryProvider)
+          .obtenerImagenesProducto(id);
+      if (!mounted) return;
+
+      setState(() {
+        _productoOriginal = producto;
+        _tituloController.text = producto.titulo;
+        _descripcionController.text = producto.descripcion;
+        _tipo = producto.tipo;
+        _precioController.text = producto.precio?.toStringAsFixed(2) ?? '';
+        _racionesController.text = producto.racionesTotales.toString();
+        _categoria = producto.categoria;
+        _etiquetas
+          ..clear()
+          ..addAll(producto.etiquetas);
+        _alergenos
+          ..clear()
+          ..addAll(producto.alergenos);
+        _sinAlergenos = producto.sinAlergenosDeclarados;
+        _ubicacionElegida = producto.ubicacionPublica;
+        _imagenes
+          ..clear()
+          ..addAll(imagenes);
+        // El centrado del mapa también se da por hecho — la ubicación
+        // pública ya viene en el producto.
+        _mapaCentradoEnPerfil = true;
+        _cargandoEdicion = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _mapController.move(producto.ubicacionPublica, _zoomMapa);
+      });
+    } catch (error) {
+      if (!mounted) return;
+      mostrarError(context, error);
+      Navigator.of(context).pop();
+    }
+  }
 
   @override
   void dispose() {
@@ -89,29 +177,35 @@ class _PublicarProductoScreenState
   }
 
   void _quitarImagen(int index) {
-    setState(() => _imagenes.removeAt(index));
+    final imagen = _imagenes[index];
+    setState(() {
+      // Si es una imagen ya persistida, marcamos su id para que el
+      // repositorio la borre de la BD y de Storage al guardar la edición.
+      if (imagen.esExistente) {
+        _idsImagenesAEliminar.add(imagen.id!);
+      }
+      _imagenes.removeAt(index);
+    });
   }
 
-  Future<void> _publicar() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _guardar() async {
+    // Validamos en bloque: TextFormField vía Form + validaciones de bloques
+    // custom (fotos, categoría, alérgenos). Si algo falla, activamos los
+    // errores inline y abortamos sin tocar nada en BD.
+    final formOk = _formKey.currentState!.validate();
+    final fotosOk = _imagenes.isNotEmpty;
+    final categoriaOk = _categoria != null;
+    final alergenosOk = _sinAlergenos || _alergenos.isNotEmpty;
 
-    if (_categoria == null) {
-      mostrarError(context, Exception('Elige una categoría para tu plato.'));
-      return;
-    }
-
-    if (_alergenos.isEmpty && !_sinAlergenos) {
-      mostrarError(
-        context,
-        Exception(
-          'Declara los alérgenos o marca "Sin alérgenos del Anexo II".',
-        ),
-      );
+    if (!formOk || !fotosOk || !categoriaOk || !alergenosOk) {
+      setState(() => _mostrarErroresBloques = true);
       return;
     }
 
     final ubicacion = _ubicacionElegida;
     if (ubicacion == null) {
+      // Caso especial: la sección de ubicación tiene su propio banner y
+      // bloquea el botón si el perfil no tiene ubicación configurada.
       mostrarError(
         context,
         Exception('Configura tu ubicación en el perfil antes de publicar.'),
@@ -120,14 +214,15 @@ class _PublicarProductoScreenState
     }
 
     final raciones = int.tryParse(_racionesController.text.trim()) ?? 0;
-    if (raciones < 1) {
-      mostrarError(
-        context,
-        Exception('Indica cuántas raciones tienes (mínimo 1).'),
-      );
-      return;
-    }
 
+    if (widget.esEdicion) {
+      await _aplicarEdicion(raciones, ubicacion);
+    } else {
+      await _publicarNuevo(raciones, ubicacion);
+    }
+  }
+
+  Future<void> _publicarNuevo(int raciones, LatLng ubicacion) async {
     try {
       await ref.read(publicarProductoControllerProvider.notifier).publicar(
             DatosPublicacionProducto(
@@ -154,6 +249,66 @@ class _PublicarProductoScreenState
     } catch (error) {
       if (mounted) mostrarError(context, error);
     }
+  }
+
+  Future<void> _aplicarEdicion(int raciones, LatLng ubicacion) async {
+    final original = _productoOriginal;
+    if (original == null) return;
+    final productoEditado = original.copyWith(
+      titulo: _tituloController.text.trim(),
+      descripcion: _descripcionController.text.trim(),
+      tipo: _tipo,
+      precio: _tipo == TipoOferta.venta
+          ? double.tryParse(_precioController.text.replaceAll(',', '.'))
+          : null,
+      categoria: _categoria!,
+      etiquetas: _etiquetas.toList(),
+      alergenos: _sinAlergenos ? const [] : _alergenos.toList(),
+      sinAlergenosDeclarados: _sinAlergenos,
+      racionesTotales: raciones,
+      // Preservamos las raciones disponibles si bajamos el total al mismo o
+      // por debajo, para no inflar stock vendido. Si el cocinero sube el
+      // total, expandimos las disponibles proporcionalmente.
+      racionesDisponibles: raciones >= original.racionesTotales
+          ? original.racionesDisponibles + (raciones - original.racionesTotales)
+          : raciones,
+      ubicacionPublica: ubicacion,
+    );
+
+    try {
+      await ref.read(publicarProductoControllerProvider.notifier).actualizar(
+            productoId: widget.productoId!,
+            producto: productoEditado,
+            imagenesFinales: List.unmodifiable(_imagenes),
+            idsImagenesAEliminar: _idsImagenesAEliminar.toList(),
+          );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        mostrarExito(context, 'Cambios guardados');
+      }
+    } catch (error) {
+      if (mounted) mostrarError(context, error);
+    }
+  }
+
+  /// Detecta si el plato tiene actividad activa (solicitudes pendientes o
+  /// transacciones aceptadas) para avisar al usuario de que la edición
+  /// afecta solo a futuras solicitudes.
+  bool _hayActividadActiva() {
+    if (!widget.esEdicion) return false;
+    final id = widget.productoId!;
+    final panel = ref.watch(panelPedidosProvider).value;
+    if (panel == null) return false;
+
+    final tienePendientes = panel.solicitudesRecibidas.any((s) =>
+        s.productoId == id &&
+        s.estado == estados_pedido.EstadoSolicitud.pendiente);
+    final tieneTxActiva = panel.transacciones.any((t) =>
+        t.productoId == id &&
+        (t.estado == estados_pedido.EstadoTransaccion.aceptada ||
+            t.estado == estados_pedido.EstadoTransaccion.pendiente));
+    return tienePendientes || tieneTxActiva;
   }
 
   void _seleccionarUbicacion(LatLng punto) {
@@ -204,17 +359,33 @@ class _PublicarProductoScreenState
         (_ubicacionElegida!.latitude != ubicacionPerfil.latitude ||
             _ubicacionElegida!.longitude != ubicacionPerfil.longitude);
 
+    final esEdicion = widget.esEdicion;
+    final tituloAppBar = esEdicion ? 'Editar plato' : 'Publicar plato';
+    final textoCta = cargando
+        ? (esEdicion ? 'Guardando…' : 'Publicando…')
+        : (esEdicion ? 'Guardar cambios' : 'Publicar ahora');
+    final iconoCta = cargando
+        ? null
+        : Icon(esEdicion ? Icons.check_rounded : Icons.add_rounded);
+    final hayActividad = _hayActividadActiva();
+
     return Scaffold(
-      appBar: const YumAppBar(title: 'Publicar plato', showBack: true),
+      appBar: YumAppBar(title: tituloAppBar, showBack: true),
       body: YumBackground(
-        child: Form(
+        child: _cargandoEdicion
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
           key: _formKey,
           // Padding inferior generoso para que el botón "Publicar ahora"
           // quede por encima del bottom nav flotante del shell (~96 px).
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
             children: [
-              const _LabelSeccion(text: 'Fotos del plato'),
+              if (hayActividad) ...[
+                _BannerActividadActiva(),
+                const SizedBox(height: 16),
+              ],
+              const _LabelSeccion(text: 'Fotos del plato', obligatorio: true),
               const SizedBox(height: 8),
               _GridImagenes(
                 imagenes: _imagenes,
@@ -228,8 +399,12 @@ class _PublicarProductoScreenState
                 'Hasta $_maxImagenes fotos. La primera será la portada.',
                 style: TextStyle(color: colors.inkSoft, fontSize: 12),
               ),
+              if (_mostrarErroresBloques && _imagenes.isEmpty)
+                const _ErrorInline(
+                  text: 'Añade al menos una foto del plato.',
+                ),
               const SizedBox(height: 18),
-              const _LabelSeccion(text: 'Nombre del plato'),
+              const _LabelSeccion(text: 'Nombre del plato', obligatorio: true),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _tituloController,
@@ -240,7 +415,7 @@ class _PublicarProductoScreenState
                     : null,
               ),
               const SizedBox(height: 16),
-              const _LabelSeccion(text: 'Descripción'),
+              const _LabelSeccion(text: 'Descripción', obligatorio: true),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _descripcionController,
@@ -254,7 +429,7 @@ class _PublicarProductoScreenState
                     : null,
               ),
               const SizedBox(height: 18),
-              const _LabelSeccion(text: 'Tipo de oferta'),
+              const _LabelSeccion(text: 'Tipo de oferta', obligatorio: true),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -287,7 +462,10 @@ class _PublicarProductoScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const _LabelSeccion(text: 'Precio por ración'),
+                          const _LabelSeccion(
+                            text: 'Precio por ración',
+                            obligatorio: true,
+                          ),
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _precioController,
@@ -315,7 +493,10 @@ class _PublicarProductoScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const _LabelSeccion(text: 'Raciones'),
+                          const _LabelSeccion(
+                            text: 'Raciones',
+                            obligatorio: true,
+                          ),
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _racionesController,
@@ -329,7 +510,10 @@ class _PublicarProductoScreenState
                   ],
                 )
               else ...[
-                const _LabelSeccion(text: 'Raciones disponibles'),
+                const _LabelSeccion(
+                  text: 'Raciones disponibles',
+                  obligatorio: true,
+                ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _racionesController,
@@ -339,7 +523,7 @@ class _PublicarProductoScreenState
                 ),
               ],
               const SizedBox(height: 16),
-              const _LabelSeccion(text: 'Categoría'),
+              const _LabelSeccion(text: 'Categoría', obligatorio: true),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -354,8 +538,15 @@ class _PublicarProductoScreenState
                     ),
                 ],
               ),
+              if (_mostrarErroresBloques && _categoria == null)
+                const _ErrorInline(
+                  text: 'Elige la categoría que mejor describe tu plato.',
+                ),
               const SizedBox(height: 16),
-              const _LabelSeccion(text: 'Etiquetas dietéticas (opcional)'),
+              const _LabelSeccion(
+                text: 'Etiquetas dietéticas',
+                opcional: true,
+              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -377,13 +568,24 @@ class _PublicarProductoScreenState
                 ],
               ),
               const SizedBox(height: 18),
-              const _LabelSeccion(text: 'Alérgenos (Anexo II)'),
+              const _LabelSeccion(
+                text: 'Alérgenos (Anexo II)',
+                obligatorio: true,
+              ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: colors.paper,
-                  border: Border.all(color: colors.line),
+                  // Resaltado en rojo cuando se intenta publicar sin
+                  // declarar alérgenos ni marcar 'sin alérgenos'.
+                  border: Border.all(
+                    color: _mostrarErroresBloques &&
+                            !_sinAlergenos &&
+                            _alergenos.isEmpty
+                        ? colors.terracottaDeep
+                        : colors.line,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -445,8 +647,18 @@ class _PublicarProductoScreenState
                   ],
                 ),
               ),
+              if (_mostrarErroresBloques &&
+                  !_sinAlergenos &&
+                  _alergenos.isEmpty)
+                const _ErrorInline(
+                  text:
+                      'Marca los alérgenos del Anexo II o activa "Sin alérgenos".',
+                ),
               const SizedBox(height: 24),
-              const _LabelSeccion(text: 'Punto de recogida'),
+              const _LabelSeccion(
+                text: 'Punto de recogida',
+                obligatorio: true,
+              ),
               const SizedBox(height: 8),
               if (bloqueado)
                 _BannerSinUbicacion(
@@ -518,10 +730,10 @@ class _PublicarProductoScreenState
               ),
               const SizedBox(height: 20),
               YumButton(
-                text: cargando ? 'Publicando…' : 'Publicar ahora',
+                text: textoCta,
                 fullWidth: true,
-                icon: cargando ? null : const Icon(Icons.add_rounded),
-                onPressed: (cargando || bloqueado) ? null : _publicar,
+                icon: iconoCta,
+                onPressed: (cargando || bloqueado) ? null : _guardar,
               ),
             ],
           ),
@@ -590,7 +802,7 @@ class _GridImagenes extends StatelessWidget {
                 width: lado,
                 height: lado,
                 child: _ThumbImagen(
-                  bytes: imagenes[i].bytes,
+                  imagen: imagenes[i],
                   esPortada: i == 0,
                   deshabilitado: deshabilitado,
                   onQuitar: () => onQuitar(i),
@@ -613,13 +825,13 @@ class _GridImagenes extends StatelessWidget {
 }
 
 class _ThumbImagen extends StatelessWidget {
-  final dynamic bytes;
+  final ImagenSeleccionada imagen;
   final bool esPortada;
   final bool deshabilitado;
   final VoidCallback onQuitar;
 
   const _ThumbImagen({
-    required this.bytes,
+    required this.imagen,
     required this.esPortada,
     required this.deshabilitado,
     required this.onQuitar,
@@ -628,12 +840,22 @@ class _ThumbImagen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.yumColors;
+    // Existentes: vienen de Storage, las pintamos con Image.network. Nuevas:
+    // bytes en memoria todavía sin subir, Image.memory.
+    final Widget contenido = imagen.esExistente
+        ? Image.network(
+            imagen.urlRemota!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(color: colors.cream2),
+          )
+        : Image.memory(imagen.bytes, fit: BoxFit.cover);
+
     return Stack(
       fit: StackFit.expand,
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(14),
-          child: Image.memory(bytes, fit: BoxFit.cover),
+          child: contenido,
         ),
         if (esPortada)
           Positioned(
@@ -748,18 +970,80 @@ class DottedBorderRect extends StatelessWidget {
 
 class _LabelSeccion extends StatelessWidget {
   final String text;
-  const _LabelSeccion({required this.text});
+
+  /// Marca el label como obligatorio añadiendo un asterisco terracotta
+  /// detrás del texto. Dos campos con marca distinta no se solapan: o el
+  /// label es obligatorio (`obligatorio: true`) o es opcional
+  /// (`opcional: true`); por defecto va sin marca para títulos
+  /// informativos.
+  final bool obligatorio;
+  final bool opcional;
+
+  const _LabelSeccion({
+    required this.text,
+    this.obligatorio = false,
+    this.opcional = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.yumColors;
-    return Text(
-      text.toUpperCase(),
-      style: TextStyle(
-        color: colors.inkSoft,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.6,
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: text.toUpperCase(),
+            style: TextStyle(
+              color: colors.inkSoft,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+          ),
+          if (obligatorio)
+            TextSpan(
+              text: ' *',
+              style: TextStyle(
+                color: colors.terracottaDeep,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          if (opcional)
+            TextSpan(
+              text: '   ·   OPCIONAL',
+              style: TextStyle(
+                color: colors.inkSoft.withValues(alpha: 0.55),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.6,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mensaje de error inline que aparece debajo de un bloque non-Form
+/// (chips de categoría, switch de alérgenos, grid de fotos) cuando el
+/// usuario intenta publicar sin haberlo rellenado.
+class _ErrorInline extends StatelessWidget {
+  final String text;
+  const _ErrorInline({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, left: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: colors.terracottaDeep,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -931,6 +1215,47 @@ class _ChipSeleccionable extends StatelessWidget {
             fontWeight: activa ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Aviso amarillo que se pinta arriba del formulario en modo edición cuando
+/// el plato tiene actividad activa (solicitudes pendientes o transacciones
+/// en curso). Comunica que los cambios afectan solo a futuras solicitudes.
+class _BannerActividadActiva extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.mustard.withValues(alpha: 0.18),
+        border: Border.all(color: colors.mustard.withValues(alpha: 0.55)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: colors.terracottaDeep,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Este plato tiene pedidos en curso. Tus cambios solo afectan a '
+              'futuras solicitudes; las que ya están abiertas mantienen los '
+              'términos originales.',
+              style: TextStyle(
+                color: colors.ink,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

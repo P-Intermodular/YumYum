@@ -29,6 +29,7 @@ abstract final class RutasApp {
   static const aliasChatRoom = '/chat_room/:id';
 
   static const productoParametro = '/producto/:id';
+  static const editarPlatoParametro = '/editar-plato/:id';
   static const chatParametro = '/chat/:id';
   static const transaccionParametro = '/transaccion/:id';
   static const pedidoSolicitudParametro = '/pedido/solicitud/:id';
@@ -37,6 +38,10 @@ abstract final class RutasApp {
 
   /// Construye la ruta de detalle para un producto concreto.
   static String productoDetalle(String productoId) => '/producto/$productoId';
+
+  /// Construye la ruta para editar un plato ya publicado. Reutiliza la
+  /// pantalla `PublicarProductoScreen` pasándole el id en modo edición.
+  static String editarPlato(String productoId) => '/editar-plato/$productoId';
 
   /// Construye la ruta de acceso a un chat concreto.
   static String chat(String chatId) => '/chat/$chatId';
