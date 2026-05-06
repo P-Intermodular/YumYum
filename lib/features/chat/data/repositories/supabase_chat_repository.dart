@@ -46,7 +46,7 @@ class SupabaseChatRepository implements ChatRepository {
     solicitud:solicitudes_oferta!conversaciones_solicitud_id_fkey(
       id,
       estado,
-      transaccion:transacciones!transacciones_solicitud_id_fkey(id)
+      transaccion:transacciones!transacciones_solicitud_id_fkey(id, estado)
     ),
     mensajes(
       id,

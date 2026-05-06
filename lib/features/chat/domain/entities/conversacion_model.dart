@@ -7,11 +7,17 @@ class MensajeModel {
   final String remitenteId;
   final DateTime creadoEn;
 
+  /// Momento en el que la otra parte marcó el mensaje como leído. Sirve para
+  /// pintar el doble-tick (estilo WhatsApp) en mensajes propios cuando el
+  /// destinatario los ha visto.
+  final DateTime? leidoEn;
+
   const MensajeModel({
     required this.id,
     required this.texto,
     required this.remitenteId,
     required this.creadoEn,
+    this.leidoEn,
   });
 }
 
@@ -57,6 +63,11 @@ class ConversacionModel {
   /// la solicitud está pendiente o si fue denegada/cancelada.
   final String? transaccionId;
 
+  /// Estado de la transacción cuando existe (pendiente / aceptada / completada
+  /// / cancelada / reportada). Permite filtrar la bandeja por chats con
+  /// pedido en curso.
+  final String? estadoTransaccion;
+
   const ConversacionModel({
     required this.id,
     required this.participante,
@@ -66,5 +77,6 @@ class ConversacionModel {
     this.solicitudId,
     this.estadoSolicitud,
     this.transaccionId,
+    this.estadoTransaccion,
   });
 }

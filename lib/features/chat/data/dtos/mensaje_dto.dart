@@ -10,6 +10,7 @@ abstract final class MensajeDto {
       remitenteId: json['remitente_id'] as String,
       creadoEn: DateTime.tryParse(json['creado_en']?.toString() ?? '') ??
           DateTime.now(),
+      leidoEn: DateTime.tryParse(json['leido_en']?.toString() ?? ''),
     );
   }
 
