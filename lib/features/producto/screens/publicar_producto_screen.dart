@@ -572,30 +572,40 @@ class _GridImagenes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final puedeAnadir = imagenes.length < maxImagenes;
-    final totalSlots = imagenes.length + (puedeAnadir ? 1 : 0);
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: totalSlots,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        childAspectRatio: 1,
-      ),
-      itemBuilder: (context, index) {
-        if (index < imagenes.length) {
-          return _ThumbImagen(
-            bytes: imagenes[index].bytes,
-            esPortada: index == 0,
-            deshabilitado: deshabilitado,
-            onQuitar: () => onQuitar(index),
-          );
-        }
-        return _SlotAnadirImagen(
-          deshabilitado: deshabilitado,
-          onTap: onAnadir,
+    // Wrap en lugar de GridView: con 1-2 fotos ocupa solo una fila y la
+    // siguiente sección sube; con 4-5 fotos crece a dos filas. Calculamos
+    // el lado del tile a partir del ancho real para mantener 3 columnas.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const espacio = 8.0;
+        final lado = (constraints.maxWidth - espacio * 2) / 3;
+
+        return Wrap(
+          spacing: espacio,
+          runSpacing: espacio,
+          children: [
+            for (var i = 0; i < imagenes.length; i++)
+              SizedBox(
+                width: lado,
+                height: lado,
+                child: _ThumbImagen(
+                  bytes: imagenes[i].bytes,
+                  esPortada: i == 0,
+                  deshabilitado: deshabilitado,
+                  onQuitar: () => onQuitar(i),
+                ),
+              ),
+            if (puedeAnadir)
+              SizedBox(
+                width: lado,
+                height: lado,
+                child: _SlotAnadirImagen(
+                  deshabilitado: deshabilitado,
+                  onTap: onAnadir,
+                ),
+              ),
+          ],
         );
       },
     );
