@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+/// Paleta semantica de la aplicacion.
+///
+/// IMPORTANTE: los nombres de los campos (`terracotta`, `mustard`, `olive`...)
+/// son **slots semanticos** heredados del tema original "Mesa de Barrio".
+/// Su valor exacto depende del tema activo: por ejemplo, en el tema "Huerto
+/// Moderno" `terracotta` es verde salvia. Tratalos siempre como roles
+/// (primario calido / acento / borde / etc.), no como etiquetas literales
+/// de hue.
 class YumColors extends ThemeExtension<YumColors> {
   final Color cream;
   final Color cream2;
@@ -81,6 +89,7 @@ class YumColors extends ThemeExtension<YumColors> {
     );
   }
 
+  /// "Mesa de Barrio": calido, arcilla y mostaza. Tema por defecto.
   static const light = YumColors(
     cream: Color(0xFFFBF6EC),
     cream2: Color(0xFFF3EADB),
@@ -95,6 +104,55 @@ class YumColors extends ThemeExtension<YumColors> {
     tomato: Color(0xFFD84A3A),
     line: Color(0xFFE8DCC7),
   );
+
+  /// "Huerto Moderno": minimal nordico, verdes salvia y arcilla suave.
+  /// Origen: prototipo-figma `theme-b` en `theme.css:127-161`.
+  static const huertoModerno = YumColors(
+    cream: Color(0xFFF4F3EC),
+    cream2: Color(0xFFE7E5D9),
+    paper: Color(0xFFFBFAF4),
+    ink: Color(0xFF1C251A),
+    inkSoft: Color(0xFF5A6B58),
+    terracotta: Color(0xFF6B8E5A),
+    terracottaDeep: Color(0xFF3F5A2E),
+    mustard: Color(0xFFC89B7B),
+    olive: Color(0xFF4A6B47),
+    oliveDeep: Color(0xFF2E4A2B),
+    tomato: Color(0xFFBC5F4A),
+    line: Color(0xFFD5D3C5),
+  );
+}
+
+/// Temas claros disponibles. Solo cambian colores; tipografia y radii
+/// permanecen iguales entre temas.
+enum YumTheme { mesaBarrio, huertoModerno }
+
+extension YumThemeX on YumTheme {
+  String get etiqueta => switch (this) {
+        YumTheme.mesaBarrio => 'Mesa de Barrio',
+        YumTheme.huertoModerno => 'Huerto Moderno',
+      };
+
+  String get descripcion => switch (this) {
+        YumTheme.mesaBarrio => 'Cálido, arcilla, mostaza',
+        YumTheme.huertoModerno => 'Salvia, blanco roto, minimal',
+      };
+
+  YumColors get colores => switch (this) {
+        YumTheme.mesaBarrio => YumColors.light,
+        YumTheme.huertoModerno => YumColors.huertoModerno,
+      };
+
+  /// Identificador estable para persistencia en SharedPreferences.
+  String get id => name;
+
+  static YumTheme? deId(String? id) {
+    if (id == null) return null;
+    for (final tema in YumTheme.values) {
+      if (tema.name == id) return tema;
+    }
+    return null;
+  }
 }
 
 // Helper extension para acceso fácil: context.yumColors.terracotta

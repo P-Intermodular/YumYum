@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/rutas_app.dart';
+import '../../../core/theme/tema_provider.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/avatar_usuario.dart';
 import '../../../core/widgets/ui/yum_app_bar.dart';
@@ -12,6 +13,7 @@ import '../../auth/controllers/auth_controller.dart';
 import '../../auth/domain/entities/usuario_model.dart';
 import '../widgets/ajustes_grupo.dart';
 import '../widgets/ajustes_tile.dart';
+import '../widgets/selector_tema_bottom_sheet.dart';
 
 /// Hub de gestión de cuenta y preferencias.
 ///
@@ -74,6 +76,19 @@ class AjustesScreen extends ConsumerWidget {
                   label: 'Certificación sanitaria',
                   hint: _hintCertificacion(usuario.certificacionSanitaria),
                   onTap: () => context.push(RutasApp.perfilEditar),
+                  ultimo: true,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            AjustesGrupo(
+              titulo: 'Apariencia',
+              children: [
+                AjustesTile(
+                  icon: Icons.palette_outlined,
+                  label: 'Tema',
+                  hint: ref.watch(temaProvider).etiqueta,
+                  onTap: () => mostrarSelectorTema(context),
                   ultimo: true,
                 ),
               ],

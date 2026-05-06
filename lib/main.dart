@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/preferencias/preferencias_locales_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/supabase/supabase_config.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/tema_provider.dart';
+import 'core/theme/yum_colors.dart';
 
 /// Punto de entrada de YumYum.
 ///
@@ -36,9 +40,17 @@ Future<void> main() async {
     ),
   );
 
+  // Cargamos SharedPreferences antes de runApp para que `temaProvider`
+  // pueda construirse de forma sincrona y la app arranque ya con el tema
+  // elegido por el usuario, sin flash al tema por defecto.
+  final prefs = await SharedPreferences.getInstance();
+
   runApp(
     ProviderScope(
       retry: (retryCount, error) => null,
+      overrides: [
+        preferenciasLocalesProvider.overrideWithValue(prefs),
+      ],
       child: const YumYumApp(),
     ),
   );
@@ -54,11 +66,12 @@ class YumYumApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final tema = ref.watch(temaProvider);
 
     return MaterialApp.router(
       title: 'YumYum',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.lightTheme(tema.colores),
       routerConfig: router,
     );
   }
@@ -73,7 +86,7 @@ class SupabaseConfigMissingApp extends StatelessWidget {
     return MaterialApp(
       title: 'YumYum',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.lightTheme(YumColors.light),
       home: const Scaffold(
         body: SafeArea(
           child: Center(

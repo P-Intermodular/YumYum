@@ -4,10 +4,11 @@ import 'yum_colors.dart';
 
 /// Define el tema visual compartido por toda la aplicación.
 class AppTheme {
-  /// Construye el tema claro "Mesa de Barrio".
-  static ThemeData get lightTheme {
-    const colors = YumColors.light;
-
+  /// Construye un tema claro a partir de la paleta semántica recibida.
+  ///
+  /// La tipografía (Inter sans + Fraunces display) y los radii son
+  /// invariantes entre temas; solo cambian los colores.
+  static ThemeData lightTheme(YumColors colors) {
     // Tipografías
     final baseTextTheme = GoogleFonts.interTextTheme();
     final displayFont = GoogleFonts.fraunces();
@@ -29,7 +30,7 @@ class AppTheme {
       ),
       
       // Añadimos nuestra extensión de colores semánticos
-      extensions: const [colors],
+      extensions: [colors],
       
       textTheme: baseTextTheme.copyWith(
         displayLarge: displayFont.copyWith(color: colors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.01),
