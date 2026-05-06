@@ -295,7 +295,7 @@ class _PerfilPublicoScreenState extends ConsumerState<PerfilPublicoScreen> {
             crossAxisCount: 2,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
-            childAspectRatio: 0.78,
+            childAspectRatio: 0.86,
           ),
           itemBuilder: (context, index) {
             final producto = productos[index];
@@ -339,13 +339,14 @@ class _PerfilPublicoScreenState extends ConsumerState<PerfilPublicoScreen> {
                           Text(
                             producto.precio == null
                                 ? 'Intercambio'
-                                : '${producto.precio!.toStringAsFixed(2)} EUR',
+                                : '${producto.precio!.toStringAsFixed(2)} €',
                             style: Theme.of(context)
                                 .textTheme
-                                .titleSmall
+                                .titleLarge
                                 ?.copyWith(
+                                  fontSize: 13,
                                   color: colors.terracottaDeep,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                 ),
                           ),
                         ],

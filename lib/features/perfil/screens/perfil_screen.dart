@@ -308,7 +308,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
             crossAxisCount: 2,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
-            childAspectRatio: 0.78,
+            childAspectRatio: 0.86,
           ),
           itemBuilder: (context, index) {
             final producto = productos[index];
@@ -336,22 +336,22 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                                 Container(color: colors.cream2),
                           ),
                           Positioned(
-                            left: 8,
-                            bottom: 8,
+                            left: 6,
+                            bottom: 6,
                             child: Container(
-                              height: 24,
+                              height: 20,
                               padding:
-                                  const EdgeInsets.symmetric(horizontal: 8),
+                                  const EdgeInsets.symmetric(horizontal: 6),
                               decoration: BoxDecoration(
                                 color: colors.paper.withValues(alpha: 0.92),
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     Icons.star_rounded,
-                                    size: 12,
+                                    size: 10,
                                     color: colors.mustard,
                                   ),
                                   const SizedBox(width: 3),
@@ -390,13 +390,14 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                           Text(
                             producto.precio == null
                                 ? 'Intercambio'
-                                : '${producto.precio!.toStringAsFixed(2)} EUR',
+                                : '${producto.precio!.toStringAsFixed(2)} €',
                             style: Theme.of(context)
                                 .textTheme
-                                .titleSmall
+                                .titleLarge
                                 ?.copyWith(
+                                  fontSize: 13,
                                   color: colors.terracottaDeep,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                 ),
                           ),
                         ],

@@ -57,10 +57,36 @@ class CabeceraPerfil extends StatelessWidget {
                   colors: [colors.terracotta, colors.mustard],
                 ),
               ),
-              child: CustomPaint(
-                painter: _CoverPatternPainter(
-                  color: colors.paper.withValues(alpha: 0.15),
-                ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _CoverPatternPainter(
+                        color: colors.paper.withValues(alpha: 0.15),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: 24,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              colors.cream.withValues(alpha: 0),
+                              colors.cream.withValues(alpha: 0.85),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             if (leadingCoverAction != null)
@@ -120,8 +146,7 @@ class CabeceraPerfil extends StatelessWidget {
                           color: colors.ink,
                         ),
                   ),
-                  if (esModerador != null)
-                    _BadgeVerificado(esModerador: esModerador!),
+                  if (esModerador == true) const _BadgeModerador(),
                 ],
               ),
               const SizedBox(height: 4),
@@ -136,9 +161,9 @@ class CabeceraPerfil extends StatelessWidget {
               if (bioNormalizada.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(
-                  bioNormalizada,
+                  '«$bioNormalizada»',
                   style: TextStyle(
-                    color: colors.ink,
+                    color: colors.ink.withValues(alpha: 0.9),
                     fontSize: 14,
                     height: 1.45,
                   ),
@@ -163,18 +188,12 @@ class CabeceraPerfil extends StatelessWidget {
   }
 }
 
-class _BadgeVerificado extends StatelessWidget {
-  final bool esModerador;
-
-  const _BadgeVerificado({required this.esModerador});
+class _BadgeModerador extends StatelessWidget {
+  const _BadgeModerador();
 
   @override
   Widget build(BuildContext context) {
     final colors = context.yumColors;
-    final texto = esModerador ? 'Moderador' : 'Verificada';
-    final icono =
-        esModerador ? Icons.shield_outlined : Icons.verified_outlined;
-
     return Container(
       height: 26,
       padding: const EdgeInsets.symmetric(horizontal: 9),
@@ -185,10 +204,10 @@ class _BadgeVerificado extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icono, size: 13, color: colors.oliveDeep),
+          Icon(Icons.shield_outlined, size: 13, color: colors.oliveDeep),
           const SizedBox(width: 4),
           Text(
-            texto,
+            'Moderador',
             style: TextStyle(
               color: colors.oliveDeep,
               fontSize: 11,
@@ -201,25 +220,74 @@ class _BadgeVerificado extends StatelessWidget {
   }
 }
 
+/// Patrón de cover con motivos gastronómicos mediterráneos: bollos de pan
+/// y hojas de olivo dispuestas en cuadrícula desplazada (staggered).
 class _CoverPatternPainter extends CustomPainter {
   final Color color;
 
   const _CoverPatternPainter({required this.color});
 
+  static const double _spacingX = 72;
+  static const double _spacingY = 60;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
+    final stroke = Paint()
       ..color = color
       ..strokeWidth = 1.2
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    for (double y = 18; y < size.height; y += 32) {
-      final path = Path()..moveTo(0, y);
-      for (double x = 0; x <= size.width; x += 48) {
-        path.quadraticBezierTo(x + 24, y - 12, x + 48, y);
+    int row = 0;
+    for (double y = 24; y < size.height; y += _spacingY) {
+      final offsetX = row.isEven ? 0.0 : _spacingX / 2;
+      int col = 0;
+      for (double x = -_spacingX; x < size.width + _spacingX; x += _spacingX) {
+        final center = Offset(x + offsetX, y);
+        if ((row + col).isEven) {
+          _drawBollo(canvas, center, stroke);
+        } else {
+          _drawHojaOlivo(canvas, center, stroke);
+        }
+        col++;
       }
-      canvas.drawPath(path, paint);
+      row++;
     }
+  }
+
+  void _drawBollo(Canvas canvas, Offset c, Paint paint) {
+    // Cuerpo oval del bollo
+    canvas.drawOval(
+      Rect.fromCenter(center: c, width: 16, height: 10),
+      paint,
+    );
+    // Dos cortes diagonales sobre la corteza
+    canvas.drawLine(
+      Offset(c.dx - 4, c.dy - 1),
+      Offset(c.dx - 1, c.dy - 3),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(c.dx, c.dy - 1),
+      Offset(c.dx + 3, c.dy - 3),
+      paint,
+    );
+  }
+
+  void _drawHojaOlivo(Canvas canvas, Offset c, Paint paint) {
+    // Hoja almendrada inclinada ~25°
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.rotate(-0.45);
+    final hoja = Path()
+      ..moveTo(-8, 0)
+      ..quadraticBezierTo(0, -5, 8, 0)
+      ..quadraticBezierTo(0, 5, -8, 0);
+    canvas.drawPath(hoja, paint);
+    // Vena central
+    canvas.drawLine(const Offset(-6, 0), const Offset(6, 0), paint);
+    canvas.restore();
   }
 
   @override
