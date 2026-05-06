@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -7,6 +8,9 @@ import '../../../core/constants/rutas_app.dart';
 import '../../../core/location/formato_distancia.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/avatar_usuario.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../../favoritos/controllers/favorito_controller.dart';
+import '../../favoritos/providers/favorito_providers.dart';
 import '../../producto/domain/entities/producto_model.dart';
 
 /// Card destacada para el primer plato del feed.
@@ -14,13 +18,13 @@ import '../../producto/domain/entities/producto_model.dart';
 /// Replica figma (`screens-a.tsx#L137-L174`): imagen 176 con gradient,
 /// badge "Recién hecho" arriba a la izquierda, favorito arriba a la derecha,
 /// avatar+cocinero+rating overlay abajo, footer con título/precio/distancia.
-class HeroPlato extends StatelessWidget {
+class HeroPlato extends ConsumerWidget {
   final ProductoModel producto;
 
   const HeroPlato({super.key, required this.producto});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.yumColors;
     final esIntercambio = producto.tipo == TipoOferta.intercambio;
     final precioTexto = esIntercambio || producto.precio == null
@@ -56,7 +60,7 @@ class HeroPlato extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildImagenConOverlays(context, colors, hora),
+                _buildImagenConOverlays(context, ref, colors, hora),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                   child: Column(
@@ -176,11 +180,36 @@ class HeroPlato extends StatelessWidget {
     return '$disp de $total raciones';
   }
 
+  Future<void> _toggleFavorito(
+    BuildContext context,
+    WidgetRef ref,
+    bool autenticado,
+  ) async {
+    if (!autenticado) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicia sesión para guardar favoritos.')),
+      );
+      return;
+    }
+    try {
+      await ref.read(favoritoControllerProvider.notifier).toggle(producto.id);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+    }
+  }
+
   Widget _buildImagenConOverlays(
     BuildContext context,
+    WidgetRef ref,
     YumColors colors,
     String hora,
   ) {
+    final esFavorito = ref.watch(esFavoritoProvider(producto.id));
+    final autenticado = ref.watch(autenticacionProvider).value != null;
     return SizedBox(
       height: 176,
       child: Stack(
@@ -233,18 +262,27 @@ class HeroPlato extends StatelessWidget {
           Positioned(
             top: 12,
             right: 12,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: colors.paper.withValues(alpha: 0.92),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.favorite_border_rounded,
-                size: 18,
-                color: colors.terracotta,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => _toggleFavorito(context, ref, autenticado),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: colors.paper.withValues(alpha: 0.92),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    esFavorito
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    size: 18,
+                    color: colors.terracotta,
+                  ),
+                ),
               ),
             ),
           ),

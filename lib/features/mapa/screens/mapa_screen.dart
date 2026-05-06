@@ -15,6 +15,9 @@ import '../../../core/providers_refresher.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/ui/dish_card_item.dart';
 import '../../../core/widgets/ui/yum_card.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../../favoritos/controllers/favorito_controller.dart';
+import '../../favoritos/providers/favorito_providers.dart';
 import '../../producto/domain/entities/producto_model.dart';
 import '../../producto/providers/producto_providers.dart';
 import '../../producto/widgets/selector_radio_busqueda.dart';
@@ -62,10 +65,18 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
 
   void _alMapaListo() {
     _mapaListo = true;
+    // Workaround flutter_map: cuando el mapa se monta el viewport puede no
+    // estar medido aún; el TileLayer calcula sus tiles con un rect inválido
+    // y no vuelve a pedirlos hasta que la cámara cambia. Un nudge de zoom
+    // imperceptible tras un par de frames fuerza ese recálculo y evita que
+    // el usuario tenga que hacer pinch-zoom para que aparezca el mapa.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final camera = _mapController.camera;
-      _mapController.move(camera.center, camera.zoom);
+      Future.delayed(const Duration(milliseconds: 80), () {
+        if (!mounted) return;
+        final camera = _mapController.camera;
+        _mapController.move(camera.center, camera.zoom + 0.01);
+      });
     });
   }
 
@@ -148,7 +159,10 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                   ),
                 ];
 
-          final circulos = ubicacionUsuario == null
+          // Si el usuario elige "Todas las distancias" (radioKm == null) no
+          // pintamos circulo: un radio sin limite no aporta informacion
+          // visual util sobre el mapa.
+          final circulos = (ubicacionUsuario == null || radioKm == null)
               ? <CircleMarker>[]
               : [
                   CircleMarker(
@@ -171,6 +185,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                 options: MapOptions(
                   initialCenter: centroInicial,
                   initialZoom: _zoomInicial,
+                  keepAlive: true,
                   onMapReady: _alMapaListo,
                 ),
                 children: [
@@ -235,13 +250,13 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
 
   void _mostrarDetalleProducto(BuildContext context, ProductoModel producto) {
     final colors = context.yumColors;
-    
+
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      builder: (context) => Container(
+      builder: (sheetContext) => Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: colors.cream,
@@ -268,21 +283,38 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
             ),
             Padding(
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
-              child: DishCardItem(
-                title: producto.titulo,
-                cookName: producto.propietario.nombre,
-                imageUrl: producto.urlImagen,
-                cookAvatarUrl: producto.propietario.urlImagenPerfil,
-                price: producto.precio ?? 0.0,
-                rating: 4.8,
-                distance: producto.distanciaKm != null 
-                    ? formatearDistanciaKm(producto.distanciaKm!) 
-                    : '---',
-                time: DateFormat('HH:mm').format(producto.creadoEn),
-                portions: 1,
-                onTap: () {
-                  context.pop();
-                  context.push(RutasApp.productoDetalle(producto.id));
+              child: Consumer(
+                builder: (context, sheetRef, _) {
+                  final esFavorito =
+                      sheetRef.watch(esFavoritoProvider(producto.id));
+                  final autenticado =
+                      sheetRef.watch(autenticacionProvider).value != null;
+                  return DishCardItem(
+                    title: producto.titulo,
+                    cookName: producto.propietario.nombre,
+                    imageUrl: producto.urlImagen,
+                    cookAvatarUrl: producto.propietario.urlImagenPerfil,
+                    price: producto.precio ?? 0.0,
+                    valoracion: producto.propietario.valoracionMedia,
+                    numeroValoraciones:
+                        producto.propietario.numeroValoraciones,
+                    distance: producto.distanciaKm != null
+                        ? formatearDistanciaKm(producto.distanciaKm!)
+                        : '---',
+                    time: DateFormat('HH:mm').format(producto.creadoEn),
+                    portions: producto.racionesDisponibles,
+                    esFavorito: esFavorito,
+                    onToggleFavorito: () => _toggleFavorito(
+                      sheetContext,
+                      sheetRef,
+                      producto.id,
+                      autenticado,
+                    ),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      context.push(RutasApp.productoDetalle(producto.id));
+                    },
+                  );
                 },
               ),
             ),
@@ -290,6 +322,31 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _toggleFavorito(
+    BuildContext sheetContext,
+    WidgetRef sheetRef,
+    String productoId,
+    bool autenticado,
+  ) async {
+    if (!autenticado) {
+      ScaffoldMessenger.of(sheetContext).showSnackBar(
+        const SnackBar(content: Text('Inicia sesión para guardar favoritos.')),
+      );
+      return;
+    }
+    try {
+      await sheetRef
+          .read(favoritoControllerProvider.notifier)
+          .toggle(productoId);
+    } catch (error) {
+      if (sheetContext.mounted) {
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+    }
   }
 }
 

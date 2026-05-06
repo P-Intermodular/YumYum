@@ -7,12 +7,17 @@ class DishCardItem extends StatelessWidget {
   final String imageUrl;
   final String cookAvatarUrl;
   final double price;
-  final double rating;
+  final double valoracion;
+  final int numeroValoraciones;
   final String distance;
   final String time;
   final int portions;
   final VoidCallback? onTap;
   final VoidCallback? onCookTap;
+  /// Estado del corazon de favoritos. Null oculta el icono por completo
+  /// (para callers que no quieran exponer favoritos en este card).
+  final bool? esFavorito;
+  final VoidCallback? onToggleFavorito;
 
   const DishCardItem({
     super.key,
@@ -21,12 +26,15 @@ class DishCardItem extends StatelessWidget {
     required this.imageUrl,
     required this.cookAvatarUrl,
     required this.price,
-    required this.rating,
+    required this.valoracion,
+    required this.numeroValoraciones,
     required this.distance,
     required this.time,
     required this.portions,
     this.onTap,
     this.onCookTap,
+    this.esFavorito,
+    this.onToggleFavorito,
   });
 
   @override
@@ -101,19 +109,34 @@ class DishCardItem extends StatelessWidget {
                     ),
                   ),
                   // Top Right Favorite
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: colors.paper.withValues(alpha: 0.9),
-                        shape: BoxShape.circle,
+                  if (esFavorito != null)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: onToggleFavorito,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: colors.paper.withValues(alpha: 0.9),
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              esFavorito!
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 18,
+                              color: colors.terracotta,
+                            ),
+                          ),
+                        ),
                       ),
-                      child: Icon(Icons.favorite_border, size: 18, color: colors.terracotta),
                     ),
-                  ),
                   // Bottom Left Avatar & Info
                   Positioned(
                     bottom: 12,
@@ -141,7 +164,9 @@ class DishCardItem extends StatelessWidget {
                                   Icon(Icons.star, size: 10, color: colors.mustard),
                                   const SizedBox(width: 2),
                                   Text(
-                                    rating.toString(),
+                                    numeroValoraciones == 0
+                                        ? 'Nuevo'
+                                        : valoracion.toStringAsFixed(1),
                                     style: const TextStyle(color: Colors.white, fontSize: 11),
                                   ),
                                 ],
