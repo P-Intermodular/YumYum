@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/router/app_router.dart';
@@ -14,6 +16,11 @@ import 'core/theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
+
+  // Carga los símbolos de fecha en español para que `DateFormat(..., 'es')`
+  // funcione (formateo de meses, días de la semana, etc.).
+  Intl.defaultLocale = 'es';
+  await initializeDateFormatting('es', null);
 
   if (!SupabaseConfig.isConfigured) {
     runApp(const SupabaseConfigMissingApp());

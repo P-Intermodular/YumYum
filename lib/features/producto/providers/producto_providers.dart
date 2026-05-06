@@ -1,11 +1,31 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/location/ubicacion_actual_provider.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../domain/entities/producto_model.dart';
 import 'producto_repository_provider.dart';
 
+/// Bloquea la query de productos hasta que la sesión esté resuelta.
+///
+/// Sin esto, al arrancar la app o tras un hot-restart la sesión de Supabase
+/// puede no estar todavía propagada al cliente y la RLS rechaza con 42501,
+/// produciendo un flash de "No tienes permisos…" antes de que el provider
+/// se re-evalúe. Devolvemos un Future que nunca resuelve mientras
+/// `autenticacionProvider` esté en `loading`; al pasar a `data` Riverpod
+/// cancela este future y vuelve a ejecutar el provider con sesión válida.
+Future<void> _esperarSesionLista(Ref ref) {
+  final estado = ref.watch(autenticacionProvider);
+  if (estado.isLoading) {
+    return Completer<void>().future;
+  }
+  return Future.value();
+}
+
 /// Lista reactiva de productos visibles en el inicio y el mapa.
 final productosProvider = FutureProvider<List<ProductoModel>>((ref) async {
+  await _esperarSesionLista(ref);
   return ref.watch(productoRepositoryProvider).obtenerProductos();
 });
 
@@ -33,6 +53,8 @@ class RadioBusquedaController extends Notifier<double> {
 /// general para no bloquear el feed ni el mapa.
 final productosCercanosProvider = FutureProvider<List<ProductoModel>>(
   (ref) async {
+    await _esperarSesionLista(ref);
+
     final ubicacion = ref.watch(ubicacionActualProvider).value;
     final repositorio = ref.watch(productoRepositoryProvider);
 
@@ -55,5 +77,6 @@ final productosCercanosProvider = FutureProvider<List<ProductoModel>>(
 /// Carga el detalle de un producto concreto a partir de su identificador.
 final productoDetalleProvider = FutureProvider.autoDispose
     .family<ProductoModel?, String>((ref, productoId) async {
+  await _esperarSesionLista(ref);
   return ref.watch(productoRepositoryProvider).obtenerProductoPorId(productoId);
 });
