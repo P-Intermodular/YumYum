@@ -146,7 +146,7 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                       TextFormField(
                         controller: _correoController,
                         decoration: InputDecoration(
-                          hintText: 'hola@vecindario.es',
+                          hintText: 'Ej. hola@vecindario.es',
                           prefixIcon: Icon(Icons.mail_outline, color: colors.inkSoft, size: 20),
                         ),
                         keyboardType: TextInputType.emailAddress,
@@ -160,7 +160,7 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                       TextFormField(
                         controller: _passwordController,
                         decoration: InputDecoration(
-                          hintText: '••••••••',
+                          hintText: 'Contraseña',
                           prefixIcon: Icon(Icons.lock_outline, color: colors.inkSoft, size: 20),
                           suffixIcon: IconButton(
                             icon: Icon(

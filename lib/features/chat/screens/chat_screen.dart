@@ -323,8 +323,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onChanged: (_) => _typingController?.notificarTecleo(),
                         onSubmitted: (_) => _enviarMensaje(),
                         decoration: InputDecoration(
-                          hintText: 'Escribe un mensaje...',
-                          hintStyle: TextStyle(color: colors.inkSoft),
+                          hintText: 'Escribe un mensaje…',
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 20,
