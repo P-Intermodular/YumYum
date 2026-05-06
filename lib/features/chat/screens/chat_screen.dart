@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/feedback/app_feedback.dart';
+import '../../../core/supabase/supabase_client_provider.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/avatar_usuario.dart';
 import '../../../core/widgets/ui/yum_app_bar.dart';
@@ -13,6 +14,7 @@ import '../../../core/widgets/ui/yum_background.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../auth/domain/entities/usuario_model.dart';
 import '../controllers/chat_controller.dart';
+import '../data/typing_indicator_controller.dart';
 import '../domain/entities/conversacion_model.dart';
 import '../providers/chat_providers.dart';
 import '../providers/chat_repository_provider.dart';
@@ -41,10 +43,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// se va al fondo cuando es uno mismo quien escribe.
   bool _forzarScrollSiguiente = false;
 
+  TypingIndicatorController? _typingController;
+
   @override
   void initState() {
     super.initState();
     _marcarMensajesComoLeidos();
+    _inicializarTyping();
+  }
+
+  /// Inicializa el canal Realtime de typing para esta conversación. Lo hacemos
+  /// en initState (no en build) para crear el canal una sola vez.
+  void _inicializarTyping() {
+    final usuario = ref.read(autenticacionProvider).value;
+    if (usuario == null) return;
+    final controller = TypingIndicatorController(
+      client: ref.read(supabaseClientProvider),
+      conversacionId: widget.chatId,
+      miId: usuario.id,
+    );
+    controller.addListener(_onTypingCambio);
+    controller.start();
+    _typingController = controller;
+  }
+
+  void _onTypingCambio() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _marcarMensajesComoLeidos() async {
@@ -59,6 +84,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    _typingController?.removeListener(_onTypingCambio);
+    _typingController?.dispose();
     _mensajeController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -76,6 +103,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .read(chatControllerProvider.notifier)
           .enviarMensaje(widget.chatId, texto);
       _mensajeController.clear();
+      // Tras enviar, permitimos un nuevo broadcast de typing inmediato para
+      // que la siguiente palabra dispare el indicador en el otro lado.
+      _typingController?.resetearTrasEnvio();
     } catch (error) {
       _forzarScrollSiguiente = false;
       if (mounted) mostrarError(context, error);
@@ -255,6 +285,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 error: (e, st) => Center(child: Text(mensajeError(e))),
               ),
             ),
+            // Indicador "escribiendo…" del otro participante.
+            AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              alignment: Alignment.bottomLeft,
+              curve: Curves.easeOut,
+              child: _typingController?.escribiendo == true
+                  ? const _IndicadorEscribiendo()
+                  : const SizedBox.shrink(),
+            ),
             // Input Area
             Container(
               padding: EdgeInsets.only(
@@ -281,6 +320,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         controller: _mensajeController,
                         maxLines: null,
                         textInputAction: TextInputAction.send,
+                        onChanged: (_) => _typingController?.notificarTecleo(),
                         onSubmitted: (_) => _enviarMensaje(),
                         decoration: InputDecoration(
                           hintText: 'Escribe un mensaje...',
@@ -429,6 +469,84 @@ class _BannerProducto extends StatelessWidget {
                 Icon(Icons.chevron_right, size: 18, color: colors.inkSoft),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Burbuja del lado izquierdo con tres puntitos animados que aparece cuando
+/// la otra persona está tecleando (Realtime broadcast desde el otro cliente).
+class _IndicadorEscribiendo extends StatefulWidget {
+  const _IndicadorEscribiendo();
+
+  @override
+  State<_IndicadorEscribiendo> createState() => _IndicadorEscribiendoState();
+}
+
+class _IndicadorEscribiendoState extends State<_IndicadorEscribiendo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animacion;
+
+  @override
+  void initState() {
+    super.initState();
+    _animacion = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _animacion.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: colors.paper,
+            border: Border.all(color: colors.line),
+            borderRadius: BorderRadius.circular(16).copyWith(
+              bottomLeft: const Radius.circular(4),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(3, (i) {
+              return Padding(
+                padding: EdgeInsets.only(left: i == 0 ? 0 : 4),
+                child: AnimatedBuilder(
+                  animation: _animacion,
+                  builder: (context, _) {
+                    // Cada punto sube/baja 4px desfasado 0,15s respecto al
+                    // anterior para crear un loop tipo "bouncing dots".
+                    final fase = (_animacion.value - i * 0.15) % 1.0;
+                    final dy = fase < 0.5 ? -4 * (fase / 0.5) : -4 * (1 - (fase - 0.5) / 0.5);
+                    return Transform.translate(
+                      offset: Offset(0, dy),
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: colors.inkSoft,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }),
           ),
         ),
       ),
