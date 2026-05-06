@@ -823,8 +823,8 @@ class _SeccionCategoriaYEtiquetas extends StatelessWidget {
   }
 }
 
-/// Sección "Información de alérgenos" — declaración negativa en el sentido
-/// del Anexo II del Reglamento UE 1169/2011.
+/// Sección "Información de alérgenos" — declaración del cocinero sobre los
+/// 14 alérgenos exigidos por el Reglamento UE 1169/2011.
 class _SeccionAlergenos extends StatelessWidget {
   final ProductoModel producto;
 
@@ -865,7 +865,8 @@ class _SeccionAlergenos extends StatelessWidget {
           const SizedBox(height: 10),
           if (producto.sinAlergenosDeclarados)
             Text(
-              'El cocinero declara que este plato no contiene alérgenos del Anexo II.',
+              'El cocinero declara que este plato no contiene ninguno de '
+              'los 14 alérgenos principales.',
               style: TextStyle(
                 color: colors.inkSoft,
                 fontSize: 13,

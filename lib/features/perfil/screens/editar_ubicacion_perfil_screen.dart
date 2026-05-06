@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
 import '../../../core/providers_refresher.dart';
@@ -11,10 +12,14 @@ import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/selector_ubicacion_mapa.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../../core/widgets/ui/yum_button.dart';
-import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
 
 /// Pantalla para editar la ubicación predeterminada del perfil.
+///
+/// Sigue el patrón visual de las subpantallas nuevas (Editar Perfil,
+/// Preferencias notificaciones): cabecera grande sin AppBar, Guardar sutil
+/// en la esquina superior derecha como atajo y CTA grande al final del
+/// scroll.
 class EditarUbicacionPerfilScreen extends ConsumerStatefulWidget {
   const EditarUbicacionPerfilScreen({super.key});
 
@@ -38,7 +43,7 @@ class _EditarUbicacionPerfilScreenState
     super.dispose();
   }
 
-  void _seleccionarUbicacion(LatLng punto) {
+  void _actualizarPunto(LatLng punto) {
     setState(() => _ubicacionElegida = punto);
   }
 
@@ -53,7 +58,9 @@ class _EditarUbicacionPerfilScreenState
       _mapController.move(punto, _zoomMapa);
     } else {
       mostrarError(
-          context, Exception('No se pudo obtener la ubicación actual.'));
+        context,
+        Exception('No se pudo obtener la ubicación actual.'),
+      );
     }
   }
 
@@ -78,9 +85,7 @@ class _EditarUbicacionPerfilScreenState
       context.pop();
       mostrarExito(context, 'Ubicación actualizada correctamente');
     } catch (error) {
-      if (mounted) {
-        mostrarError(context, error);
-      }
+      if (mounted) mostrarError(context, error);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -118,55 +123,159 @@ class _EditarUbicacionPerfilScreenState
     }
 
     return Scaffold(
-      appBar: const YumYumAppBar(
-        titulo: 'Editar ubicación',
-        mostrarBotonVolver: true,
-        mostrarBotonPerfil: false,
-      ),
       body: YumBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
             children: [
-              SelectorUbicacionMapa(
-                mapController: _mapController,
-                ubicacionElegida: _ubicacionElegida,
-                ubicacionUsuario: ubicacionActualAsync.value,
-                gpsResolviendo: gpsResolviendo,
-                gpsFallido: gpsFallido,
-                onTap: _guardando ? null : _seleccionarUbicacion,
-                titulo: 'Ubicación predeterminada',
-                subtitulo:
-                    'Toca el mapa para fijar tu ubicación habitual. Será la predeterminada al publicar platos.',
-              ),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _guardando ? null : _usarUbicacionActual,
-                  icon: Icon(Icons.my_location, size: 18, color: colors.terracotta),
-                  label: Text(
-                    'Usar mi ubicación actual',
-                    style: TextStyle(
-                      color: colors.terracotta,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+              ListView(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  12,
+                  20,
+                  MediaQuery.of(context).padding.bottom + 28,
                 ),
+                children: [
+                  _Header(),
+                  const SizedBox(height: 24),
+                  SelectorUbicacionMapa(
+                    mapController: _mapController,
+                    ubicacionElegida: _ubicacionElegida,
+                    ubicacionUsuario: ubicacionActualAsync.value,
+                    gpsResolviendo: gpsResolviendo,
+                    gpsFallido: gpsFallido,
+                    onPuntoCambiado: _guardando ? null : _actualizarPunto,
+                    onUsarUbicacionActual:
+                        _guardando ? null : _usarUbicacionActual,
+                    subtitulo: 'Arrastra el mapa para fijar tu zona habitual.',
+                    altura: 380,
+                  ),
+                  const SizedBox(height: 16),
+                  _BannerPrivacidad(),
+                  const SizedBox(height: 28),
+                  YumButton(
+                    text: _guardando ? 'Guardando…' : 'Guardar ubicación',
+                    fullWidth: true,
+                    onPressed: (_guardando || _ubicacionElegida == null)
+                        ? null
+                        : _guardar,
+                  ),
+                ],
               ),
-              const SizedBox(height: 28),
-              YumButton(
-                text: _guardando ? 'Guardando…' : 'Guardar',
-                fullWidth: true,
-                onPressed: (_guardando || _ubicacionElegida == null)
-                    ? null
-                    : _guardar,
+              Positioned(
+                top: 12,
+                left: 12,
+                child: _BotonAtras(),
               ),
             ],
           ),
         ),
+      ),
+      backgroundColor: colors.cream,
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(56, 0, 56, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Editar ubicación',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontSize: 26,
+                  height: 1.1,
+                  fontWeight: FontWeight.w600,
+                  color: colors.ink,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Define tu zona predeterminada',
+            style: TextStyle(color: colors.inkSoft, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BotonAtras extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Material(
+      color: colors.paper,
+      shape: const CircleBorder(),
+      elevation: 0,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          } else {
+            context.go(RutasApp.ajustes);
+          }
+        },
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: colors.paper,
+            shape: BoxShape.circle,
+            border: Border.all(color: colors.line),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 16,
+            color: colors.ink,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Banner olive con el copy de privacidad. Refuerza la confianza del
+/// usuario al pedirle la ubicación: explica qué guardamos y qué no.
+class _BannerPrivacidad extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: colors.olive.withValues(alpha: 0.10),
+        border: Border.all(color: colors.olive.withValues(alpha: 0.30)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.shield_outlined,
+            color: colors.oliveDeep,
+            size: 16,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Solo guardamos esta zona como referencia. Tu dirección exacta '
+              'únicamente se comparte al confirmar un pedido.',
+              style: TextStyle(
+                color: colors.oliveDeep,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

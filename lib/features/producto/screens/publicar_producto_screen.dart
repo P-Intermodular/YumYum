@@ -338,6 +338,41 @@ class _PublicarProductoScreenState
     _mapController.move(ubicacionPerfil, _zoomMapa);
   }
 
+  /// Dialog que explica por qué pedimos esta lista exacta de alérgenos.
+  /// Sustituye al "(Anexo II)" en el label, que era jerga legal opaca.
+  Future<void> _mostrarInfoAlergenos(BuildContext context) async {
+    final colors = context.yumColors;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: colors.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: colors.line),
+        ),
+        title: Text(
+          '¿Por qué estos alérgenos?',
+          style: TextStyle(color: colors.ink, fontSize: 18),
+        ),
+        content: Text(
+          'Listamos los 14 alérgenos que la normativa europea (Reglamento '
+          'UE 1169/2011) obliga a declarar en alimentación. Marca los que '
+          'contenga tu plato — los vecinos con alergias confiarán en tu '
+          'información.',
+          style: TextStyle(color: colors.inkSoft, fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            style: TextButton.styleFrom(foregroundColor: colors.terracottaDeep),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cargando = ref.watch(publicarProductoControllerProvider).isLoading;
@@ -410,7 +445,7 @@ class _PublicarProductoScreenState
               TextFormField(
                 controller: _tituloController,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: _decoracion('Lentejas de la abuela'),
+                decoration: _decoracion('Ej. Lentejas de la abuela'),
                 validator: (v) => v == null || v.trim().isEmpty
                     ? 'El nombre es obligatorio'
                     : null,
@@ -569,9 +604,23 @@ class _PublicarProductoScreenState
                 ],
               ),
               const SizedBox(height: 18),
-              const LabelSeccion(
-                text: 'Alérgenos (Anexo II)',
-                obligatorio: true,
+              Row(
+                children: [
+                  const LabelSeccion(text: 'Alérgenos', obligatorio: true),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => _mostrarInfoAlergenos(context),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.info_outline_rounded,
+                        size: 14,
+                        color: colors.inkSoft,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Container(
@@ -596,7 +645,7 @@ class _PublicarProductoScreenState
                       children: [
                         Expanded(
                           child: Text(
-                            'Sin alérgenos del Anexo II',
+                            'Sin alérgenos',
                             style: TextStyle(
                               color: colors.ink,
                               fontSize: 14,
@@ -653,7 +702,7 @@ class _PublicarProductoScreenState
                   _alergenos.isEmpty)
                 const ErrorInline(
                   text:
-                      'Marca los alérgenos del Anexo II o activa "Sin alérgenos".',
+                      'Marca los alérgenos del plato o activa "Sin alérgenos".',
                 ),
               const SizedBox(height: 24),
               const LabelSeccion(
@@ -672,30 +721,26 @@ class _PublicarProductoScreenState
                   ubicacionUsuario: null,
                   gpsResolviendo: false,
                   gpsFallido: false,
-                  onTap: cargando ? null : _seleccionarUbicacion,
+                  onPuntoCambiado: cargando ? null : _seleccionarUbicacion,
+                  onUsarUbicacionActual:
+                      cargando ? null : _usarUbicacionActual,
                   titulo: 'Punto exacto de recogida',
-                  subtitulo: 'Usando tu ubicación predeterminada. '
-                      'Toca el mapa para ajustarla solo para este plato.',
+                  subtitulo: 'Usando tu ubicación predeterminada. Arrastra '
+                      'el mapa para ajustarla solo para este plato.',
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton.icon(
-                      onPressed: cargando ? null : _usarUbicacionActual,
-                      icon: const Icon(Icons.my_location, size: 18),
-                      label: const Text('Usar mi ubicación actual'),
+                if (ubicacionDifiereDePerfil) ...[
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: cargando
+                          ? null
+                          : () => _restablecerAlPerfil(ubicacionPerfil),
+                      icon: const Icon(Icons.restore, size: 18),
+                      label: const Text('Restablecer al perfil'),
                     ),
-                    if (ubicacionDifiereDePerfil)
-                      TextButton.icon(
-                        onPressed: cargando
-                            ? null
-                            : () => _restablecerAlPerfil(ubicacionPerfil),
-                        icon: const Icon(Icons.restore, size: 18),
-                        label: const Text('Restablecer al perfil'),
-                      ),
-                  ],
-                ),
+                  ),
+                ],
               ],
               const SizedBox(height: 24),
               Container(
