@@ -62,7 +62,14 @@ class _BuscadorFeedState extends ConsumerState<BuscadorFeed> {
                           ref.read(busquedaQueryProvider.notifier).set(valor),
                       decoration: InputDecoration(
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        filled: false,
                         isDense: true,
+                        contentPadding: EdgeInsets.zero,
                         hintText: 'Busca lentejas, tortilla, tarta…',
                         hintStyle:
                             TextStyle(color: colors.inkSoft, fontSize: 14),
