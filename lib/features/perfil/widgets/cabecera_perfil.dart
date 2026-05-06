@@ -51,10 +51,17 @@ class CabeceraPerfil extends StatelessWidget {
               height: topPadding + 164,
               width: double.infinity,
               decoration: BoxDecoration(
+                // Antes saltaba de terracotta a mustard, lo que viraba a marrón
+                // en la mezcla intermedia. Ahora nos quedamos en el mismo hue
+                // cálido y solo modulamos la luminosidad mezclando con cream
+                // hacia la esquina opuesta.
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [colors.terracotta, colors.mustard],
+                  colors: [
+                    colors.terracotta,
+                    Color.lerp(colors.terracotta, colors.cream, 0.35)!,
+                  ],
                 ),
               ),
               child: Stack(
