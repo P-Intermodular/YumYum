@@ -27,6 +27,9 @@ dependencies:
   # Necesario para sincronizar la barra de URL de la PWA con el tema activo.
   # En plataformas no-web no se importa (conditional imports en theme_color_web).
   web: ^1.0.0
+  # Cliente HTTP para el asistente IA. Requiere un backend Node corriendo
+  # en localhost:3000 (fuera de este repo) para que el FAB tenga efecto real.
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/rutas_app.dart';
+import '../../../core/widgets/ui/boton_ia_global.dart';
 import '../../../core/widgets/ui/yum_bottom_nav.dart';
 
 /// Shell principal con la navegación inferior compartida de la app.
@@ -14,7 +15,20 @@ class PrincipalScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true, // Necesario para el efecto flotante sobre el contenido
-      body: child,
+      body: Stack(
+        children: [
+          child,
+          // FAB del asistente IA: persistente en todas las pantallas dentro
+          // del shell (Inicio, Mapa, Pedidos, Chats, etc.) pero no en
+          // login/registro/recuperación, donde no tiene sentido un asistente.
+          // Lo elevamos por encima del bottom nav flotante (~96 px de alto).
+          const Positioned(
+            right: 16,
+            bottom: 110,
+            child: BotonIAGlobal(),
+          ),
+        ],
+      ),
       bottomNavigationBar: YumBottomNav(
         currentTab: _calculateSelectedTab(context),
         onTabSelected: (tab) => _onTabSelected(tab, context),
