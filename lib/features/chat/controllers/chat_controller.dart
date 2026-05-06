@@ -1,0 +1,51 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../core/errors/app_exception.dart';
+import '../domain/entities/conversacion_model.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../providers/chat_repository_provider.dart';
+
+/// Gestiona el envío de mensajes desde la pantalla de chat.
+final chatControllerProvider =
+    NotifierProvider.autoDispose<ChatController, AsyncValue<void>>(
+  ChatController.new,
+);
+
+/// Construye mensajes válidos y delega la persistencia en el repositorio.
+class ChatController extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  Future<void> enviarMensaje(String chatId, String texto) async {
+    final contenido = texto.trim();
+    if (contenido.isEmpty) return;
+
+    final keepAlive = ref.keepAlive();
+    final usuario = ref.read(autenticacionProvider).value;
+    if (usuario == null) {
+      keepAlive.close();
+      throw const AppException('Debes iniciar sesión');
+    }
+
+    state = const AsyncValue.loading();
+    try {
+      // Se genera un identificador cliente para mantener el modelo completo,
+      // aunque la base de datos sea quien decide el identificador persistido.
+      final mensaje = MensajeModel(
+        id: const Uuid().v4(),
+        texto: contenido,
+        remitenteId: usuario.id,
+        creadoEn: DateTime.now(),
+      );
+
+      await ref.read(chatRepositoryProvider).enviarMensaje(chatId, mensaje);
+      state = const AsyncValue.data(null);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      rethrow;
+    } finally {
+      keepAlive.close();
+    }
+  }
+}

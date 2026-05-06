@@ -1,0 +1,162 @@
+import 'dart:async';
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../../core/constants/supabase_names.dart';
+import '../../domain/entities/transaccion_model.dart';
+import '../../domain/repositories/transaccion_repository.dart';
+import '../dtos/transaccion_dto.dart';
+
+/// Implementación de [TransaccionRepository] usando Supabase.
+class SupabaseTransaccionRepository implements TransaccionRepository {
+  final SupabaseClient _client;
+
+  SupabaseTransaccionRepository(this._client);
+
+  @override
+
+  /// Recupera las transacciones donde participa el usuario.
+  Future<List<TransaccionModel>> obtenerTransacciones(String usuarioId) async {
+    final rows = await _client
+        .from(TablasSupabase.transacciones)
+        .select(TransaccionDto.selectBasico)
+        .or('solicitante_id.eq.$usuarioId,propietario_id.eq.$usuarioId')
+        .order('creado_en', ascending: false);
+
+    return _mapearTransacciones(
+      rows.cast<Map<String, dynamic>>().toList(),
+      usuarioId,
+    );
+  }
+
+  @override
+
+  /// Escucha en tiempo real las transacciones donde participa el usuario.
+  Stream<List<TransaccionModel>> escucharTransacciones(String usuarioId) async* {
+    yield await obtenerTransacciones(usuarioId);
+
+    final ctrl = StreamController<void>();
+    final channel = _client
+        .channel('transacciones-$usuarioId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: TablasSupabase.transacciones,
+          callback: (_) => ctrl.add(null),
+        )
+        .subscribe();
+
+    try {
+      await for (final _ in ctrl.stream) {
+        yield await obtenerTransacciones(usuarioId);
+      }
+    } finally {
+      await _client.removeChannel(channel);
+      await ctrl.close();
+    }
+  }
+
+  @override
+
+  /// Recupera una transacción concreta por su identificador.
+  Future<TransaccionModel?> obtenerTransaccionPorId(
+    String transaccionId,
+    String usuarioId,
+  ) async {
+    final row = await _client
+        .from(TablasSupabase.transacciones)
+        .select(TransaccionDto.selectBasico)
+        .eq('id', transaccionId)
+        .maybeSingle();
+
+    if (row == null) return null;
+    final transacciones = await _mapearTransacciones([row], usuarioId);
+    return transacciones.single;
+  }
+
+  @override
+
+  /// Ejecuta la RPC que completa una transacción aceptada.
+  Future<void> completarTransaccion(String transaccionId) async {
+    await _client.rpc(
+      RpcsSupabase.completarTransaccion,
+      params: {'p_transaccion_id': transaccionId},
+    );
+  }
+
+  @override
+
+  /// Ejecuta la RPC que cancela una transacción aceptada.
+  Future<void> cancelarTransaccion(String transaccionId) async {
+    await _client.rpc(
+      RpcsSupabase.cancelarTransaccion,
+      params: {'p_transaccion_id': transaccionId},
+    );
+  }
+
+  Future<List<TransaccionModel>> _mapearTransacciones(
+    List<Map<String, dynamic>> rows,
+    String usuarioId,
+  ) async {
+    if (rows.isEmpty) return const [];
+
+    final productos = await _obtenerProductosPorId(
+      rows.map((row) => row['producto_id'] as String),
+    );
+    final perfiles = await _obtenerPerfilesPorId(
+      rows.expand(
+        (row) => [
+          row['solicitante_id'] as String,
+          row['propietario_id'] as String,
+        ],
+      ),
+    );
+
+    return rows.map((row) {
+      final esSolicitante = row['solicitante_id'] == usuarioId;
+      final contraparteId =
+          row[esSolicitante ? 'propietario_id' : 'solicitante_id'] as String;
+
+      return TransaccionDto.desdeSupabase(
+        row,
+        usuarioId,
+        producto: productos[row['producto_id']],
+        contraparte: perfiles[contraparteId],
+      );
+    }).toList();
+  }
+
+  Future<Map<String, Map<String, dynamic>>> _obtenerProductosPorId(
+    Iterable<String> ids,
+  ) async {
+    final idsUnicos = ids.toSet().toList();
+    if (idsUnicos.isEmpty) return const {};
+
+    final rows = await _client
+        .from(TablasSupabase.productos)
+        .select('id, titulo')
+        .inFilter('id', idsUnicos);
+
+    return {
+      for (final row in rows.cast<Map<String, dynamic>>())
+        row['id'] as String: row,
+    };
+  }
+
+  Future<Map<String, Map<String, dynamic>>> _obtenerPerfilesPorId(
+    Iterable<String> ids,
+  ) async {
+    final idsUnicos = ids.toSet().toList();
+    if (idsUnicos.isEmpty) return const {};
+
+    final rows = await _client
+        .from(TablasSupabase.perfiles)
+        .select('id, nombre, url_avatar, valoracion_media, numero_valoraciones')
+        .inFilter('id', idsUnicos);
+
+    return {
+      for (final row in rows.cast<Map<String, dynamic>>())
+        row['id'] as String: row,
+    };
+  }
+}
