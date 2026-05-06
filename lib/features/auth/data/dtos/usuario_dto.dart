@@ -23,6 +23,13 @@ abstract final class UsuarioDto {
               ?.map((item) => item.toString())
               .toList() ??
           const [],
+      alergenos: (json['alergenos'] as List<dynamic>?)
+              ?.map((item) => item.toString())
+              .toList() ??
+          const [],
+      preferenciasNotificaciones: _toBoolMap(
+        json['preferencias_notificaciones'],
+      ),
       certificacionSanitaria: json['certificacion_sanitaria'] as String?,
       esModerador: json['es_moderador'] as bool? ?? false,
       valoracionMedia: _toDouble(json['valoracion_media']),
@@ -49,6 +56,8 @@ abstract final class UsuarioDto {
           ? null
           : bioNormalizada,
       'preferencias': usuario.preferencias,
+      'alergenos': usuario.alergenos,
+      'preferencias_notificaciones': usuario.preferenciasNotificaciones,
       'certificacion_sanitaria': usuario.certificacionSanitaria,
       'latitud_predeterminada': usuario.latitudPredeterminada,
       'longitud_predeterminada': usuario.longitudPredeterminada,
@@ -67,6 +76,17 @@ abstract final class UsuarioDto {
   static double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  /// Convierte un jsonb tipo `{"clave": true/false}` en `Map<String, bool>`.
+  /// Las claves cuyo valor no sea booleano se descartan en silencio.
+  static Map<String, bool> _toBoolMap(dynamic value) {
+    if (value is! Map) return const {};
+    final resultado = <String, bool>{};
+    value.forEach((k, v) {
+      if (v is bool) resultado[k.toString()] = v;
+    });
+    return resultado;
   }
 
   /// Normaliza fechas que pueden llegar como `String` ISO-8601 o `DateTime`.

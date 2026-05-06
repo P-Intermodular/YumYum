@@ -18,12 +18,18 @@ class EditarPerfilController extends Notifier<AsyncValue<void>> {
   AsyncValue<void> build() => const AsyncValue.data(null);
 
   /// Sube la imagen de avatar (si existe) y actualiza los datos del usuario.
+  ///
+  /// Si [quitarAvatar] es `true` se ignora [nuevoAvatar] y se persiste el
+  /// `urlImagenPerfil` vacío para que la UI vuelva al placeholder con
+  /// iniciales.
   Future<void> actualizarPerfil({
     required String nombre,
     required String ciudad,
     required String bio,
     required List<String> preferencias,
+    required List<String> alergenos,
     File? nuevoAvatar,
+    bool quitarAvatar = false,
   }) async {
     final keepAlive = ref.keepAlive();
     final usuarioActual = ref.read(autenticacionProvider).value;
@@ -44,28 +50,32 @@ class EditarPerfilController extends Notifier<AsyncValue<void>> {
       final repository = ref.read(autenticacionRepositoryProvider);
       String urlAvatar = usuarioActual.urlImagenPerfil;
 
-      // 1. Si hay una nueva imagen, la subimos primero al bucket.
-      if (nuevoAvatar != null) {
+      if (quitarAvatar) {
+        // Quitar foto: vacía la URL. No tocamos el blob en Storage para no
+        // romper avatares cacheados en chats antiguos; lo limpia un job de
+        // mantenimiento si hace falta.
+        urlAvatar = '';
+      } else if (nuevoAvatar != null) {
         urlAvatar = await repository.subirAvatar(usuarioActual.id, nuevoAvatar);
       }
 
-      // 2. Preparamos el modelo actualizado.
       final usuarioActualizado = usuarioActual.copyWith(
         nombre: nombre.trim(),
         ciudad: ciudad.trim(),
         bio: bio.trim(),
         preferencias: preferencias,
+        alergenos: alergenos,
         urlImagenPerfil: urlAvatar,
       );
 
-      // 3. Persistimos los cambios y refrescamos la sesión local
-      // usando el AutenticacionNotifier (que se encarga de ambas cosas).
-      await ref.read(autenticacionProvider.notifier).actualizarPerfil(usuarioActualizado);
+      await ref
+          .read(autenticacionProvider.notifier)
+          .actualizarPerfil(usuarioActualizado);
 
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      rethrow; // Lanzamos el error para que la UI pueda mostrar el AppFeedback
+      rethrow;
     } finally {
       keepAlive.close();
     }

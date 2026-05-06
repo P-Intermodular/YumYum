@@ -15,6 +15,7 @@ import '../../../core/location/ubicacion_actual_provider.dart';
 import '../../../core/providers_refresher.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/selector_ubicacion_mapa.dart';
+import '../../../core/widgets/ui/label_seccion.dart';
 import '../../../core/widgets/ui/yum_app_bar.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../../core/widgets/ui/yum_button.dart';
@@ -385,7 +386,7 @@ class _PublicarProductoScreenState
                 _BannerActividadActiva(),
                 const SizedBox(height: 16),
               ],
-              const _LabelSeccion(text: 'Fotos del plato', obligatorio: true),
+              const LabelSeccion(text: 'Fotos del plato', obligatorio: true),
               const SizedBox(height: 8),
               _GridImagenes(
                 imagenes: _imagenes,
@@ -400,11 +401,11 @@ class _PublicarProductoScreenState
                 style: TextStyle(color: colors.inkSoft, fontSize: 12),
               ),
               if (_mostrarErroresBloques && _imagenes.isEmpty)
-                const _ErrorInline(
+                const ErrorInline(
                   text: 'Añade al menos una foto del plato.',
                 ),
               const SizedBox(height: 18),
-              const _LabelSeccion(text: 'Nombre del plato', obligatorio: true),
+              const LabelSeccion(text: 'Nombre del plato', obligatorio: true),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _tituloController,
@@ -415,7 +416,7 @@ class _PublicarProductoScreenState
                     : null,
               ),
               const SizedBox(height: 16),
-              const _LabelSeccion(text: 'Descripción', obligatorio: true),
+              const LabelSeccion(text: 'Descripción', obligatorio: true),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _descripcionController,
@@ -429,7 +430,7 @@ class _PublicarProductoScreenState
                     : null,
               ),
               const SizedBox(height: 18),
-              const _LabelSeccion(text: 'Tipo de oferta', obligatorio: true),
+              const LabelSeccion(text: 'Tipo de oferta', obligatorio: true),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -462,7 +463,7 @@ class _PublicarProductoScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const _LabelSeccion(
+                          const LabelSeccion(
                             text: 'Precio por ración',
                             obligatorio: true,
                           ),
@@ -493,7 +494,7 @@ class _PublicarProductoScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const _LabelSeccion(
+                          const LabelSeccion(
                             text: 'Raciones',
                             obligatorio: true,
                           ),
@@ -510,7 +511,7 @@ class _PublicarProductoScreenState
                   ],
                 )
               else ...[
-                const _LabelSeccion(
+                const LabelSeccion(
                   text: 'Raciones disponibles',
                   obligatorio: true,
                 ),
@@ -523,7 +524,7 @@ class _PublicarProductoScreenState
                 ),
               ],
               const SizedBox(height: 16),
-              const _LabelSeccion(text: 'Categoría', obligatorio: true),
+              const LabelSeccion(text: 'Categoría', obligatorio: true),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -539,11 +540,11 @@ class _PublicarProductoScreenState
                 ],
               ),
               if (_mostrarErroresBloques && _categoria == null)
-                const _ErrorInline(
+                const ErrorInline(
                   text: 'Elige la categoría que mejor describe tu plato.',
                 ),
               const SizedBox(height: 16),
-              const _LabelSeccion(
+              const LabelSeccion(
                 text: 'Etiquetas dietéticas',
                 opcional: true,
               ),
@@ -568,7 +569,7 @@ class _PublicarProductoScreenState
                 ],
               ),
               const SizedBox(height: 18),
-              const _LabelSeccion(
+              const LabelSeccion(
                 text: 'Alérgenos (Anexo II)',
                 obligatorio: true,
               ),
@@ -650,12 +651,12 @@ class _PublicarProductoScreenState
               if (_mostrarErroresBloques &&
                   !_sinAlergenos &&
                   _alergenos.isEmpty)
-                const _ErrorInline(
+                const ErrorInline(
                   text:
                       'Marca los alérgenos del Anexo II o activa "Sin alérgenos".',
                 ),
               const SizedBox(height: 24),
-              const _LabelSeccion(
+              const LabelSeccion(
                 text: 'Punto de recogida',
                 obligatorio: true,
               ),
@@ -968,86 +969,9 @@ class DottedBorderRect extends StatelessWidget {
   }
 }
 
-class _LabelSeccion extends StatelessWidget {
-  final String text;
-
-  /// Marca el label como obligatorio añadiendo un asterisco terracotta
-  /// detrás del texto. Dos campos con marca distinta no se solapan: o el
-  /// label es obligatorio (`obligatorio: true`) o es opcional
-  /// (`opcional: true`); por defecto va sin marca para títulos
-  /// informativos.
-  final bool obligatorio;
-  final bool opcional;
-
-  const _LabelSeccion({
-    required this.text,
-    this.obligatorio = false,
-    this.opcional = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.yumColors;
-    return Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(
-            text: text.toUpperCase(),
-            style: TextStyle(
-              color: colors.inkSoft,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-            ),
-          ),
-          if (obligatorio)
-            TextSpan(
-              text: ' *',
-              style: TextStyle(
-                color: colors.terracottaDeep,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          if (opcional)
-            TextSpan(
-              text: '   ·   OPCIONAL',
-              style: TextStyle(
-                color: colors.inkSoft.withValues(alpha: 0.55),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.6,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Mensaje de error inline que aparece debajo de un bloque non-Form
-/// (chips de categoría, switch de alérgenos, grid de fotos) cuando el
-/// usuario intenta publicar sin haberlo rellenado.
-class _ErrorInline extends StatelessWidget {
-  final String text;
-  const _ErrorInline({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.yumColors;
-    return Padding(
-      padding: const EdgeInsets.only(top: 6, left: 4),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: colors.terracottaDeep,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
+// LabelSeccion y ErrorInline viven ahora en
+// `lib/core/widgets/ui/label_seccion.dart` para reutilizarse desde otras
+// pantallas de formulario (como editar perfil).
 
 class _BotonTipo extends StatelessWidget {
   final String label;
