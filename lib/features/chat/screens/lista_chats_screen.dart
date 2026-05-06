@@ -63,6 +63,9 @@ class _ListaChatsScreenState extends ConsumerState<ListaChatsScreen> {
     final filtrados = _aplicarFiltros(chats);
 
     return Column(
+      // Sin esto, los Padding hijos se centran (default de Column) y el
+      // header acaba en el medio en vez de alineado a la izquierda.
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Header(conversacionesActivas: activos),
         const SizedBox(height: 12),
@@ -154,11 +157,14 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.yumColors;
-    final subtitulo = conversacionesActivas == 0
-        ? 'Sin pedidos en curso'
-        : conversacionesActivas == 1
-            ? '1 conversación activa'
-            : '$conversacionesActivas conversaciones activas';
+    // Solo mostramos el subtítulo cuando aporta valor (pedido en curso); si
+    // no, el título "Mensajes" queda solo y se evita un wording negativo
+    // que ocupa espacio sin informar.
+    final subtitulo = conversacionesActivas == 1
+        ? '1 conversación activa'
+        : conversacionesActivas > 1
+            ? '$conversacionesActivas conversaciones activas'
+            : null;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -166,12 +172,8 @@ class _Header extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            subtitulo,
-            style: TextStyle(color: colors.inkSoft, fontSize: 12),
-          ),
-          const SizedBox(height: 2),
-          Text(
             'Mensajes',
+            textAlign: TextAlign.start,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontSize: 28,
                   height: 1.1,
@@ -179,6 +181,14 @@ class _Header extends StatelessWidget {
                   color: colors.ink,
                 ),
           ),
+          if (subtitulo != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitulo,
+              textAlign: TextAlign.start,
+              style: TextStyle(color: colors.inkSoft, fontSize: 12),
+            ),
+          ],
         ],
       ),
     );
