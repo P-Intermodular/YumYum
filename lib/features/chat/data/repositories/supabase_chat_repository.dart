@@ -113,12 +113,17 @@ class SupabaseChatRepository implements ChatRepository {
   @override
 
   /// Escucha los mensajes ordenados cronológicamente para pintar el chat.
+  ///
+  /// `ascending: true` es OBLIGATORIO: a diferencia de `.from().select().order()`
+  /// (que por defecto es ASC), el `.order()` del SupabaseStreamBuilder
+  /// defaultea a DESC. Sin este flag los mensajes llegarian de nuevo a viejo
+  /// y el chat pintaria los nuevos en la parte superior en vez de la inferior.
   Stream<List<MensajeModel>> obtenerMensajes(String conversacionId) {
     return _client
         .from(TablasSupabase.mensajes)
         .stream(primaryKey: ['id'])
         .eq('conversacion_id', conversacionId)
-        .order('creado_en')
+        .order('creado_en', ascending: true)
         .map(
           (rows) => rows
               .cast<Map<String, dynamic>>()

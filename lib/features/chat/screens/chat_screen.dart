@@ -31,6 +31,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _mensajeController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  /// Distancia en pixels desde el fondo dentro de la cual se considera que
+  /// el usuario "esta al final" y por tanto auto-scrolleamos al recibir.
+  /// Si esta mas arriba (leyendo historial), no le movemos la vista.
+  static const double _umbralCercaDelFondoPx = 240;
+
+  /// Marca puesta justo despues de enviar para forzar el siguiente
+  /// auto-scroll aunque el usuario este leyendo historial. WhatsApp tambien
+  /// se va al fondo cuando es uno mismo quien escribe.
+  bool _forzarScrollSiguiente = false;
+
   @override
   void initState() {
     super.initState();
@@ -59,22 +69,57 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (texto.isEmpty) return;
 
     try {
-      await ref.read(chatControllerProvider.notifier).enviarMensaje(widget.chatId, texto);
+      // Marcamos antes del await para que el evento del stream que llega tras
+      // la insercion ya encuentre la marca activa y fuerce el scroll.
+      _forzarScrollSiguiente = true;
+      await ref
+          .read(chatControllerProvider.notifier)
+          .enviarMensaje(widget.chatId, texto);
       _mensajeController.clear();
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0.0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
     } catch (error) {
+      _forzarScrollSiguiente = false;
       if (mounted) mostrarError(context, error);
     }
   }
 
+  /// Auto-scroll estilo WhatsApp: salta al fondo cuando recibes/envias un
+  /// mensaje y o (a) lo acabas de mandar tu, o (b) ya estabas pegado al
+  /// fondo. Si estabas leyendo historial, no te molestamos.
+  void _autoScrollAlRecibirMensaje() {
+    final forzar = _forzarScrollSiguiente;
+    _forzarScrollSiguiente = false;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      // Con reverse:true, pixels=0 corresponde al fondo (mensaje mas reciente).
+      final cercaDelFondo =
+          _scrollController.position.pixels < _umbralCercaDelFondoPx;
+      if (!forzar && !cercaDelFondo) return;
+
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Reaccionamos a los cambios del stream para auto-scroll al fondo cuando
+    // crece la lista (envio propio o recepcion). El listener corre fuera del
+    // build, asi que no programa setState durante la fase de pintado.
+    ref.listen<AsyncValue<List<MensajeModel>>>(
+      mensajesProvider(widget.chatId),
+      (previa, actual) {
+        final cantidadAnterior = previa?.value?.length ?? 0;
+        final cantidadActual = actual.value?.length ?? 0;
+        if (cantidadActual > cantidadAnterior) {
+          _autoScrollAlRecibirMensaje();
+        }
+      },
+    );
+
     final mensajesAsync = ref.watch(mensajesProvider(widget.chatId));
     final usuarioActual = ref.watch(autenticacionProvider).value;
     final chats = ref.watch(listaChatsProvider).value ?? [];
