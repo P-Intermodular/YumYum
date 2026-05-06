@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,6 +26,11 @@ import '../../features/pedidos/screens/pedidos_screen.dart';
 import '../../features/pedidos/screens/detalle_transaccion_screen.dart';
 import '../../features/valoraciones/screens/valorar_transaccion_screen.dart';
 
+/// Llave global de navegación.
+/// Permite acceder al [NavigatorState] raíz desde componentes que se encuentran
+/// fuera del árbol de widgets estándar (como overlays o botones globales).
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 /// Expone el [GoRouter] principal de la aplicación.
 ///
 /// El router observa el estado de autenticación para redirigir automáticamente
@@ -33,6 +39,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(_appRouterRefreshProvider);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: RutasApp.iniciarSesion,
     refreshListenable: refresh,
     redirect: (context, state) {
@@ -211,8 +218,8 @@ final _appRouterRefreshProvider = Provider<ValueNotifier<int>>((ref) {
 
 /// Decide la redirección de autenticación sin depender de [GoRouter].
 ///
-/// Es una función pura para poder cubrir los casos delicados de recovery en
-/// tests sin levantar toda la navegación de la aplicación.
+/// Es una función pura para aislar la lógica de estado de la navegación,
+/// facilitando las pruebas unitarias de los casos de recuperación de sesión.
 String? resolverRedireccionAutenticacion({
   required Uri uri,
   required bool autenticacionCargando,
@@ -226,8 +233,7 @@ String? resolverRedireccionAutenticacion({
     return _rutaRestablecerPasswordConQuery(uri);
   }
 
-  // El formulario de recovery siempre gana sobre cualquier sesión temporal que
-  // Supabase haya abierto al validar el enlace.
+  // Prioridad al flujo de recuperación frente a sesiones temporales de validación.
   if (esRutaRestablecer) {
     return null;
   }
