@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,18 +7,31 @@ import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/feedback/app_feedback.dart';
+import '../../../core/format/tiempo_relativo.dart';
+import '../../../core/location/formato_distancia.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/avatar_usuario.dart';
-import '../../../core/widgets/ui/yum_app_bar.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../../core/widgets/ui/yum_button.dart';
 import '../../../core/widgets/ui/yum_card.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../favoritos/controllers/favorito_controller.dart';
+import '../../favoritos/providers/favorito_providers.dart';
+import '../../perfil/providers/perfil_providers.dart';
+import '../../valoraciones/domain/entities/valoracion_model.dart';
+import '../../valoraciones/providers/valoracion_providers.dart';
 import '../domain/entities/producto_model.dart';
 import '../providers/producto_providers.dart';
+import '../widgets/carrusel_imagenes.dart';
 import '../widgets/contacto_bottom_sheet.dart';
 
 /// Pantalla de detalle de una oferta concreta.
+///
+/// Estructura inspirada en `DishDetailScreen` del prototipo Figma: hero con
+/// botón flotante atrás, cabecera con badges, ficha del cocinero con CTA al
+/// perfil, descripción, grid de tres stats (distancia / publicado / raciones),
+/// categoría + etiquetas, alérgenos, últimas reseñas del cocinero, y un CTA
+/// fijo abajo que abre el bottom sheet de contacto.
 class DetalleProductoScreen extends ConsumerWidget {
   final String productoId;
 
@@ -28,262 +40,606 @@ class DetalleProductoScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final productoAsync = ref.watch(productoDetalleProvider(productoId));
-    final colors = context.yumColors;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: const YumAppBar(
-        title: '',
-        showBack: true,
-      ),
       body: YumBackground(
         child: productoAsync.when(
           data: (producto) {
             if (producto == null) {
-              return const Center(child: Text('Producto no encontrado'));
+              return const _MensajeCentrado(texto: 'Producto no encontrado');
             }
-
-            return SingleChildScrollView(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
-                bottom: 100, // Espacio para el boton fijo abajo
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Imagen principal con bordes redondeados tipo carta
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Hero(
-                      tag: 'img-${producto.id}',
-                      child: Container(
-                        clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: colors.ink.withValues(alpha: 0.15),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: AspectRatio(
-                          aspectRatio: 4 / 3,
-                          child: CachedNetworkImage(
-                            imageUrl: producto.urlImagen,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Titulo y Precio
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                producto.titulo,
-                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colors.ink,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: producto.tipo == TipoOferta.intercambio
-                                    ? colors.mustard.withValues(alpha: 0.2)
-                                    : colors.terracotta.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: producto.tipo == TipoOferta.intercambio
-                                      ? colors.mustard.withValues(alpha: 0.5)
-                                      : colors.terracotta.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: Text(
-                                producto.tipo == TipoOferta.intercambio
-                                    ? 'Intercambio'
-                                    : '${producto.precio?.toStringAsFixed(2)} €',
-                                style: TextStyle(
-                                  color: producto.tipo == TipoOferta.intercambio
-                                      ? colors.ink
-                                      : colors.terracottaDeep,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        
-                        // Ficha del cocinero
-                        YumCard(
-                          padding: const EdgeInsets.all(16),
-                          onTap: () {
-                            final usuarioActual =
-                                ref.read(autenticacionProvider).value;
-                            final ruta = usuarioActual?.id ==
-                                    producto.propietario.id
-                                ? RutasApp.perfil
-                                : RutasApp.perfilUsuario(
-                                    producto.propietario.id,
-                                  );
-                            context.push(ruta);
-                          },
-                          child: Row(
-                            children: [
-                              AvatarUsuario(
-                                nombre: producto.propietario.nombre,
-                                identificadorColor: producto.propietario.id,
-                                urlImagen: producto.propietario.urlImagenPerfil,
-                                radius: 24,
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Cocinado por',
-                                      style: TextStyle(fontSize: 12, color: colors.inkSoft),
-                                    ),
-                                    Text(
-                                      producto.propietario.nombre,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: colors.ink,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Row(
-                                children: [
-                                  Icon(Icons.star, size: 16, color: colors.mustard),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    producto.propietario.numeroValoraciones == 0
-                                        ? 'Nuevo'
-                                        : producto.propietario.valoracionMedia.toStringAsFixed(1),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: colors.ink,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Detalles (Descripcion)
-                        Text(
-                          'Sobre este plato',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: colors.ink,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          producto.descripcion,
-                          style: TextStyle(
-                            fontSize: 15,
-                            height: 1.6,
-                            color: colors.inkSoft,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _SeccionCategoriaYEtiquetas(producto: producto),
-                        const SizedBox(height: 16),
-                        _SeccionAlergenos(producto: producto),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
+            return _Contenido(producto: producto);
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, st) => Center(child: Text(mensajeError(e))),
+          error: (e, _) => _MensajeCentrado(texto: mensajeError(e)),
         ),
       ),
       bottomNavigationBar: productoAsync.maybeWhen(
         data: (producto) {
           if (producto == null) return const SizedBox.shrink();
-          final usuario = ref.watch(autenticacionProvider).value;
-          final esPropietario = usuario?.id == producto.propietario.id;
-
-          return Container(
-            padding: EdgeInsets.only(
-              left: 24,
-              right: 24,
-              top: 16,
-              bottom: MediaQuery.of(context).padding.bottom + 16,
-            ),
-            decoration: BoxDecoration(
-              color: colors.cream.withValues(alpha: 0.95),
-              border: Border(top: BorderSide(color: colors.line.withValues(alpha: 0.5))),
-            ),
-            child: YumButton(
-              text: esPropietario ? 'Es tu publicación' : 'Contactar y probar',
-              fullWidth: true,
-              variant: esPropietario ? YumButtonVariant.ghost : YumButtonVariant.primary,
-              icon: esPropietario ? null : const Icon(Icons.chat_bubble_outline),
-              onPressed: esPropietario ? null : () => _contactar(context, ref, producto),
-            ),
-          );
+          return _BarraInferior(producto: producto);
         },
         orElse: () => const SizedBox.shrink(),
       ),
     );
   }
+}
 
-  /// Inicia el flujo de contacto para venta o intercambio mostrando un
-  /// BottomSheet con selectores de cantidad y, si aplica, lista de
-  /// productos a ofrecer.
-  Future<void> _contactar(
+/// Cuerpo scrollable del detalle.
+class _Contenido extends StatelessWidget {
+  final ProductoModel producto;
+
+  const _Contenido({required this.producto});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 120),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Hero(producto: producto),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _BadgesYTitulo(producto: producto),
+                const SizedBox(height: 18),
+                _ChefCard(producto: producto),
+                const SizedBox(height: 22),
+                _SeccionDescripcion(producto: producto),
+                const SizedBox(height: 18),
+                _StatsGrid(producto: producto),
+                const SizedBox(height: 22),
+                _SeccionCategoriaYEtiquetas(producto: producto),
+                const SizedBox(height: 16),
+                _SeccionAlergenos(producto: producto),
+                const SizedBox(height: 22),
+                _SeccionUltimasResenas(propietario: producto.propietario),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Imagen hero a aspect 4:3 con gradient overlay inferior y botones flotantes
+/// (atrás + favorito). Sin `YumAppBar`: el lugar de la appbar lo ocupa el
+/// botón circular translúcido sobre la imagen.
+class _Hero extends ConsumerWidget {
+  final ProductoModel producto;
+
+  const _Hero({required this.producto});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.yumColors;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final ancho = MediaQuery.of(context).size.width;
+    final altoHero = ancho * 3 / 4; // aspect 4:3 fijo
+    final esFavorito = ref.watch(esFavoritoProvider(producto.id));
+    final autenticado = ref.watch(autenticacionProvider).value != null;
+
+    return SizedBox(
+      width: ancho,
+      height: altoHero,
+      child: Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.expand,
+        children: [
+          CarruselImagenes(
+            urls: producto.urlsImagenes,
+            heroTag: 'img-${producto.id}',
+          ),
+        // Fade del cover al fondo para suavizar el corte con el contenido.
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 60,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    colors.cream.withValues(alpha: 0),
+                    colors.cream,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Sombrita superior para que el botón atrás quede legible.
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          height: topPadding + 64,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    colors.ink.withValues(alpha: 0.30),
+                    colors.ink.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: topPadding + 8,
+          left: 12,
+          child: _BotonFlotanteCircular(
+            icon: Icons.arrow_back_ios_new_rounded,
+            tooltip: 'Atrás',
+            onTap: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                context.go(RutasApp.inicio);
+              }
+            },
+          ),
+        ),
+          Positioned(
+            top: topPadding + 8,
+            right: 12,
+            child: _BotonFlotanteCircular(
+              icon: esFavorito
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              tooltip: esFavorito ? 'Quitar de favoritos' : 'Guardar',
+              iconColor: esFavorito ? colors.terracotta : colors.ink,
+              onTap: () => _toggleFavorito(context, ref, autenticado),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggleFavorito(
     BuildContext context,
     WidgetRef ref,
-    ProductoModel producto,
+    bool autenticado,
   ) async {
-    final usuario = ref.read(autenticacionProvider).value;
-    if (usuario == null) {
-      mostrarError(context, Exception('Debes iniciar sesión'));
+    if (!autenticado) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicia sesión para guardar favoritos.')),
+      );
       return;
     }
-
     try {
-      final conversacionId = await mostrarContactoBottomSheet(
-        context,
-        producto: producto,
-      );
-
-      if (conversacionId != null && context.mounted) {
-        context.push(RutasApp.chat(conversacionId));
-      }
+      await ref.read(favoritoControllerProvider.notifier).toggle(producto.id);
     } catch (error) {
       if (context.mounted) {
-        mostrarError(context, error);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
       }
     }
+  }
+}
+
+class _BotonFlotanteCircular extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final Color? iconColor;
+
+  const _BotonFlotanteCircular({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Material(
+      color: Colors.transparent,
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Container(
+            height: 44,
+            width: 44,
+            decoration: BoxDecoration(
+              color: colors.paper.withValues(alpha: 0.92),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: colors.ink.withValues(alpha: 0.18),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 18, color: iconColor ?? colors.ink),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BadgesYTitulo extends StatelessWidget {
+  final ProductoModel producto;
+
+  const _BadgesYTitulo({required this.producto});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    final esIntercambio = producto.tipo == TipoOferta.intercambio;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _Chip(
+              icono: Icons.eco_outlined,
+              texto: 'Casero',
+              fondo: colors.olive.withValues(alpha: 0.15),
+              color: colors.oliveDeep,
+            ),
+            if (esIntercambio)
+              _Chip(
+                icono: Icons.swap_horiz_rounded,
+                texto: 'Intercambio',
+                fondo: colors.mustard.withValues(alpha: 0.20),
+                color: colors.ink,
+              )
+            else
+              _Chip(
+                icono: Icons.auto_awesome_rounded,
+                texto: 'Recién hecho',
+                fondo: colors.mustard.withValues(alpha: 0.20),
+                color: colors.ink,
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          producto.titulo,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontSize: 28,
+                height: 1.15,
+                color: colors.ink,
+              ),
+        ),
+        const SizedBox(height: 8),
+        _LineaValoracion(
+          valoracion: producto.propietario.valoracionMedia,
+          numero: producto.propietario.numeroValoraciones,
+        ),
+      ],
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final IconData icono;
+  final String texto;
+  final Color fondo;
+  final Color color;
+
+  const _Chip({
+    required this.icono,
+    required this.texto,
+    required this.fondo,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: fondo,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icono, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            texto,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Línea con 5 estrellas + texto "X,Y (N valoraciones)" o "Nuevo cocinero".
+class _LineaValoracion extends StatelessWidget {
+  final double valoracion;
+  final int numero;
+
+  const _LineaValoracion({required this.valoracion, required this.numero});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    if (numero == 0) {
+      return Row(
+        children: [
+          Icon(Icons.star_outline_rounded, size: 18, color: colors.inkSoft),
+          const SizedBox(width: 6),
+          Text(
+            'Nuevo cocinero',
+            style: TextStyle(
+              color: colors.inkSoft,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
+    }
+
+    final etiquetaNumero = numero == 1 ? '1 valoración' : '$numero valoraciones';
+
+    return Row(
+      children: [
+        for (var i = 0; i < 5; i++)
+          Icon(
+            i < valoracion.round()
+                ? Icons.star_rounded
+                : Icons.star_outline_rounded,
+            size: 16,
+            color: colors.mustard,
+          ),
+        const SizedBox(width: 8),
+        Text(
+          valoracion.toStringAsFixed(1).replaceAll('.', ','),
+          style: TextStyle(
+            color: colors.ink,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '($etiquetaNumero)',
+          style: TextStyle(color: colors.inkSoft, fontSize: 13),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChefCard extends ConsumerWidget {
+  final ProductoModel producto;
+
+  const _ChefCard({required this.producto});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.yumColors;
+    final propietario = producto.propietario;
+    final productosAsync =
+        ref.watch(productosDeUsuarioProvider(propietario.id));
+    final usuarioActual = ref.watch(autenticacionProvider).value;
+    final esYo = usuarioActual?.id == propietario.id;
+
+    final anyo = propietario.creadoEn?.year;
+    final platosTexto = productosAsync.when(
+      data: (lista) {
+        final n = lista.length;
+        return n == 1 ? '1 plato' : '$n platos';
+      },
+      loading: () => '… platos',
+      error: (_, __) => '— platos',
+    );
+    final subtitulo = anyo != null
+        ? 'Cocina desde $anyo · $platosTexto'
+        : 'Cocina compartida en YumYum · $platosTexto';
+
+    return YumCard(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          AvatarUsuario(
+            nombre: propietario.nombre,
+            identificadorColor: propietario.id,
+            urlImagen: propietario.urlImagenPerfil,
+            radius: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  propietario.nombre,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.ink,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitulo,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.inkSoft,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          YumButton(
+            text: 'Ver perfil',
+            variant: YumButtonVariant.ghost,
+            onPressed: () {
+              if (esYo) {
+                context.go(RutasApp.perfil);
+              } else {
+                context.push(RutasApp.perfilUsuario(propietario.id));
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SeccionDescripcion extends StatelessWidget {
+  final ProductoModel producto;
+
+  const _SeccionDescripcion({required this.producto});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Sobre este plato',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 16,
+                color: colors.ink,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          producto.descripcion,
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.55,
+            color: colors.ink.withValues(alpha: 0.9),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatsGrid extends StatelessWidget {
+  final ProductoModel producto;
+
+  const _StatsGrid({required this.producto});
+
+  @override
+  Widget build(BuildContext context) {
+    final distancia = producto.distanciaKm == null
+        ? '—'
+        : formatearDistanciaKm(producto.distanciaKm!);
+    final publicado = formatearTiempoRelativo(producto.creadoEn);
+    final raciones =
+        '${producto.racionesDisponibles}/${producto.racionesTotales}';
+
+    return Row(
+      children: [
+        Expanded(
+          child: _Stat(
+            icono: Icons.place_outlined,
+            etiqueta: 'Distancia',
+            valor: distancia,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Stat(
+            icono: Icons.access_time_rounded,
+            etiqueta: 'Publicado',
+            valor: publicado,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Stat(
+            icono: Icons.restaurant_outlined,
+            etiqueta: 'Raciones',
+            valor: raciones,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  final IconData icono;
+  final String etiqueta;
+  final String valor;
+
+  const _Stat({
+    required this.icono,
+    required this.etiqueta,
+    required this.valor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: colors.cream2,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Icon(icono, size: 18, color: colors.inkSoft),
+          const SizedBox(height: 6),
+          Text(
+            etiqueta,
+            style: TextStyle(
+              fontSize: 11,
+              color: colors.inkSoft,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            valor,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14,
+              color: colors.ink,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -449,6 +805,262 @@ class _SeccionAlergenos extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Últimas reseñas recibidas por el cocinero. Se muestran hasta 3 y un link
+/// para ver todas en su perfil. Si todavía no tiene reseñas, no se pinta nada
+/// (la línea de valoración del header ya comunica "Nuevo cocinero").
+class _SeccionUltimasResenas extends ConsumerWidget {
+  final dynamic propietario;
+
+  const _SeccionUltimasResenas({required this.propietario});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.yumColors;
+    final asyncResenas =
+        ref.watch(valoracionesRecibidasProvider(propietario.id));
+
+    return asyncResenas.when(
+      data: (lista) {
+        if (lista.isEmpty) return const SizedBox.shrink();
+        final muestras = lista.take(3).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Últimas valoraciones',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 16,
+                    color: colors.ink,
+                  ),
+            ),
+            const SizedBox(height: 10),
+            for (var i = 0; i < muestras.length; i++) ...[
+              if (i > 0) const SizedBox(height: 8),
+              _TarjetaResena(valoracion: muestras[i]),
+            ],
+            if (lista.length > muestras.length) ...[
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () =>
+                      context.push(RutasApp.perfilUsuario(propietario.id)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.terracotta,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                  child: Text(
+                    'Ver todas en el perfil de ${propietario.nombre}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _TarjetaResena extends StatelessWidget {
+  final ValoracionModel valoracion;
+
+  const _TarjetaResena({required this.valoracion});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    final comentario = valoracion.comentario?.trim() ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.cream2,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  valoracion.nombreValorador,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.ink,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              for (var i = 0; i < 5; i++)
+                Icon(
+                  i < valoracion.puntuacion
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
+                  size: 12,
+                  color: colors.mustard,
+                ),
+            ],
+          ),
+          if (comentario.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              '«$comentario»',
+              style: TextStyle(
+                color: colors.ink.withValues(alpha: 0.85),
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Barra inferior con el CTA principal: pedir / pedir trueque / propio.
+class _BarraInferior extends ConsumerWidget {
+  final ProductoModel producto;
+
+  const _BarraInferior({required this.producto});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.yumColors;
+    final usuario = ref.watch(autenticacionProvider).value;
+    final esPropietario = usuario?.id == producto.propietario.id;
+    final esIntercambio = producto.tipo == TipoOferta.intercambio;
+    final agotado = producto.racionesDisponibles <= 0;
+
+    final String texto;
+    final bool habilitado;
+    if (esPropietario) {
+      texto = 'Es tu publicación';
+      habilitado = false;
+    } else if (agotado) {
+      texto = 'Sin raciones disponibles';
+      habilitado = false;
+    } else {
+      texto = esIntercambio ? 'Pedir trueque' : 'Pedir ración';
+      habilitado = true;
+    }
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 12,
+        bottom: MediaQuery.of(context).padding.bottom + 12,
+      ),
+      decoration: BoxDecoration(
+        color: colors.cream.withValues(alpha: 0.96),
+        border: Border(
+          top: BorderSide(color: colors.line.withValues(alpha: 0.6)),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  esIntercambio
+                      ? 'Trueque'
+                      : '${producto.precio?.toStringAsFixed(2) ?? '--'} €',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 22,
+                        color: colors.terracottaDeep,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                Text(
+                  esIntercambio ? 'plato por plato' : 'por ración',
+                  style: TextStyle(fontSize: 11, color: colors.inkSoft),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 180,
+            child: YumButton(
+              text: texto,
+              fullWidth: true,
+              variant: habilitado
+                  ? YumButtonVariant.primary
+                  : YumButtonVariant.ghost,
+              icon: habilitado
+                  ? const Icon(Icons.chat_bubble_outline_rounded)
+                  : null,
+              onPressed: habilitado ? () => _contactar(context, ref) : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Inicia el flujo de contacto para venta o intercambio mostrando un
+  /// BottomSheet con selectores de cantidad y, si aplica, lista de
+  /// productos a ofrecer.
+  Future<void> _contactar(BuildContext context, WidgetRef ref) async {
+    final usuario = ref.read(autenticacionProvider).value;
+    if (usuario == null) {
+      mostrarError(context, Exception('Debes iniciar sesión'));
+      return;
+    }
+
+    try {
+      final conversacionId = await mostrarContactoBottomSheet(
+        context,
+        producto: producto,
+      );
+
+      if (conversacionId != null && context.mounted) {
+        context.push(RutasApp.chat(conversacionId));
+      }
+    } catch (error) {
+      if (context.mounted) {
+        mostrarError(context, error);
+      }
+    }
+  }
+}
+
+class _MensajeCentrado extends StatelessWidget {
+  final String texto;
+
+  const _MensajeCentrado({required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          texto,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: colors.inkSoft, fontSize: 14),
+        ),
       ),
     );
   }
