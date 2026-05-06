@@ -115,11 +115,12 @@ class InicioScreen extends ConsumerWidget {
           const SeccionTitulo(titulo: 'Cerca de ti'),
           HeroPlato(producto: productos.first),
           if (productos.length > 1) ...[
-            SeccionTitulo(
-              titulo: 'Recomendados',
-              cta: 'Ordenar',
-              onCtaTap: () => mostrarFiltrosFeed(context),
-            ),
+            // El nombre antiguo "Recomendados" prometía un sistema de
+            // recomendación que no existe: la lista solo está ordenada por
+            // el criterio activo (recientes por defecto). El CTA "Ordenar"
+            // duplicaba el botón de filtros del buscador, así que también
+            // lo retiramos.
+            const SeccionTitulo(titulo: 'Otras ofertas cerca'),
             for (final producto in productos.skip(1)) ...[
               FilaPlato(producto: producto),
               const SizedBox(height: 10),
