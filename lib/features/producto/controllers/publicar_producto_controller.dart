@@ -38,7 +38,7 @@ class PublicarProductoController extends Notifier<AsyncValue<void>> {
         id: '',
         titulo: datos.titulo,
         descripcion: datos.descripcion,
-        urlImagen: '',
+        urlsImagenes: const [],
         propietario: usuario,
         creadoEn: DateTime.now(),
         tipo: datos.tipo,
@@ -56,8 +56,7 @@ class PublicarProductoController extends Notifier<AsyncValue<void>> {
       await ref.read(productoRepositoryProvider).crearProducto(
             nuevoProducto,
             ubicacionExacta: datos.ubicacionExacta,
-            bytesImagen: datos.bytesImagen,
-            extensionImagen: datos.extensionImagen,
+            imagenes: datos.imagenes,
           );
 
       // Tras publicar, el inicio, mapa y perfil deben resolver de nuevo datos.

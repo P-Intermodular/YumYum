@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -46,7 +44,6 @@ void main() {
               precio: 12,
               categoria: CategoriaProducto.postresDulces,
               sinAlergenosDeclarados: true,
-              extensionImagen: 'jpg',
               ubicacionExacta: exacta,
             ),
           );
@@ -100,8 +97,7 @@ class _ProductoRepositoryFake implements ProductoRepository {
   Future<ProductoModel> crearProducto(
     ProductoModel producto, {
     required LatLng ubicacionExacta,
-    Uint8List? bytesImagen,
-    String extensionImagen = 'jpg',
+    List<ImagenSeleccionada> imagenes = const [],
   }) async {
     productoCreado = producto;
     this.ubicacionExacta = ubicacionExacta;

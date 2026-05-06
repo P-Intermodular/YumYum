@@ -8,7 +8,10 @@ class ProductoModel {
   final String id;
   final String titulo;
   final String descripcion;
-  final String urlImagen;
+  /// Lista ordenada de URLs publicas de las imagenes del producto, con la
+  /// portada en `urlsImagenes.first`. Maximo 5 elementos (limite reforzado
+  /// por la migracion `imagenes_producto_posicion_rango`).
+  final List<String> urlsImagenes;
   final UsuarioModel propietario;
   final DateTime creadoEn;
   final String tipo;
@@ -30,7 +33,7 @@ class ProductoModel {
     required this.id,
     required this.titulo,
     required this.descripcion,
-    required this.urlImagen,
+    required this.urlsImagenes,
     required this.propietario,
     required this.creadoEn,
     required this.tipo,
@@ -46,12 +49,17 @@ class ProductoModel {
     required this.ubicacionPublica,
   });
 
+  /// Compatibilidad con consumidores que solo necesitan la portada.
+  /// Devuelve cadena vacia si el producto aun no tiene imagenes subidas.
+  String get urlImagen =>
+      urlsImagenes.isNotEmpty ? urlsImagenes.first : '';
+
   /// Devuelve una copia parcial del producto manteniendo el resto de campos.
   ProductoModel copyWith({
     String? id,
     String? titulo,
     String? descripcion,
-    String? urlImagen,
+    List<String>? urlsImagenes,
     UsuarioModel? propietario,
     DateTime? creadoEn,
     String? tipo,
@@ -70,7 +78,7 @@ class ProductoModel {
       id: id ?? this.id,
       titulo: titulo ?? this.titulo,
       descripcion: descripcion ?? this.descripcion,
-      urlImagen: urlImagen ?? this.urlImagen,
+      urlsImagenes: urlsImagenes ?? this.urlsImagenes,
       propietario: propietario ?? this.propietario,
       creadoEn: creadoEn ?? this.creadoEn,
       tipo: tipo ?? this.tipo,

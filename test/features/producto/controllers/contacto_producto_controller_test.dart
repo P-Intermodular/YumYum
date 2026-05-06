@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +8,7 @@ import 'package:yumyum/core/supabase/supabase_client_provider.dart';
 import 'package:yumyum/features/auth/controllers/auth_controller.dart';
 import 'package:yumyum/features/auth/providers/auth_repository_provider.dart';
 import 'package:yumyum/features/producto/controllers/contacto_producto_controller.dart';
+import 'package:yumyum/features/producto/controllers/datos_publicacion_producto.dart';
 import 'package:yumyum/features/producto/domain/entities/producto_model.dart';
 import 'package:yumyum/features/producto/domain/repositories/producto_repository.dart';
 import 'package:yumyum/features/producto/providers/producto_repository_provider.dart';
@@ -127,7 +127,7 @@ ProductoModel _producto({required String id, required String tipo}) {
     id: id,
     titulo: 'Producto $id',
     descripcion: 'Descripcion',
-    urlImagen: '',
+    urlsImagenes: const [],
     propietario: usuarioTest(),
     creadoEn: DateTime(2026),
     tipo: tipo,
@@ -167,8 +167,7 @@ class _ProductoRepositoryFake implements ProductoRepository {
   Future<ProductoModel> crearProducto(
     ProductoModel producto, {
     required LatLng ubicacionExacta,
-    Uint8List? bytesImagen,
-    String extensionImagen = 'jpg',
+    List<ImagenSeleccionada> imagenes = const [],
   }) async {
     return producto;
   }

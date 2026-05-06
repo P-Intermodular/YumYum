@@ -8,6 +8,12 @@ import '../../domain/entities/producto_model.dart';
 
 /// Traduce filas de Supabase al modelo de dominio [ProductoModel].
 abstract final class ProductoDto {
+  /// Placeholder de portada cuando un producto todavia no tiene imagenes
+  /// subidas a Storage. Mantiene el feed renderizable con una imagen
+  /// reconocible mientras el cocinero termina la publicacion.
+  static const _portadaPorDefecto =
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
+
   /// Convierte una fila enriquecida con relaciones en una entidad de producto.
   static ProductoModel desdeSupabase(Map<String, dynamic> json) {
     final propietarioJson = json['perfiles'] as Map<String, dynamic>?;
@@ -15,18 +21,22 @@ abstract final class ProductoDto {
     final imagenesOrdenadas = imagenes.cast<Map<String, dynamic>>().toList()
       ..sort((a, b) =>
           (a['posicion'] as int? ?? 0).compareTo(b['posicion'] as int? ?? 0));
-    // El feed siempre necesita una imagen visible, aunque la oferta todavía no
-    // tenga ficheros propios subidos a Storage.
-    final urlImagen = imagenesOrdenadas.isEmpty
-        ? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'
-        : imagenesOrdenadas.first['url_publica'] as String? ??
-            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
+    final urlsImagenes = imagenesOrdenadas
+        .map((m) => m['url_publica'] as String?)
+        .whereType<String>()
+        .where((s) => s.isNotEmpty)
+        .toList(growable: false);
+    // El feed siempre necesita una portada visible, aunque la oferta todavia no
+    // tenga ficheros subidos.
+    final listaFinal = urlsImagenes.isEmpty
+        ? const <String>[_portadaPorDefecto]
+        : urlsImagenes;
 
     return ProductoModel(
       id: json['id'] as String,
       titulo: json['titulo'] as String? ?? '',
       descripcion: json['descripcion'] as String? ?? '',
-      urlImagen: urlImagen,
+      urlsImagenes: listaFinal,
       propietario: propietarioJson == null
           ? UsuarioModel(
               id: json['propietario_id'] as String,

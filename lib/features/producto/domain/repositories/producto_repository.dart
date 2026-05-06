@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:latlong2/latlong.dart';
 
+import '../../controllers/datos_publicacion_producto.dart';
 import '../entities/producto_model.dart';
 
 /// Contrato de persistencia para el catálogo de productos.
@@ -25,7 +24,8 @@ abstract class ProductoRepository {
     String propietarioId,
   );
 
-  /// Crea un producto y, opcionalmente, sube su imagen asociada.
+  /// Crea un producto y, opcionalmente, sube sus imagenes en orden. La
+  /// primera imagen de [imagenes] queda como portada (`posicion = 0`).
   ///
   /// La [ubicacionExacta] queda guardada para entregarsela mas tarde a quien
   /// participe en una transaccion aceptada del producto. Solo se persiste, no
@@ -33,8 +33,7 @@ abstract class ProductoRepository {
   Future<ProductoModel> crearProducto(
     ProductoModel producto, {
     required LatLng ubicacionExacta,
-    Uint8List? bytesImagen,
-    String extensionImagen,
+    List<ImagenSeleccionada> imagenes = const [],
   });
 
   /// Recupera la ubicacion exacta de un producto cuando el usuario actual es

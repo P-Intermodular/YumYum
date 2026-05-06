@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,8 +43,9 @@ class _PublicarProductoScreenState
   final _picker = ImagePicker();
   final _mapController = MapController();
 
-  Uint8List? _bytesImagen;
-  String _extensionImagen = 'jpg';
+  static const _maxImagenes = 5;
+
+  final List<ImagenSeleccionada> _imagenes = [];
   String _tipo = TipoOferta.intercambio;
   String? _categoria;
   final Set<String> _etiquetas = {};
@@ -65,7 +64,9 @@ class _PublicarProductoScreenState
     super.dispose();
   }
 
-  Future<void> _elegirImagen() async {
+  Future<void> _anadirImagen() async {
+    if (_imagenes.length >= _maxImagenes) return;
+
     final imagen = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 85,
@@ -78,9 +79,17 @@ class _PublicarProductoScreenState
 
     final extension = imagen.name.split('.').last;
     setState(() {
-      _bytesImagen = bytes;
-      _extensionImagen = extension.isEmpty ? 'jpg' : extension;
+      _imagenes.add(
+        ImagenSeleccionada(
+          bytes: bytes,
+          extension: extension.isEmpty ? 'jpg' : extension,
+        ),
+      );
     });
+  }
+
+  void _quitarImagen(int index) {
+    setState(() => _imagenes.removeAt(index));
   }
 
   Future<void> _publicar() async {
@@ -133,8 +142,7 @@ class _PublicarProductoScreenState
               alergenos: _sinAlergenos ? const [] : _alergenos.toList(),
               sinAlergenosDeclarados: _sinAlergenos,
               raciones: raciones,
-              bytesImagen: _bytesImagen,
-              extensionImagen: _extensionImagen,
+              imagenes: List.unmodifiable(_imagenes),
               ubicacionExacta: ubicacion,
             ),
           );
@@ -206,7 +214,20 @@ class _PublicarProductoScreenState
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
             children: [
-              _buildFotoPicker(colors, cargando),
+              const _LabelSeccion(text: 'Fotos del plato'),
+              const SizedBox(height: 8),
+              _GridImagenes(
+                imagenes: _imagenes,
+                maxImagenes: _maxImagenes,
+                deshabilitado: cargando,
+                onAnadir: _anadirImagen,
+                onQuitar: _quitarImagen,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Hasta $_maxImagenes fotos. La primera será la portada.',
+                style: TextStyle(color: colors.inkSoft, fontSize: 12),
+              ),
               const SizedBox(height: 18),
               const _LabelSeccion(text: 'Nombre del plato'),
               const SizedBox(height: 8),
@@ -528,83 +549,189 @@ class _PublicarProductoScreenState
     );
   }
 
-  Widget _buildFotoPicker(YumColors colors, bool cargando) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: cargando ? null : _elegirImagen,
-        child: Container(
-          height: 200,
-          decoration: BoxDecoration(
-            color: colors.paper,
-            border: Border.all(
-              color: colors.line,
-              style: _bytesImagen == null ? BorderStyle.solid : BorderStyle.solid,
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: _bytesImagen == null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.add_a_photo_outlined,
-                        size: 36,
-                        color: colors.inkSoft,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Toca para añadir una foto',
-                        style: TextStyle(
-                          color: colors.inkSoft,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Luz natural, plato bien servido',
-                        style: TextStyle(
-                          color: colors.inkSoft,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.memory(_bytesImagen!, fit: BoxFit.cover),
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colors.ink.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          'Principal',
-                          style: TextStyle(
-                            color: colors.paper,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+}
+
+/// Grid 3 columnas con miniaturas de las imagenes seleccionadas y un slot
+/// "+" al final para añadir hasta `maxImagenes`. La primera miniatura lleva
+/// el badge "Portada". El boton ✕ sobre cada thumb la elimina.
+class _GridImagenes extends StatelessWidget {
+  final List<ImagenSeleccionada> imagenes;
+  final int maxImagenes;
+  final bool deshabilitado;
+  final Future<void> Function() onAnadir;
+  final void Function(int index) onQuitar;
+
+  const _GridImagenes({
+    required this.imagenes,
+    required this.maxImagenes,
+    required this.deshabilitado,
+    required this.onAnadir,
+    required this.onQuitar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final puedeAnadir = imagenes.length < maxImagenes;
+    final totalSlots = imagenes.length + (puedeAnadir ? 1 : 0);
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: totalSlots,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 1,
+      ),
+      itemBuilder: (context, index) {
+        if (index < imagenes.length) {
+          return _ThumbImagen(
+            bytes: imagenes[index].bytes,
+            esPortada: index == 0,
+            deshabilitado: deshabilitado,
+            onQuitar: () => onQuitar(index),
+          );
+        }
+        return _SlotAnadirImagen(
+          deshabilitado: deshabilitado,
+          onTap: onAnadir,
+        );
+      },
+    );
+  }
+}
+
+class _ThumbImagen extends StatelessWidget {
+  final dynamic bytes;
+  final bool esPortada;
+  final bool deshabilitado;
+  final VoidCallback onQuitar;
+
+  const _ThumbImagen({
+    required this.bytes,
+    required this.esPortada,
+    required this.deshabilitado,
+    required this.onQuitar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.memory(bytes, fit: BoxFit.cover),
+        ),
+        if (esPortada)
+          Positioned(
+            top: 6,
+            left: 6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: colors.ink.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Portada',
+                style: TextStyle(
+                  color: colors.paper,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
                 ),
+              ),
+            ),
+          ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: deshabilitado ? null : onQuitar,
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: colors.paper.withValues(alpha: 0.92),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.close_rounded, size: 14, color: colors.ink),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SlotAnadirImagen extends StatelessWidget {
+  final bool deshabilitado;
+  final Future<void> Function() onTap;
+
+  const _SlotAnadirImagen({required this.deshabilitado, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: deshabilitado ? null : onTap,
+      child: DottedBorderRect(
+        color: colors.line,
+        borderRadius: 14,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add_a_photo_outlined, size: 22, color: colors.inkSoft),
+              const SizedBox(height: 4),
+              Text(
+                'Añadir',
+                style: TextStyle(
+                  color: colors.inkSoft,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Contenedor con borde discontinuo. Implementacion sencilla para no
+/// introducir dependencia externa solo por el slot de añadir foto.
+class DottedBorderRect extends StatelessWidget {
+  final Color color;
+  final double borderRadius;
+  final Widget child;
+
+  const DottedBorderRect({
+    super.key,
+    required this.color,
+    required this.borderRadius,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.paper,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: color, width: 1.4),
+      ),
+      child: child,
     );
   }
 }
