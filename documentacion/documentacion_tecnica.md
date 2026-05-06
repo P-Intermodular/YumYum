@@ -32,6 +32,351 @@ La arquitectura global sigue el paradigma **Feature-First** (por funcionalidades
 *   **Capa de Acceso y Reglas (RLS):** Las consultas pasan primero por las políticas de PostgreSQL, asegurando que un usuario solo lee/escribe lo que le corresponde.
 *   **Lógica Transaccional:** Se apoya fuertemente en Procedimientos Almacenados (RPCs) de PL/pgSQL para garantizar atomicidad y evitar inconsistencias sin tener que montar una API Node/Python intermedia.
 
+### 3.1. Estructura del proyecto para nuevos desarrolladores
+
+Este apartado sirve como mapa de entrada para una persona junior que se incorpora al proyecto. La idea principal es que YumYum no está organizado por tipo técnico global (`pantallas/`, `modelos/`, `servicios/`), sino por **funcionalidades de negocio**. Por eso, cuando quieras tocar algo relacionado con productos, normalmente trabajarás dentro de `lib/features/producto/`; si quieres tocar chats, irás a `lib/features/chat/`; y si algo afecta a toda la app, probablemente estará en `lib/core/`.
+
+#### 3.1.1. Vista general de carpetas
+
+```text
+YumYum/
+|-- assets/                         # Recursos empaquetados con Flutter
+|   `-- images/                     # Logos, iconos e imágenes locales
+|
+|-- doc/                            # Documentación auxiliar
+|-- documentacion/                  # Documentación principal del proyecto
+|   |-- documentacion_tecnica.md
+|   |-- estado_tecnico_actual.md
+|   |-- roadmap_tecnico_yumyum.md
+|   `-- roadmap_tfg_acotado.md
+|
+|-- lib/                            # Código fuente de la aplicación Flutter
+|   |-- main.dart                   # Punto de entrada de la app
+|   |
+|   |-- core/                       # Código compartido entre features
+|   |   |-- constants/              # Rutas, estados, nombres de Supabase, assets
+|   |   |-- errors/                 # Excepciones y traducción de errores
+|   |   |-- feedback/               # Helpers para mostrar feedback en UI
+|   |   |-- location/               # Servicios/providers de ubicación
+|   |   |-- router/                 # GoRouter y reglas de redirección
+|   |   |-- supabase/               # Configuración e inyección del cliente Supabase
+|   |   |-- theme/                  # Tema, colores y estilos visuales
+|   |   `-- widgets/                # Widgets reutilizables globales
+|   |       `-- ui/                 # Componentes UI comunes de YumYum
+|   |
+|   `-- features/                   # Módulos organizados por funcionalidad
+|       |-- auth/                   # Login, registro y recuperación de contraseña
+|       |   |-- controllers/        # Estado y acciones de autenticación
+|       |   |-- data/               # Acceso a Supabase Auth y conversión de datos
+|       |   |   |-- dtos/           # Conversión entre respuestas de Supabase y modelos
+|       |   |   `-- repositories/   # Implementación real del repositorio de auth
+|       |   |-- domain/             # Contratos y entidades propias de autenticación
+|       |   |   |-- entities/       # Usuario y modelos puros del dominio
+|       |   |   `-- repositories/   # Interfaces que definen operaciones de auth
+|       |   |-- providers/          # Inyección del repositorio y providers de auth
+|       |   `-- screens/            # Pantallas de login, registro y recuperación
+|       |
+|       |-- chat/                   # Conversaciones y mensajes realtime
+|       |   |-- controllers/        # Envío, lectura y estado de conversación
+|       |   |-- data/               # Lectura/escritura de conversaciones en Supabase
+|       |   |   |-- dtos/           # Mapeo de conversaciones y mensajes
+|       |   |   `-- repositories/   # Implementación Supabase del chat
+|       |   |-- domain/             # Modelos y contratos del módulo de chat
+|       |   |   |-- entities/       # Conversación, mensaje y datos derivados
+|       |   |   `-- repositories/   # Interfaz del repositorio de chat
+|       |   |-- providers/          # Providers para listados, detalle y repositorio
+|       |   `-- screens/            # Lista de chats y pantalla de conversación
+|       |
+|       |-- inicio/                 # Feed principal
+|       |   `-- screens/            # Pantalla inicial con productos cercanos
+|       |
+|       |-- mapa/                   # Vista de mapa
+|       |   `-- screens/            # Pantalla de productos geolocalizados
+|       |
+|       |-- notificaciones/         # Centro de notificaciones
+|       |   |-- data/               # Acceso a la tabla de notificaciones
+|       |   |   |-- dtos/           # Mapeo de filas de notificación
+|       |   |   `-- repositories/   # Implementación Supabase de notificaciones
+|       |   |-- domain/             # Entidades y contratos de notificaciones
+|       |   |   |-- entities/       # Modelo de notificación
+|       |   |   `-- repositories/   # Interfaz del repositorio
+|       |   |-- providers/          # Estado de no leídas/listados
+|       |   `-- screens/            # Pantalla del centro de notificaciones
+|       |
+|       |-- pedidos/                # Solicitudes aceptadas y transacciones
+|       |   |-- controllers/        # Acciones sobre transacciones
+|       |   |-- data/               # Persistencia y consultas de pedidos
+|       |   |   |-- dtos/           # Conversión de transacciones desde Supabase
+|       |   |   `-- repositories/   # Implementación Supabase de transacciones
+|       |   |-- domain/             # Modelos y contratos del panel de pedidos
+|       |   |   |-- entities/       # Transacción y modelos de panel
+|       |   |   `-- repositories/   # Interfaz del repositorio de transacciones
+|       |   |-- providers/          # Providers para panel, detalle y repositorio
+|       |   |-- screens/            # Pantallas de pedidos y detalle de transacción
+|       |   `-- widgets/            # Tarjetas e insignias específicas de pedidos
+|       |
+|       |-- perfil/                 # Perfil y edición de usuario
+|       |   |-- controllers/        # Acciones de edición de perfil
+|       |   |-- providers/          # Estado del perfil y datos relacionados
+|       |   |-- screens/            # Perfil, edición y ubicación predeterminada
+|       |   `-- widgets/            # Componentes visuales propios del perfil
+|       |
+|       |-- principal/              # Shell principal con navegación inferior
+|       |   `-- screens/            # Contenedor que envuelve las rutas privadas
+|       |
+|       |-- producto/               # Catálogo, publicación y detalle de productos
+|       |   |-- controllers/        # Publicación, contacto y datos de formularios
+|       |   |-- data/               # Acceso a productos, imágenes y RPCs
+|       |   |   |-- dtos/           # Mapeo producto/perfil/imagen desde Supabase
+|       |   |   `-- repositories/   # Implementación Supabase de productos
+|       |   |-- domain/             # Modelo y contrato del catálogo
+|       |   |   |-- entities/       # Producto y entidades relacionadas
+|       |   |   `-- repositories/   # Interfaz del repositorio de productos
+|       |   |-- providers/          # Catálogo, búsqueda, detalle y repositorio
+|       |   |-- screens/            # Detalle y publicación de producto
+|       |   `-- widgets/            # Tarjetas, selectores y UI de producto
+|       |
+|       |-- reportes/               # Reportes/moderación
+|       |   |-- data/               # Acceso a la persistencia de reportes
+|       |   |   `-- repositories/   # Implementación Supabase de reportes
+|       |   |-- domain/             # Contratos del módulo de reportes
+|       |   |   `-- repositories/   # Interfaz del repositorio de reportes
+|       |   `-- providers/          # Inyección del repositorio de reportes
+|       |
+|       |-- solicitudes/            # Solicitudes de compra/intercambio
+|       |   |-- controllers/        # Creación, aceptación, denegación y cancelación
+|       |   |-- data/               # Llamadas a RPCs y tablas de solicitudes
+|       |   |   |-- dtos/           # Mapeo de solicitudes y resultados
+|       |   |   `-- repositories/   # Implementación Supabase de solicitudes
+|       |   |-- domain/             # Modelos y contratos de solicitudes
+|       |   |   |-- entities/       # Solicitud, resultado y modelos derivados
+|       |   |   `-- repositories/   # Interfaz del repositorio de solicitudes
+|       |   `-- providers/          # Providers de estado y repositorio
+|       |
+|       `-- valoraciones/           # Valoraciones tras transacciones
+|           |-- controllers/        # Acción de emitir valoración
+|           |-- data/               # Inserción y consulta de valoraciones
+|           |   |-- dtos/           # Conversión de valoraciones
+|           |   `-- repositories/   # Implementación Supabase de valoraciones
+|           |-- domain/             # Modelo y contrato de valoraciones
+|           |   |-- entities/       # Modelo de valoración
+|           |   `-- repositories/   # Interfaz del repositorio de valoraciones
+|           |-- providers/          # Providers de valoración y repositorio
+|           `-- screens/            # Pantalla para valorar una transacción
+|
+|-- scripts/                        # Scripts de desarrollo y build
+|   |-- build
+|   |-- build_web_from_env.sh
+|   |-- run_dev.ps1
+|   `-- run_local.sh
+|
+|-- supabase/                       # Backend Supabase versionado
+|   |-- config.toml                 # Configuración local de Supabase
+|   `-- migrations/                 # Evolución del esquema, RLS, triggers y RPCs
+|       |-- 20260424120000_esquema_base_yumyum.sql
+|       |-- ...
+|       `-- 20260501010000_corregir_crear_solicitud_oferta.sql
+|
+|-- test/                           # Pruebas automatizadas
+|   |-- core/                       # Tests de piezas compartidas
+|   |-- features/                   # Tests por feature
+|   |-- helpers/                    # Utilidades para tests
+|   `-- supabase/                   # Tests sobre migraciones/reglas SQL
+|
+|-- web/                            # Archivos específicos del build web
+|   |-- icons/
+|   |-- favicon.png
+|   |-- index.html
+|   `-- manifest.json
+|
+|-- pubspec.yaml                    # Dependencias, SDK, assets y metadatos Flutter
+|-- pubspec.lock                    # Versiones exactas resueltas
+|-- analysis_options.yaml           # Reglas de lint/análisis estático
+|-- .env.example                    # Plantilla de variables de entorno
+`-- README.md                       # Resumen inicial del proyecto
+```
+
+**Carpetas y archivos de primer nivel:**
+*   **`lib/`:** Código fuente principal de Flutter. Aquí vive la aplicación real: arranque, rutas, estado, pantallas, widgets, repositorios y modelos.
+*   **`test/`:** Pruebas automatizadas. Replica parcialmente la estructura de `lib/` y también incluye tests de migraciones SQL de Supabase.
+*   **`supabase/`:** Configuración local de Supabase y migraciones SQL. Es la fuente de verdad del esquema de base de datos, políticas RLS, triggers y RPCs.
+*   **`assets/images/`:** Imágenes empaquetadas con la app, como logos e iconos. Están declaradas en `pubspec.yaml`.
+*   **`web/`:** Archivos propios del build web de Flutter: `index.html`, manifest e iconos PWA.
+*   **`scripts/`:** Scripts de apoyo para desarrollo local y build, por ejemplo ejecución local o construcción web usando variables de entorno.
+*   **`documentacion/`:** Documentación funcional, técnica y roadmap del proyecto.
+*   **`doc/`:** Carpeta auxiliar de documentación o recursos adicionales del proyecto.
+*   **`pubspec.yaml`:** Define nombre del proyecto, versión, SDK de Dart, dependencias, dependencias de desarrollo y assets.
+*   **`pubspec.lock`:** Bloquea versiones exactas de dependencias. No se edita a mano; se actualiza con `flutter pub get`.
+*   **`analysis_options.yaml`:** Reglas de análisis estático y linting de Dart/Flutter.
+*   **`.env.example`:** Plantilla de variables necesarias. El archivo `.env` real no debe tratarse como documentación pública ni compartirse con secretos.
+*   **`.dart_tool/`, `build/` y logs `flutter_*.log`:** Archivos generados por herramientas. Sirven para la máquina local, no para entender la arquitectura.
+
+#### 3.1.2. Punto de entrada de la aplicación
+
+El archivo `lib/main.dart` es el primer sitio que conviene leer. Hace cuatro cosas importantes:
+
+1.  Inicializa Flutter con `WidgetsFlutterBinding.ensureInitialized()`.
+2.  Activa URLs limpias en web mediante `usePathUrlStrategy()`.
+3.  Comprueba que existan `SUPABASE_URL` y `SUPABASE_ANON_KEY` usando `SupabaseConfig`.
+4.  Inicializa Supabase y arranca la app dentro de un `ProviderScope` de Riverpod.
+
+Desde ahí se renderiza `YumYumApp`, que construye un `MaterialApp.router`. El router no se crea directamente en `main.dart`, sino que se obtiene desde Riverpod con `appRouterProvider`. Esto permite que la navegación reaccione al estado de autenticación.
+
+#### 3.1.3. `lib/core/`: código compartido por toda la app
+
+`core` contiene piezas transversales. Si una clase, constante o widget se usa en varias funcionalidades y no pertenece claramente a una feature concreta, debería vivir aquí.
+
+*   **`core/constants/`:** Constantes globales. Incluye rutas (`rutas_app.dart`), nombres de tablas/RPCs/buckets de Supabase (`supabase_names.dart`), estados de negocio (`estados_app.dart`), assets y ubicaciones por defecto.
+*   **`core/router/`:** Configuración de GoRouter. `app_router.dart` define rutas públicas, rutas privadas, `ShellRoute` con navegación principal y redirecciones según autenticación.
+*   **`core/supabase/`:** Configuración e inyección del cliente Supabase. `supabase_config.dart` lee variables de compilación y `supabase_client_provider.dart` expone el cliente al resto de providers.
+*   **`core/theme/`:** Tema visual de la app. Aquí se centralizan colores, tipografías y estilos base.
+*   **`core/widgets/`:** Widgets reutilizables no ligados a una sola feature, como app bars, fondo visual, botones, tarjetas o navegación inferior.
+*   **`core/location/`:** Servicios y providers de ubicación. Encapsulan permisos, coordenadas actuales, formato de distancia e integración con `geolocator`.
+*   **`core/errors/`:** Excepciones de aplicación y traducción de errores técnicos a mensajes entendibles para el usuario.
+*   **`core/feedback/`:** Utilidades para mostrar feedback en UI, por ejemplo errores o confirmaciones.
+*   **`core/providers_refresher.dart`:** Extensiones y utilidades para invalidar providers relacionados cuando una acción cambia datos compartidos, como publicar un producto o modificar el catálogo.
+
+Regla práctica: si estás trabajando en una pantalla y te apetece crear algo en `core`, pregúntate si lo van a reutilizar al menos dos features. Si la respuesta es no, probablemente debería quedarse dentro de la feature.
+
+#### 3.1.4. `lib/features/`: módulos de negocio
+
+Cada carpeta dentro de `features` representa una parte reconocible del producto:
+
+*   **`auth/`:** Inicio de sesión, registro, recuperación y restablecimiento de contraseña. También contiene el estado principal de autenticación.
+*   **`principal/`:** Estructura principal tras iniciar sesión, incluyendo el contenedor de navegación inferior.
+*   **`inicio/`:** Feed o pantalla inicial con productos cercanos.
+*   **`mapa/`:** Visualización geográfica de productos.
+*   **`producto/`:** Publicación, detalle, tarjetas, búsqueda y repositorio de productos.
+*   **`solicitudes/`:** Creación y gestión de solicitudes de compra o intercambio.
+*   **`pedidos/`:** Panel y detalle de transacciones, aceptación, cancelación y completado.
+*   **`chat/`:** Listado de conversaciones, pantalla de chat, mensajes y suscripción Realtime.
+*   **`notificaciones/`:** Centro de notificaciones y estado de notificaciones no leídas.
+*   **`perfil/`:** Visualización y edición de perfil, avatar, preferencias y ubicación predeterminada.
+*   **`valoraciones/`:** Emisión de valoraciones tras completar transacciones.
+*   **`reportes/`:** Acceso a la lógica de reportes/moderación. Actualmente está más orientada a repositorio que a pantallas completas.
+
+No todas las features tienen exactamente las mismas subcarpetas, porque algunas son más simples que otras. Aun así, cuando una feature crece, suele seguir esta estructura:
+
+```text
+feature/
+|-- controllers/
+|-- data/
+|   |-- dtos/
+|   `-- repositories/
+|-- domain/
+|   |-- entities/
+|   `-- repositories/
+|-- providers/
+|-- screens/
+`-- widgets/
+```
+
+**Responsabilidad de cada subcarpeta:**
+*   **`domain/entities/`:** Modelos puros de la app. Representan conceptos de negocio como `ProductoModel`, `UsuarioModel`, `TransaccionModel` o `ValoracionModel`. No deberían depender de Supabase ni de Flutter UI.
+*   **`domain/repositories/`:** Contratos abstractos. Definen qué operaciones necesita la feature sin decir cómo se implementan. Ejemplo: `ProductoRepository`.
+*   **`data/dtos/`:** Adaptadores entre la base de datos y el dominio. Un DTO sabe leer un `Map<String, dynamic>` de Supabase y convertirlo en un modelo de dominio, o preparar un mapa para insertar/actualizar.
+*   **`data/repositories/`:** Implementaciones concretas contra Supabase. Aquí aparecen llamadas como `.from(...)`, `.select(...)`, `.insert(...)`, `.rpc(...)` o accesos a Storage.
+*   **`providers/`:** Providers de Riverpod que inyectan repositorios, exponen consultas, cachean estado o conectan datos con controladores.
+*   **`controllers/`:** Orquestan acciones iniciadas desde la UI. Suelen ser `Notifier`, `AsyncNotifier` o variantes `autoDispose`. Validan el estado actual, llaman a repositorios, actualizan `AsyncValue` e invalidan providers cuando toca.
+*   **`screens/`:** Pantallas completas conectadas a rutas. Deben centrarse en pintar UI y reaccionar al estado.
+*   **`widgets/`:** Componentes visuales privados de esa feature. Si luego se reutilizan en varias features, se pueden mover a `core/widgets/`.
+
+#### 3.1.5. Flujo típico de datos
+
+El flujo más habitual en YumYum sigue esta cadena:
+
+```text
+Screen/Widget
+  -> Controller o Provider de Riverpod
+  -> Repository abstracto de domain
+  -> Implementación Supabase en data
+  -> DTO
+  -> Modelo de dominio
+  -> Provider actualiza estado
+  -> UI se reconstruye
+```
+
+Ejemplo simplificado al publicar un producto:
+
+1.  `PublicarProductoScreen` recoge datos del formulario.
+2.  `PublicarProductoController` valida que haya usuario autenticado, calcula una ubicación pública aproximada y construye un `ProductoModel`.
+3.  El controller llama a `productoRepositoryProvider`.
+4.  `productoRepositoryProvider` devuelve una implementación `SupabaseProductoRepository`.
+5.  `SupabaseProductoRepository` inserta en `productos`, sube imagen a Storage si existe e inserta metadata en `imagenes_producto`.
+6.  `ProductoDto` convierte la respuesta de Supabase en `ProductoModel`.
+7.  El controller llama a `ref.refrescarCatalogo()` para que inicio, mapa y perfil vuelvan a pedir datos.
+8.  La UI escucha el `AsyncValue` y muestra carga, error o éxito.
+
+Este patrón evita que las pantallas sepan detalles de SQL, nombres de tablas o buckets. Una pantalla no debería construir consultas complejas a Supabase directamente; debe delegar en providers, controllers o repositorios.
+
+#### 3.1.6. Rutas y navegación
+
+Las rutas se centralizan en dos lugares:
+
+*   **`core/constants/rutas_app.dart`:** Define las cadenas de ruta y helpers para construir rutas con parámetros.
+*   **`core/router/app_router.dart`:** Registra las pantallas concretas, redirecciones, aliases y reglas de autenticación.
+
+Hay rutas públicas, como inicio de sesión, registro y recuperación de contraseña. Después de iniciar sesión, la app entra en una `ShellRoute` que usa `PrincipalScreen` como marco común con navegación inferior. Las pantallas principales dentro de esa shell son inicio, mapa, publicar, pedidos, chats y perfil.
+
+Para añadir una pantalla nueva normalmente hay que:
+
+1.  Crear la pantalla en la feature correspondiente, dentro de `screens/`.
+2.  Añadir la constante de ruta en `rutas_app.dart`.
+3.  Registrar el `GoRoute` en `app_router.dart`.
+4.  Si forma parte de la navegación inferior, actualizar `PrincipalScreen` y/o los widgets de navegación compartidos.
+5.  Añadir tests de redirección si afecta a autenticación, recovery o rutas protegidas.
+
+#### 3.1.7. Relación con Supabase
+
+Supabase se usa desde el cliente Flutter, pero la lógica crítica no está dispersa por la UI. El proyecto concentra los nombres de tablas, buckets y RPCs en `core/constants/supabase_names.dart`. Esto reduce errores por strings escritos a mano.
+
+La base de datos se controla desde `supabase/migrations/`. Cada migración describe un cambio incremental del backend: tablas, índices, constraints, políticas RLS, triggers o funciones RPC. Para entender el estado real de la base de datos, se deben leer las migraciones en orden cronológico.
+
+Cuando una feature necesita una operación nueva de backend, el camino recomendado es:
+
+1.  Si cambia el esquema, crear una migración SQL en `supabase/migrations/`.
+2.  Si se añade una RPC, declarar su nombre en `RpcsSupabase`.
+3.  Añadir o ampliar el contrato en `domain/repositories/`.
+4.  Implementar la llamada concreta en `data/repositories/`.
+5.  Convertir datos con un DTO si la respuesta no es trivial.
+6.  Exponer la operación mediante un provider o controller.
+7.  Cubrir la lógica con tests de Dart y, si aplica, tests de migración SQL.
+
+#### 3.1.8. Tests
+
+La carpeta `test/` tiene tres tipos de pruebas principales:
+
+*   **Tests de `core`:** Validan piezas compartidas como traducción de errores, refresco de providers y redirecciones del router.
+*   **Tests de features:** Cubren controllers, DTOs, providers y repositorios de funcionalidades concretas.
+*   **Tests de Supabase/migraciones:** Verifican reglas SQL importantes, como privacidad, duplicados, cancelaciones, políticas de mensajes o restricciones de estados.
+
+La regla para una persona junior es simple: si modificas una regla de negocio, busca primero si ya hay un test cerca. Por ejemplo, si cambias la forma de cancelar solicitudes, revisa `test/features/solicitudes/` y `test/supabase/`. Si modificas un DTO, añade o actualiza tests junto al DTO correspondiente.
+
+#### 3.1.9. Cómo orientarse antes de tocar código
+
+Un recorrido recomendado para entender cualquier funcionalidad es:
+
+1.  Empieza por la pantalla en `screens/` para ver qué experiencia recibe el usuario.
+2.  Busca qué providers o controllers usa esa pantalla.
+3.  Abre el controller para entender la acción de negocio.
+4.  Sigue el provider del repositorio para ver qué implementación se inyecta.
+5.  Lee el contrato en `domain/repositories/` para entender la intención.
+6.  Lee la implementación en `data/repositories/` para ver consultas, RPCs o Storage.
+7.  Revisa el DTO para entender cómo se transforma la respuesta de Supabase.
+8.  Si hay una RPC o una política RLS implicada, busca su definición en `supabase/migrations/`.
+9.  Mira los tests relacionados antes de cambiar comportamiento.
+
+#### 3.1.10. Reglas prácticas para contribuir sin romper la arquitectura
+
+*   No pongas lógica de negocio compleja dentro de widgets. Los widgets deben pintar estado y lanzar acciones.
+*   No escribas nombres de tablas, buckets o RPCs a mano si ya existen en `supabase_names.dart`.
+*   No saltes la capa de repositorio desde una pantalla salvo en casos muy pequeños y justificados.
+*   No mezcles modelos de Supabase directamente con UI. Convierte primero a modelos de dominio.
+*   Mantén la lógica crítica de consistencia en Supabase cuando dependa de atomicidad, permisos o concurrencia.
+*   Usa `AsyncValue` para estados de carga/error/datos y traduce errores técnicos antes de mostrarlos al usuario.
+*   Si una acción cambia datos compartidos, revisa si hay que invalidar providers con las utilidades de `providers_refresher.dart`.
+*   Si una carpeta o archivo es generado (`build/`, `.dart_tool/`, logs), no lo uses como fuente para entender ni modificar comportamiento.
+
 ## 4. Modelo de datos
 El modelo relacional está diseñado en PostgreSQL e implementa múltiples constricciones (CHECKs), disparadores (Triggers) de integridad e índices estratégicos (obtenidos de las migraciones SQL) para optimizar el rendimiento y prevenir estados anómalos. A continuación, se detalla el esquema consolidado:
 
