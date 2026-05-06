@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/constants/ubicaciones_app.dart';
 import '../../../core/errors/app_exception.dart';
@@ -12,10 +12,12 @@ import '../../../core/location/formato_distancia.dart';
 import '../../../core/location/ubicacion_actual.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
 import '../../../core/providers_refresher.dart';
+import '../../../core/theme/yum_colors.dart';
+import '../../../core/widgets/ui/dish_card_item.dart';
+import '../../../core/widgets/ui/yum_card.dart';
 import '../../producto/domain/entities/producto_model.dart';
 import '../../producto/providers/producto_providers.dart';
 import '../../producto/widgets/selector_radio_busqueda.dart';
-import '../../../core/widgets/yumyum_app_bar.dart';
 
 /// Pantalla de mapa que sitúa las ofertas disponibles sobre OpenStreetMap.
 class MapaScreen extends ConsumerStatefulWidget {
@@ -37,8 +39,6 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
     super.initState();
     _mapController = MapController();
 
-    // listenManual se ata al ciclo de vida del State: la suscripcion se cierra
-    // en dispose sin riesgo de oyentes duplicados al rebuild.
     _suscripcionUbicacion = ref.listenManual<AsyncValue<UbicacionActual?>>(
       ubicacionActualProvider,
       (anterior, actual) {
@@ -60,12 +60,6 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
     );
   }
 
-  /// Fuerza un re-render del viewport tras el primer frame del mapa.
-  ///
-  /// FlutterMap puede montar con dimensiones incompletas dentro de un
-  /// ShellRoute, causando que los tiles no carguen hasta una interacción.
-  /// Un move al mismo centro tras un post-frame callback fuerza la
-  /// recarga del tile layer.
   void _alMapaListo() {
     _mapaListo = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -88,13 +82,13 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
     final ubicacionAsync = ref.watch(ubicacionActualProvider);
     final ubicacionUsuario = ubicacionAsync.value;
     final radioKm = ref.watch(radioBusquedaProvider);
+    final colors = context.yumColors;
 
     final centroInicial = ubicacionUsuario == null
         ? UbicacionesApp.madridMapaInicial
         : LatLng(ubicacionUsuario.latitud, ubicacionUsuario.longitud);
 
     return Scaffold(
-      appBar: const YumYumAppBar(titulo: 'Mapa'),
       body: productosAsync.when(
         data: (productos) {
           final markersProductos = productos
@@ -105,10 +99,17 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                   height: 80,
                   child: GestureDetector(
                     onTap: () => _mostrarDetalleProducto(context, producto),
-                    child: const Icon(
+                    child: Icon(
                       Icons.location_on,
-                      color: Colors.green,
-                      size: 40,
+                      color: colors.terracotta,
+                      size: 44,
+                      shadows: [
+                        Shadow(
+                          color: colors.ink.withValues(alpha: 0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -127,21 +128,20 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                     height: 44,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: colors.paper,
                         shape: BoxShape.circle,
-                        border:
-                            Border.all(color: Colors.blue.shade700, width: 2),
-                        boxShadow: const [
+                        border: Border.all(color: colors.ink, width: 2),
+                        boxShadow: [
                           BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
+                            color: colors.ink.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: Icon(
                         Icons.my_location,
-                        color: Colors.blue.shade700,
+                        color: colors.ink,
                         size: 22,
                       ),
                     ),
@@ -158,8 +158,8 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                     ),
                     radius: radioKm * 1000,
                     useRadiusInMeter: true,
-                    color: Colors.blue.withValues(alpha: 0.10),
-                    borderColor: Colors.blue.shade700,
+                    color: colors.terracotta.withValues(alpha: 0.10),
+                    borderColor: colors.terracotta,
                     borderStrokeWidth: 1.5,
                   ),
                 ];
@@ -175,25 +175,53 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.yumyum.app',
                   ),
                   if (circulos.isNotEmpty) CircleLayer(circles: circulos),
-                  MarkerLayer(
-                      markers: [...markersProductos, ...markersUsuario]),
+                  MarkerLayer(markers: [...markersProductos, ...markersUsuario]),
                 ],
               ),
               SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: ubicacionUsuario != null
-                      ? const _OverlaySelectorRadio()
-                      : _OverlaySinUbicacion(
+                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(child: _SearchBarMapa()),
+                          const SizedBox(width: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: colors.paper,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.ink.withValues(alpha: 0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                )
+                              ],
+                            ),
+                            child: IconButton(
+                              icon: Icon(Icons.person_outline, color: colors.ink),
+                              onPressed: () => context.push(RutasApp.perfil),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (ubicacionUsuario != null)
+                        const SelectorRadioBusqueda()
+                      else
+                        _OverlaySinUbicacion(
                           onReintentar: () {
                             ref.refrescarUbicacionYProductosCercanos();
                           },
                         ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -206,49 +234,58 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
   }
 
   void _mostrarDetalleProducto(BuildContext context, ProductoModel producto) {
+    final colors = context.yumColors;
+    
     showModalBottomSheet(
       context: context,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(16),
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.cream,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: colors.ink.withValues(alpha: 0.2),
+              blurRadius: 30,
+              offset: const Offset(0, -10),
+            )
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: CircleAvatar(
-                backgroundImage: NetworkImage(producto.urlImagen),
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colors.line,
+                borderRadius: BorderRadius.circular(2),
               ),
-              title: Text(producto.titulo),
-              subtitle: Text(
-                producto.tipo == TipoOferta.intercambio
-                    ? 'Intercambio'
-                    : '${producto.precio} EUR',
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                context.pop();
-                context.push(RutasApp.productoDetalle(producto.id));
-              },
             ),
-            if (producto.distanciaKm != null)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 4),
-                  child: Row(
-                    children: [
-                      Icon(Icons.place, size: 16, color: Colors.blue.shade700),
-                      const SizedBox(width: 4),
-                      Text(
-                        'A ${formatearDistanciaKm(producto.distanciaKm!)} de ti',
-                        style: TextStyle(
-                          color: Colors.blue.shade800,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
+              child: DishCardItem(
+                title: producto.titulo,
+                cookName: producto.propietario.nombre,
+                imageUrl: producto.urlImagen,
+                cookAvatarUrl: producto.propietario.urlImagenPerfil,
+                price: producto.precio ?? 0.0,
+                rating: 4.8,
+                distance: producto.distanciaKm != null 
+                    ? formatearDistanciaKm(producto.distanciaKm!) 
+                    : '---',
+                time: DateFormat('HH:mm').format(producto.creadoEn),
+                portions: 1,
+                onTap: () {
+                  context.pop();
+                  context.push(RutasApp.productoDetalle(producto.id));
+                },
               ),
+            ),
           ],
         ),
       ),
@@ -256,12 +293,42 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
   }
 }
 
-class _OverlaySelectorRadio extends StatelessWidget {
-  const _OverlaySelectorRadio();
+class _SearchBarMapa extends StatelessWidget {
+  const _SearchBarMapa();
 
   @override
   Widget build(BuildContext context) {
-    return const SelectorRadioBusqueda();
+    final colors = context.yumColors;
+    
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: colors.paper,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: colors.ink.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.search, color: colors.inkSoft, size: 22),
+          const SizedBox(width: 12),
+          Text(
+            'Encuentra Comida Cerca',
+            style: TextStyle(
+              color: colors.inkSoft,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -272,28 +339,25 @@ class _OverlaySinUbicacion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 4,
-      borderRadius: BorderRadius.circular(12),
-      color: Colors.orange.shade50,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            Icon(Icons.location_off, color: Colors.orange.shade800),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Activa tu ubicación para centrar el mapa en ti.',
-                style: TextStyle(fontSize: 13),
-              ),
+    final colors = context.yumColors;
+    
+    return YumCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(Icons.location_off, color: colors.mustard),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Activa tu ubicación para centrar el mapa en ti.',
+              style: TextStyle(fontSize: 13, color: colors.ink),
             ),
-            TextButton(
-              onPressed: onReintentar,
-              child: const Text('Reintentar'),
-            ),
-          ],
-        ),
+          ),
+          TextButton(
+            onPressed: onReintentar,
+            child: Text('Reintentar', style: TextStyle(color: colors.terracotta, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

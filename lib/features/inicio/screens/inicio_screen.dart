@@ -2,120 +2,259 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_exception.dart';
-import '../../../core/location/ubicacion_actual.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
 import '../../../core/providers_refresher.dart';
-import '../../../core/widgets/yumyum_app_bar.dart';
+import '../../../core/theme/yum_colors.dart';
+import '../../../core/widgets/ui/yum_background.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../../producto/domain/entities/producto_model.dart';
 import '../../producto/providers/producto_providers.dart';
-import '../../producto/widgets/selector_radio_busqueda.dart';
-import '../../producto/widgets/tarjeta_producto.dart';
+import '../providers/feed_filtros_providers.dart';
+import '../widgets/buscador_feed.dart';
+import '../widgets/cabecera_inicio.dart';
+import '../widgets/chips_categoria.dart';
+import '../widgets/fila_plato.dart';
+import '../widgets/filtros_feed_bottom_sheet.dart';
+import '../widgets/hero_plato.dart';
+import '../widgets/seccion_titulo.dart';
 
-/// Pantalla principal del feed de ofertas publicadas.
+/// Feed principal: cabecera personal + búsqueda + chips + plato destacado +
+/// recomendados. Replica la estética del prototipo-figma `FeedScreen`.
 class InicioScreen extends ConsumerWidget {
   const InicioScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final productosAsync = ref.watch(productosCercanosProvider);
-    final ubicacionAsync = ref.watch(ubicacionActualProvider);
+    final feed = ref.watch(feedFiltradoProvider);
+    final ubicacion = ref.watch(ubicacionActualProvider);
+    final usuario = ref.watch(autenticacionProvider).value;
+    final colors = context.yumColors;
 
     return Scaffold(
-      appBar: const YumYumAppBar(
-        titulo: 'Inicio',
-        mostrarBotonNotificaciones: true,
-      ),
-      body: productosAsync.when(
-        data: (productos) => RefreshIndicator(
+      body: YumBackground(
+        child: RefreshIndicator(
           onRefresh: () async {
             ref.refrescarUbicacionYProductosCercanos();
             await ref.read(productosCercanosProvider.future);
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: productos.length + 1,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _CabeceraProximidad(ubicacionAsync: ubicacionAsync);
-              }
-              final producto = productos[index - 1];
-              return TarjetaProducto(producto: producto);
-            },
+          child: feed.when(
+            data: (lista) => _buildScroll(
+              context: context,
+              ref: ref,
+              productos: lista,
+              ciudadUsuario: usuario?.ciudad,
+              tieneUbicacion: ubicacion.value != null,
+              ubicacionCargando: ubicacion.isLoading,
+              colors: colors,
+            ),
+            loading: () => _buildScroll(
+              context: context,
+              ref: ref,
+              productos: const [],
+              ciudadUsuario: usuario?.ciudad,
+              tieneUbicacion: ubicacion.value != null,
+              ubicacionCargando: ubicacion.isLoading,
+              colors: colors,
+              cargando: true,
+            ),
+            error: (e, st) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  mensajeError(e),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: colors.inkSoft),
+                ),
+              ),
+            ),
           ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text(mensajeError(e))),
+      ),
+    );
+  }
+
+  Widget _buildScroll({
+    required BuildContext context,
+    required WidgetRef ref,
+    required List<ProductoModel> productos,
+    required String? ciudadUsuario,
+    required bool tieneUbicacion,
+    required bool ubicacionCargando,
+    required YumColors colors,
+    bool cargando = false,
+  }) {
+    final padding = MediaQuery.of(context).padding;
+    final query = ref.watch(busquedaQueryProvider);
+    final hayFiltros = query.isNotEmpty ||
+        ref.watch(filtrosActivosCountProvider) > 0;
+
+    return ListView(
+      padding: EdgeInsets.only(top: padding.top + 4, bottom: 120),
+      children: [
+        CabeceraInicio(ciudad: ciudadUsuario),
+        const SizedBox(height: 14),
+        BuscadorFeed(onTapFiltros: () => mostrarFiltrosFeed(context)),
+        const SizedBox(height: 14),
+        const ChipsCategoria(),
+        if (!tieneUbicacion && !ubicacionCargando) ...[
+          const SizedBox(height: 14),
+          _BannerSinUbicacion(
+            onReintentar: () => ref.refrescarUbicacionYProductosCercanos(),
+          ),
+        ],
+        if (cargando)
+          Padding(
+            padding: const EdgeInsets.only(top: 48),
+            child: Center(
+              child: CircularProgressIndicator(color: colors.terracotta),
+            ),
+          )
+        else if (productos.isEmpty)
+          _EstadoVacio(hayFiltros: hayFiltros)
+        else ...[
+          const SeccionTitulo(titulo: 'Cerca de ti'),
+          HeroPlato(producto: productos.first),
+          if (productos.length > 1) ...[
+            SeccionTitulo(
+              titulo: 'Recomendados',
+              cta: 'Ordenar',
+              onCtaTap: () => mostrarFiltrosFeed(context),
+            ),
+            for (final producto in productos.skip(1)) ...[
+              FilaPlato(producto: producto),
+              const SizedBox(height: 10),
+            ],
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _BannerSinUbicacion extends StatelessWidget {
+  final VoidCallback onReintentar;
+
+  const _BannerSinUbicacion({required this.onReintentar});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colors.mustard.withValues(alpha: 0.18),
+          border: Border.all(color: colors.mustard.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.location_off_outlined,
+                color: colors.terracottaDeep, size: 20),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Mostrando todas las ofertas. Activa la ubicación para verlas más cerca.',
+                style: TextStyle(fontSize: 12.5),
+              ),
+            ),
+            TextButton(
+              onPressed: onReintentar,
+              child: Text(
+                'Reintentar',
+                style: TextStyle(
+                  color: colors.terracottaDeep,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Cabecera del feed: selector de radio cuando hay ubicacion, banner con
-/// accion de reintento cuando no.
-class _CabeceraProximidad extends ConsumerWidget {
-  final AsyncValue<UbicacionActual?> ubicacionAsync;
+class _EstadoVacio extends ConsumerWidget {
+  final bool hayFiltros;
 
-  const _CabeceraProximidad({required this.ubicacionAsync});
+  const _EstadoVacio({required this.hayFiltros});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tieneUbicacion = ubicacionAsync.value != null;
-    final radioActual = ref.watch(radioBusquedaProvider);
-
-    if (ubicacionAsync.isLoading) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: 16),
-        child: LinearProgressIndicator(minHeight: 2),
-      );
-    }
-
-    if (tieneUbicacion) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ofertas a menos de ${radioActual.toInt()} km de ti',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+    final colors = context.yumColors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 56, 20, 24),
+      child: Column(
+        children: [
+          Container(
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              color: colors.cream2,
+              shape: BoxShape.circle,
+              border: Border.all(color: colors.line),
             ),
-            const SizedBox(height: 8),
-            const SelectorRadioBusqueda(),
-          ],
-        ),
-      );
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      color: Colors.orange.shade50,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.orange.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(Icons.location_off, color: Colors.orange.shade800),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Mostrando todas las ofertas. Activa la ubicación para ver '
-                'las más cercanas.',
-                style: TextStyle(fontSize: 13),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.restaurant_menu_outlined,
+              size: 36,
+              color: colors.olive,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            hayFiltros ? 'Sin resultados' : 'Aún no hay ofertas',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 18,
+                  color: colors.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hayFiltros
+                ? 'Prueba con otra búsqueda o ajusta los filtros.'
+                : 'Cuando algún vecino publique un plato lo verás aquí.',
+            style: TextStyle(
+              fontSize: 13,
+              color: colors.inkSoft,
+              height: 1.4,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (hayFiltros) ...[
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(busquedaQueryProvider.notifier).set('');
+                ref.read(categoriaSeleccionadaProvider.notifier).set(null);
+                ref.read(etiquetasSeleccionadasProvider.notifier).limpiar();
+                ref
+                    .read(ordenacionFeedProvider.notifier)
+                    .set(OrdenFeed.recientes);
+                ref.read(radioBusquedaProvider.notifier).seleccionar(10);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.terracotta,
+                foregroundColor: colors.paper,
+                elevation: 0,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              child: const Text(
+                'Limpiar filtros',
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
-            TextButton(
-              onPressed: () {
-                ref.refrescarUbicacionYProductosCercanos();
-              },
-              child: const Text('Reintentar'),
-            ),
           ],
-        ),
+        ],
       ),
     );
   }
