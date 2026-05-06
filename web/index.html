@@ -22,7 +22,12 @@
     name="description"
     content="Compra e intercambia comida casera cerca de ti con YumYum."
   >
-  <meta name="theme-color" content="#C6553A">
+  <!-- theme-color por defecto: cream de Huerto Moderno (tema por defecto).
+       Coincide con el `scaffoldBackgroundColor` de la app, así la barra de
+       URL del navegador se confunde con el fondo y el contenido parece
+       extenderse infinitamente hacia arriba. Se sobreescribe en runtime
+       cuando el usuario cambia de tema (ver theme_color_web.dart). -->
+  <meta name="theme-color" content="#F4F3EC">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">

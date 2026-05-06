@@ -24,6 +24,9 @@ dependencies:
   cupertino_icons: ^1.0.6
   google_fonts: ^6.2.1
   shared_preferences: ^2.3.2
+  # Necesario para sincronizar la barra de URL de la PWA con el tema activo.
+  # En plataformas no-web no se importa (conditional imports en theme_color_web).
+  web: ^1.0.0
 
 dev_dependencies:
   flutter_test:
