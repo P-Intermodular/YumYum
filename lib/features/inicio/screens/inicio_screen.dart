@@ -236,7 +236,7 @@ class _EstadoVacio extends ConsumerWidget {
                 ref
                     .read(ordenacionFeedProvider.notifier)
                     .set(OrdenFeed.recientes);
-                ref.read(radioBusquedaProvider.notifier).seleccionar(10);
+                ref.read(radioBusquedaProvider.notifier).seleccionar(null);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.terracotta,

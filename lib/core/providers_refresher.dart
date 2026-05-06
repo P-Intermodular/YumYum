@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/chat/providers/chat_providers.dart';
+import '../features/mapa/providers/mapa_providers.dart';
 import '../features/pedidos/providers/transaccion_providers.dart';
 import '../features/perfil/providers/perfil_providers.dart';
 import '../features/solicitudes/providers/solicitud_oferta_providers.dart';
@@ -13,6 +14,7 @@ extension RefrescarProviders on Ref {
   void refrescarCatalogo() {
     invalidate(productosProvider);
     invalidate(productosCercanosProvider);
+    invalidate(productosMapaProvider);
     invalidate(misProductosProvider);
   }
 
@@ -33,6 +35,7 @@ extension RefrescarProviders on Ref {
   void refrescarUbicacionYProductosCercanos() {
     invalidate(ubicacionActualProvider);
     invalidate(productosCercanosProvider);
+    invalidate(productosMapaProvider);
   }
 
   void refrescarProductoDetalle(String productoId) {
@@ -64,5 +67,6 @@ extension RefrescarProvidersWidget on WidgetRef {
   void refrescarUbicacionYProductosCercanos() {
     invalidate(ubicacionActualProvider);
     invalidate(productosCercanosProvider);
+    invalidate(productosMapaProvider);
   }
 }

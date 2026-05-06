@@ -10,11 +10,18 @@ import '../providers/feed_filtros_providers.dart';
 /// El estado activo se persiste en `categoriaSeleccionadaProvider`.
 /// El valor `null` representa "todas las categorías" (chip "Todo").
 class ChipsCategoria extends ConsumerWidget {
-  const ChipsCategoria({super.key});
+  final FiltrosProductosScope scope;
+
+  const ChipsCategoria({
+    super.key,
+    this.scope = FiltrosProductosScope.inicio,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final seleccionada = ref.watch(categoriaSeleccionadaProvider);
+    final seleccionada = scope == FiltrosProductosScope.inicio
+        ? ref.watch(categoriaSeleccionadaProvider)
+        : ref.watch(mapaCategoriaSeleccionadaProvider);
     final colors = context.yumColors;
     final items = <_ChipItem>[
       const _ChipItem(null, 'Todo', Icons.restaurant_outlined),
@@ -34,9 +41,17 @@ class ChipsCategoria extends ConsumerWidget {
           final activa = item.valor == seleccionada;
           return InkWell(
             borderRadius: BorderRadius.circular(20),
-            onTap: () => ref
-                .read(categoriaSeleccionadaProvider.notifier)
-                .set(item.valor),
+            onTap: () {
+              if (scope == FiltrosProductosScope.inicio) {
+                ref
+                    .read(categoriaSeleccionadaProvider.notifier)
+                    .set(item.valor);
+              } else {
+                ref
+                    .read(mapaCategoriaSeleccionadaProvider.notifier)
+                    .set(item.valor);
+              }
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               padding: const EdgeInsets.symmetric(horizontal: 14),

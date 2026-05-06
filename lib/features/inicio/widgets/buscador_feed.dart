@@ -11,8 +11,13 @@ import '../providers/feed_filtros_providers.dart';
 /// muestra un punto terracotta cuando hay filtros activos.
 class BuscadorFeed extends ConsumerStatefulWidget {
   final VoidCallback onTapFiltros;
+  final FiltrosProductosScope scope;
 
-  const BuscadorFeed({super.key, required this.onTapFiltros});
+  const BuscadorFeed({
+    super.key,
+    required this.onTapFiltros,
+    this.scope = FiltrosProductosScope.inicio,
+  });
 
   @override
   ConsumerState<BuscadorFeed> createState() => _BuscadorFeedState();
@@ -24,7 +29,7 @@ class _BuscadorFeedState extends ConsumerState<BuscadorFeed> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: ref.read(busquedaQueryProvider));
+    _controller = TextEditingController(text: _leerQuery());
   }
 
   @override
@@ -36,7 +41,9 @@ class _BuscadorFeedState extends ConsumerState<BuscadorFeed> {
   @override
   Widget build(BuildContext context) {
     final colors = context.yumColors;
-    final filtrosActivos = ref.watch(filtrosActivosCountProvider);
+    final filtrosActivos = widget.scope == FiltrosProductosScope.inicio
+        ? ref.watch(filtrosActivosCountProvider)
+        : ref.watch(filtrosMapaActivosCountProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -58,8 +65,7 @@ class _BuscadorFeedState extends ConsumerState<BuscadorFeed> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      onChanged: (valor) =>
-                          ref.read(busquedaQueryProvider.notifier).set(valor),
+                      onChanged: _setQuery,
                       decoration: InputDecoration(
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -81,7 +87,7 @@ class _BuscadorFeedState extends ConsumerState<BuscadorFeed> {
                     InkWell(
                       onTap: () {
                         _controller.clear();
-                        ref.read(busquedaQueryProvider.notifier).set('');
+                        _setQuery('');
                         setState(() {});
                       },
                       child: Icon(Icons.close, size: 16, color: colors.inkSoft),
@@ -131,5 +137,19 @@ class _BuscadorFeedState extends ConsumerState<BuscadorFeed> {
         ],
       ),
     );
+  }
+
+  String _leerQuery() {
+    return widget.scope == FiltrosProductosScope.inicio
+        ? ref.read(busquedaQueryProvider)
+        : ref.read(mapaBusquedaQueryProvider);
+  }
+
+  void _setQuery(String valor) {
+    if (widget.scope == FiltrosProductosScope.inicio) {
+      ref.read(busquedaQueryProvider.notifier).set(valor);
+    } else {
+      ref.read(mapaBusquedaQueryProvider.notifier).set(valor);
+    }
   }
 }
