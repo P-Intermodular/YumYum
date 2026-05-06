@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/alergenos_ue.dart';
+import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/etiquetas_dieteticas.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../producto/providers/producto_providers.dart';
@@ -35,12 +37,16 @@ class _FiltrosFeedSheet extends ConsumerWidget {
       child: Container(
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
         decoration: BoxDecoration(
           color: colors.paper,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: colors.line),
         ),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -75,6 +81,8 @@ class _FiltrosFeedSheet extends ConsumerWidget {
                         .read(ordenacionFeedProvider.notifier)
                         .set(OrdenFeed.recientes);
                     ref.read(etiquetasSeleccionadasProvider.notifier).limpiar();
+                    ref.read(alergenosExcluidosProvider.notifier).limpiar();
+                    ref.read(tipoOfertaFiltroProvider.notifier).set(null);
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(4),
@@ -124,6 +132,72 @@ class _FiltrosFeedSheet extends ConsumerWidget {
                         onTap: () => ref
                             .read(etiquetasSeleccionadasProvider.notifier)
                             .toggle(etq),
+                      ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            const _Subtitulo(texto: 'Tipo de oferta'),
+            const SizedBox(height: 10),
+            Consumer(
+              builder: (context, ref, _) {
+                final tipo = ref.watch(tipoOfertaFiltroProvider);
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _Pill(
+                      label: 'Todo',
+                      activa: tipo == null,
+                      onTap: () => ref
+                          .read(tipoOfertaFiltroProvider.notifier)
+                          .set(null),
+                    ),
+                    _Pill(
+                      label: 'Intercambio',
+                      activa: tipo == TipoOferta.intercambio,
+                      onTap: () => ref
+                          .read(tipoOfertaFiltroProvider.notifier)
+                          .set(TipoOferta.intercambio),
+                    ),
+                    _Pill(
+                      label: 'Venta',
+                      activa: tipo == TipoOferta.venta,
+                      onTap: () => ref
+                          .read(tipoOfertaFiltroProvider.notifier)
+                          .set(TipoOferta.venta),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            const _Subtitulo(texto: 'Excluir alérgenos'),
+            const SizedBox(height: 4),
+            Text(
+              'Marca lo que quieras evitar.',
+              style: TextStyle(
+                color: colors.inkSoft,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Consumer(
+              builder: (context, ref, _) {
+                final excluidos = ref.watch(alergenosExcluidosProvider);
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final a in AlergenosUe.todos)
+                      _Pill(
+                        label: a,
+                        activa: excluidos.contains(a),
+                        onTap: () => ref
+                            .read(alergenosExcluidosProvider.notifier)
+                            .toggle(a),
                       ),
                   ],
                 );
@@ -182,6 +256,7 @@ class _FiltrosFeedSheet extends ConsumerWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

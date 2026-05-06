@@ -52,6 +52,45 @@ class _EtiquetasNotifier extends Notifier<Set<String>> {
   void limpiar() => state = const <String>{};
 }
 
+/// Alérgenos del Anexo II que el usuario quiere **excluir** de los resultados.
+///
+/// Política conservadora (OR): se descarta cualquier plato cuya lista
+/// `alergenos` contenga al menos uno de los marcados aquí. Los platos que
+/// declaran `sin_alergenos_declarados=true` se consideran seguros y siempre
+/// pasan el filtro.
+final alergenosExcluidosProvider =
+    NotifierProvider<_AlergenosNotifier, Set<String>>(_AlergenosNotifier.new);
+
+class _AlergenosNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const <String>{};
+
+  void toggle(String valor) {
+    final actual = {...state};
+    if (actual.contains(valor)) {
+      actual.remove(valor);
+    } else {
+      actual.add(valor);
+    }
+    state = actual;
+  }
+
+  void limpiar() => state = const <String>{};
+}
+
+/// Filtro por tipo de oferta. `null` = todos, en otro caso `'venta'` o
+/// `'intercambio'`.
+final tipoOfertaFiltroProvider =
+    NotifierProvider<_TipoOfertaNotifier, String?>(_TipoOfertaNotifier.new);
+
+class _TipoOfertaNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  // ignore: use_setters_to_change_properties
+  void set(String? value) => state = value;
+}
+
 /// Criterio activo de ordenación. Por defecto, los más recientes.
 final ordenacionFeedProvider =
     NotifierProvider<_OrdenNotifier, OrdenFeed>(_OrdenNotifier.new);
@@ -73,6 +112,8 @@ final feedFiltradoProvider =
   final query = _normalizar(ref.watch(busquedaQueryProvider));
   final categoria = ref.watch(categoriaSeleccionadaProvider);
   final etiquetas = ref.watch(etiquetasSeleccionadasProvider);
+  final alergenosExcluidos = ref.watch(alergenosExcluidosProvider);
+  final tipoOferta = ref.watch(tipoOfertaFiltroProvider);
   final orden = ref.watch(ordenacionFeedProvider);
 
   return productos.whenData((lista) {
@@ -82,10 +123,24 @@ final feedFiltradoProvider =
       resultado = resultado.where((p) => p.categoria == categoria);
     }
 
+    if (tipoOferta != null) {
+      resultado = resultado.where((p) => p.tipo == tipoOferta);
+    }
+
     if (etiquetas.isNotEmpty) {
       resultado = resultado.where(
         (p) => etiquetas.every((e) => p.etiquetas.contains(e)),
       );
+    }
+
+    if (alergenosExcluidos.isNotEmpty) {
+      // Política OR: se excluye el plato si CONTIENE alguno de los marcados.
+      // Si el cocinero declaró "sin alérgenos del Anexo II" se considera
+      // seguro y se mantiene visible.
+      resultado = resultado.where((p) {
+        if (p.sinAlergenosDeclarados) return true;
+        return !p.alergenos.any(alergenosExcluidos.contains);
+      });
     }
 
     if (query.isNotEmpty) {
@@ -126,11 +181,15 @@ final filtrosActivosCountProvider = Provider<int>((ref) {
   final radio = ref.watch(radioBusquedaProvider);
   final orden = ref.watch(ordenacionFeedProvider);
   final etiquetas = ref.watch(etiquetasSeleccionadasProvider);
+  final alergenosExcluidos = ref.watch(alergenosExcluidosProvider);
+  final tipoOferta = ref.watch(tipoOfertaFiltroProvider);
 
   var count = 0;
   if (radio != 10) count += 1;
   if (orden != OrdenFeed.recientes) count += 1;
   if (etiquetas.isNotEmpty) count += 1;
+  if (alergenosExcluidos.isNotEmpty) count += 1;
+  if (tipoOferta != null) count += 1;
   return count;
 });
 
