@@ -130,17 +130,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AjustesScreen(),
           ),
           GoRoute(
-            path: RutasApp.perfilUsuarioParametro,
-            builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return PerfilPublicoScreen(usuarioId: id);
-            },
-          ),
-          GoRoute(
             path: RutasApp.aliasProfile,
             redirect: (context, state) => RutasApp.perfil,
           ),
         ],
+      ),
+      GoRoute(
+        path: RutasApp.perfilUsuarioParametro,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PerfilPublicoScreen(usuarioId: id);
+        },
       ),
       GoRoute(
         path: RutasApp.productoParametro,
