@@ -24,6 +24,18 @@ Future<void> _esperarSesionLista(Ref ref) {
 const _radioSinLimiteKm = 999.0;
 const _limiteSinLimite = 200;
 
+final radioZonaVisibleMapaProvider =
+    NotifierProvider<RadioZonaVisibleMapaNotifier, double>(
+  RadioZonaVisibleMapaNotifier.new,
+);
+
+class RadioZonaVisibleMapaNotifier extends Notifier<double> {
+  @override
+  double build() => 10;
+
+  void establecer(double radioKm) => state = radioKm;
+}
+
 /// Centro de busqueda activo para la pantalla de mapa.
 ///
 /// `null` significa "usa la ubicacion GPS del usuario". Cuando el usuario
@@ -68,12 +80,19 @@ final productosMapaProvider = FutureProvider<List<ProductoModel>>(
       return repositorio.obtenerProductos();
     }
 
-    final radioKm = ref.watch(mapaRadioBusquedaProvider);
+    final distancia = ref.watch(mapaDistanciaProvider);
+    final radioZonaVisibleKm = ref.watch(radioZonaVisibleMapaProvider);
+    final radioKm = switch (distancia.modo) {
+      ModoDistanciaMapa.zonaVisible => radioZonaVisibleKm,
+      ModoDistanciaMapa.radio => distancia.radioKm ?? radioZonaVisibleKm,
+      ModoDistanciaMapa.todas => _radioSinLimiteKm,
+    };
+
     return repositorio.obtenerProductosCercanos(
       latitud: centro.latitude,
       longitud: centro.longitude,
-      radioKm: radioKm ?? _radioSinLimiteKm,
-      limite: radioKm == null ? _limiteSinLimite : 50,
+      radioKm: radioKm,
+      limite: distancia.modo == ModoDistanciaMapa.todas ? _limiteSinLimite : 50,
     );
   },
 );

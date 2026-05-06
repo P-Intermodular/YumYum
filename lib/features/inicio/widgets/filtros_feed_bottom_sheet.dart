@@ -14,6 +14,7 @@ Future<void> mostrarFiltrosFeed(
   BuildContext context, {
   FiltrosProductosScope scope = FiltrosProductosScope.inicio,
   Provider<AsyncValue<List<ProductoModel>>>? resultadosProvider,
+  ValueChanged<FiltroDistanciaMapa>? onSeleccionarDistanciaMapa,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -23,6 +24,7 @@ Future<void> mostrarFiltrosFeed(
     builder: (_) => _FiltrosFeedSheet(
       scope: scope,
       resultadosProvider: resultadosProvider,
+      onSeleccionarDistanciaMapa: onSeleccionarDistanciaMapa,
     ),
   );
 }
@@ -30,18 +32,19 @@ Future<void> mostrarFiltrosFeed(
 class _FiltrosFeedSheet extends ConsumerWidget {
   final FiltrosProductosScope scope;
   final Provider<AsyncValue<List<ProductoModel>>>? resultadosProvider;
+  final ValueChanged<FiltroDistanciaMapa>? onSeleccionarDistanciaMapa;
 
   const _FiltrosFeedSheet({
     required this.scope,
     required this.resultadosProvider,
+    required this.onSeleccionarDistanciaMapa,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.yumColors;
-    final radioActivo = scope == FiltrosProductosScope.inicio
-        ? ref.watch(radioBusquedaProvider)
-        : ref.watch(mapaRadioBusquedaProvider);
+    final radioActivo = ref.watch(radioBusquedaProvider);
+    final distanciaMapa = ref.watch(mapaDistanciaProvider);
     final ordenActiva = scope == FiltrosProductosScope.inicio
         ? ref.watch(ordenacionFeedProvider)
         : ref.watch(mapaOrdenacionFeedProvider);
@@ -113,18 +116,50 @@ class _FiltrosFeedSheet extends ConsumerWidget {
               const SizedBox(height: 18),
               const _Subtitulo(texto: 'Distancia máxima'),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final radio in radiosDisponiblesKm)
+              if (scope == FiltrosProductosScope.inicio)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final radio in radiosDisponiblesKm)
+                      _Pill(
+                        label: radio == null ? 'Todas' : '${radio.toInt()} km',
+                        activa: radio == radioActivo,
+                        onTap: () => _seleccionarRadio(ref, radio),
+                      ),
+                  ],
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
                     _Pill(
-                      label: radio == null ? 'Todas' : '${radio.toInt()} km',
-                      activa: radio == radioActivo,
-                      onTap: () => _seleccionarRadio(ref, radio),
+                      label: 'Zona visible',
+                      activa:
+                          distanciaMapa.modo == ModoDistanciaMapa.zonaVisible,
+                      onTap: () => _seleccionarDistanciaMapa(
+                        const FiltroDistanciaMapa.zonaVisible(),
+                      ),
                     ),
-                ],
-              ),
+                    for (final radio in radiosDisponiblesKm.whereType<double>())
+                      _Pill(
+                        label: '${radio.toInt()} km',
+                        activa: distanciaMapa.modo == ModoDistanciaMapa.radio &&
+                            distanciaMapa.radioKm == radio,
+                        onTap: () => _seleccionarDistanciaMapa(
+                          FiltroDistanciaMapa.radio(radio),
+                        ),
+                      ),
+                    _Pill(
+                      label: 'Todas',
+                      activa: distanciaMapa.modo == ModoDistanciaMapa.todas,
+                      onTap: () => _seleccionarDistanciaMapa(
+                        const FiltroDistanciaMapa.todas(),
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 20),
               const _Subtitulo(texto: 'Restricciones dietéticas'),
               const SizedBox(height: 10),
@@ -271,7 +306,7 @@ class _FiltrosFeedSheet extends ConsumerWidget {
       ref.read(alergenosExcluidosProvider.notifier).limpiar();
       ref.read(tipoOfertaFiltroProvider.notifier).set(null);
     } else {
-      ref.read(mapaRadioBusquedaProvider.notifier).seleccionar(null);
+      _seleccionarDistanciaMapa(const FiltroDistanciaMapa.zonaVisible());
       ref.read(mapaOrdenacionFeedProvider.notifier).set(OrdenFeed.recientes);
       ref.read(mapaEtiquetasSeleccionadasProvider.notifier).limpiar();
       ref.read(mapaAlergenosExcluidosProvider.notifier).limpiar();
@@ -280,11 +315,11 @@ class _FiltrosFeedSheet extends ConsumerWidget {
   }
 
   void _seleccionarRadio(WidgetRef ref, double? radio) {
-    if (scope == FiltrosProductosScope.inicio) {
-      ref.read(radioBusquedaProvider.notifier).seleccionar(radio);
-    } else {
-      ref.read(mapaRadioBusquedaProvider.notifier).seleccionar(radio);
-    }
+    ref.read(radioBusquedaProvider.notifier).seleccionar(radio);
+  }
+
+  void _seleccionarDistanciaMapa(FiltroDistanciaMapa distancia) {
+    onSeleccionarDistanciaMapa?.call(distancia);
   }
 
   void _toggleEtiqueta(WidgetRef ref, String etiqueta) {

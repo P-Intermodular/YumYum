@@ -45,12 +45,16 @@ class MapaScreen extends ConsumerStatefulWidget {
 class _MapaScreenState extends ConsumerState<MapaScreen> {
   static const double _zoomInicial = 13;
   static const double _umbralBuscarAquiMetros = 300;
+  static const double _radioZonaVisibleMinKm = 1;
+  static const double _radioZonaVisibleMaxKm = 50;
+  static const double _umbralCambioRadioVisible = 0.15;
 
   late final MapController _mapController;
   StreamSubscription<MapEvent>? _eventosMapa;
   ProviderSubscription<AsyncValue<UbicacionActual?>>? _suscripcionUbicacion;
   bool _mapaListo = false;
   LatLng? _centroVisual;
+  double? _radioVisualKm;
 
   @override
   void initState() {
@@ -91,13 +95,22 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
         event is MapEventFlingAnimationEnd ||
         event is MapEventDoubleTapZoomEnd ||
         event is MapEventScrollWheelZoom) {
-      setState(() => _centroVisual = event.camera.center);
+      setState(() {
+        _centroVisual = event.camera.center;
+        _radioVisualKm = _calcularRadioZonaVisibleKm(event.camera);
+      });
     }
   }
 
   void _alMapaListo() {
     _mapaListo = true;
-    setState(() => _centroVisual = _mapController.camera.center);
+    final camera = _mapController.camera;
+    final radioVisible = _calcularRadioZonaVisibleKm(camera);
+    ref.read(radioZonaVisibleMapaProvider.notifier).establecer(radioVisible);
+    setState(() {
+      _centroVisual = camera.center;
+      _radioVisualKm = radioVisible;
+    });
     // Workaround flutter_map: cuando el mapa se monta el viewport puede no
     // estar medido aun; el TileLayer calcula sus tiles con un rect invalido
     // y no vuelve a pedirlos hasta que la camara cambia. Un nudge de zoom
@@ -127,7 +140,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
     final ubicacionAsync = ref.watch(ubicacionActualProvider);
     final ubicacionUsuario = ubicacionAsync.value;
     final centroOverride = ref.watch(centroMapaProvider);
-    final radioKm = ref.watch(mapaRadioBusquedaProvider);
+    final distanciaMapa = ref.watch(mapaDistanciaProvider);
     final colors = context.yumColors;
 
     final centroBusqueda = centroOverride ??
@@ -160,12 +173,13 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.yumyum.app',
               ),
-              if (centroBusqueda != null && radioKm != null)
+              if (centroBusqueda != null &&
+                  distanciaMapa.modo == ModoDistanciaMapa.radio)
                 CircleLayer(
                   circles: [
                     CircleMarker(
                       point: centroBusqueda,
-                      radius: radioKm * 1000,
+                      radius: (distanciaMapa.radioKm ?? 0) * 1000,
                       useRadiusInMeter: true,
                       color: colors.terracotta.withValues(alpha: 0.10),
                       borderColor: colors.terracotta.withValues(alpha: 0.7),
@@ -207,6 +221,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
             right: 0,
             child: _OverlaySuperior(
               centroOverrideActivo: centroOverride != null,
+              onSeleccionarDistancia: _seleccionarDistanciaMapa,
             ),
           ),
           if (mostrarFab)
@@ -229,6 +244,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
                   : null,
               totalProductos: productos.length,
               onReintentar: () => ref.refrescarUbicacionYProductosCercanos(),
+              onSeleccionarDistancia: _seleccionarDistanciaMapa,
             ),
           ),
         ],
@@ -245,13 +261,60 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
     }
     final metros =
         const Distance().as(LengthUnit.Meter, visual, centroBusqueda);
-    return metros > _umbralBuscarAquiMetros;
+    if (metros > _umbralBuscarAquiMetros) return true;
+
+    final distancia = ref.read(mapaDistanciaProvider);
+    if (distancia.modo != ModoDistanciaMapa.zonaVisible) return false;
+
+    final radioVisual = _radioVisualKm;
+    if (radioVisual == null) return false;
+
+    final radioAplicado = ref.read(radioZonaVisibleMapaProvider);
+    final diferencia =
+        (radioVisual - radioAplicado).abs() / radioAplicado.clamp(1, 999);
+    return diferencia > _umbralCambioRadioVisible;
   }
 
   void _onBuscarAqui() {
+    _aplicarBusquedaEnVistaActual(ref.read(mapaDistanciaProvider));
+  }
+
+  void _seleccionarDistanciaMapa(FiltroDistanciaMapa distancia) {
+    _aplicarBusquedaEnVistaActual(distancia);
+  }
+
+  void _aplicarBusquedaEnVistaActual(FiltroDistanciaMapa distancia) {
+    final camera = _mapController.camera;
     final centro = _centroVisual ?? _mapController.camera.center;
+    final radioVisible = _calcularRadioZonaVisibleKm(camera);
+    ref.read(mapaDistanciaProvider.notifier).seleccionar(distancia);
+    if (distancia.modo == ModoDistanciaMapa.zonaVisible) {
+      ref.read(radioZonaVisibleMapaProvider.notifier).establecer(radioVisible);
+    }
     ref.read(centroMapaProvider.notifier).establecer(centro);
-    setState(() => _centroVisual = centro);
+    setState(() {
+      _centroVisual = centro;
+      _radioVisualKm = radioVisible;
+    });
+  }
+
+  double _calcularRadioZonaVisibleKm(MapCamera camera) {
+    final centro = camera.center;
+    final bounds = camera.visibleBounds;
+    const distance = Distance();
+    final maxMetros = <LatLng>[
+      bounds.northWest,
+      bounds.northEast,
+      bounds.southWest,
+      bounds.southEast,
+    ].fold<double>(0, (max, punto) {
+      final metros = distance.as(LengthUnit.Meter, centro, punto);
+      return metros > max ? metros : max;
+    });
+
+    return (maxMetros / 1000)
+        .clamp(_radioZonaVisibleMinKm, _radioZonaVisibleMaxKm)
+        .toDouble();
   }
 
   void _mostrarDetalleProducto(BuildContext context, ProductoModel producto) {
@@ -359,8 +422,12 @@ class _MapaScreenState extends ConsumerState<MapaScreen> {
 /// categoria y, si procede, chip "Buscando en otra zona".
 class _OverlaySuperior extends ConsumerWidget {
   final bool centroOverrideActivo;
+  final ValueChanged<FiltroDistanciaMapa> onSeleccionarDistancia;
 
-  const _OverlaySuperior({required this.centroOverrideActivo});
+  const _OverlaySuperior({
+    required this.centroOverrideActivo,
+    required this.onSeleccionarDistancia,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -378,6 +445,7 @@ class _OverlaySuperior extends ConsumerWidget {
                 context,
                 scope: FiltrosProductosScope.mapa,
                 resultadosProvider: feedMapaFiltradoProvider,
+                onSeleccionarDistanciaMapa: onSeleccionarDistancia,
               ),
             ),
             const SizedBox(height: 10),
@@ -519,6 +587,7 @@ class _OverlayInferior extends ConsumerWidget {
   final String? error;
   final int totalProductos;
   final VoidCallback onReintentar;
+  final ValueChanged<FiltroDistanciaMapa> onSeleccionarDistancia;
 
   const _OverlayInferior({
     required this.centroBusquedaActivo,
@@ -527,6 +596,7 @@ class _OverlayInferior extends ConsumerWidget {
     required this.error,
     required this.totalProductos,
     required this.onReintentar,
+    required this.onSeleccionarDistancia,
   });
 
   @override
@@ -570,7 +640,9 @@ class _OverlayInferior extends ConsumerWidget {
                   cargando: cargando,
                 ),
                 const Spacer(),
-                const _SelectorRadioCompacto(),
+                _SelectorRadioCompacto(
+                  onSeleccionarDistancia: onSeleccionarDistancia,
+                ),
               ],
             ),
           ],
@@ -637,20 +709,21 @@ class _ContadorOfertas extends StatelessWidget {
 /// Selector de radio en formato pill compacto, alineado con el resto de
 /// controles flotantes (paper + line + sombra suave).
 class _SelectorRadioCompacto extends ConsumerWidget {
-  const _SelectorRadioCompacto();
+  final ValueChanged<FiltroDistanciaMapa> onSeleccionarDistancia;
+
+  const _SelectorRadioCompacto({required this.onSeleccionarDistancia});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final radioActual = ref.watch(mapaRadioBusquedaProvider);
+    final distancia = ref.watch(mapaDistanciaProvider);
     final colors = context.yumColors;
-    final texto =
-        radioActual == null ? 'Cualquier' : '${radioActual.toInt()} km';
+    final texto = _textoDistanciaMapa(distancia);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => _abrirSelector(context, ref, radioActual),
+        onTap: () => _abrirSelector(context, ref, distancia),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -692,7 +765,7 @@ class _SelectorRadioCompacto extends ConsumerWidget {
   Future<void> _abrirSelector(
     BuildContext context,
     WidgetRef ref,
-    double? radioActual,
+    FiltroDistanciaMapa distanciaActual,
   ) {
     final colors = context.yumColors;
     return showModalBottomSheet<void>(
@@ -735,23 +808,50 @@ class _SelectorRadioCompacto extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final r in radiosDisponiblesKm)
+                _PillRadio(
+                  label: 'Zona visible',
+                  activa: distanciaActual.modo == ModoDistanciaMapa.zonaVisible,
+                  onTap: () {
+                    onSeleccionarDistancia(
+                      const FiltroDistanciaMapa.zonaVisible(),
+                    );
+                    Navigator.of(sheetContext).pop();
+                  },
+                ),
+                for (final r in radiosDisponiblesKm.whereType<double>())
                   _PillRadio(
-                    label: r == null ? 'Todas' : '${r.toInt()} km',
-                    activa: r == radioActual,
+                    label: '${r.toInt()} km',
+                    activa: distanciaActual.modo == ModoDistanciaMapa.radio &&
+                        distanciaActual.radioKm == r,
                     onTap: () {
-                      ref
-                          .read(mapaRadioBusquedaProvider.notifier)
-                          .seleccionar(r);
+                      onSeleccionarDistancia(FiltroDistanciaMapa.radio(r));
                       Navigator.of(sheetContext).pop();
                     },
                   ),
+                _PillRadio(
+                  label: 'Todas',
+                  activa: distanciaActual.modo == ModoDistanciaMapa.todas,
+                  onTap: () {
+                    onSeleccionarDistancia(
+                      const FiltroDistanciaMapa.todas(),
+                    );
+                    Navigator.of(sheetContext).pop();
+                  },
+                ),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _textoDistanciaMapa(FiltroDistanciaMapa distancia) {
+    return switch (distancia.modo) {
+      ModoDistanciaMapa.zonaVisible => 'Zona visible',
+      ModoDistanciaMapa.radio => '${distancia.radioKm?.toInt() ?? 0} km',
+      ModoDistanciaMapa.todas => 'Todas',
+    };
   }
 }
 

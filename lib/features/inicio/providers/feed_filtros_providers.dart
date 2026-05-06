@@ -8,6 +8,24 @@ enum OrdenFeed { recientes, cercanos, valorados }
 
 enum FiltrosProductosScope { inicio, mapa }
 
+enum ModoDistanciaMapa { zonaVisible, radio, todas }
+
+class FiltroDistanciaMapa {
+  final ModoDistanciaMapa modo;
+  final double? radioKm;
+
+  const FiltroDistanciaMapa.zonaVisible()
+      : modo = ModoDistanciaMapa.zonaVisible,
+        radioKm = null;
+
+  const FiltroDistanciaMapa.radio(this.radioKm)
+      : modo = ModoDistanciaMapa.radio;
+
+  const FiltroDistanciaMapa.todas()
+      : modo = ModoDistanciaMapa.todas,
+        radioKm = null;
+}
+
 /// Texto buscado en el campo de búsqueda del feed.
 final busquedaQueryProvider =
     NotifierProvider<_StringNotifier, String>(_StringNotifier.new);
@@ -117,10 +135,18 @@ class _OrdenNotifier extends Notifier<OrdenFeed> {
   void set(OrdenFeed value) => state = value;
 }
 
-final mapaRadioBusquedaProvider =
-    NotifierProvider<RadioBusquedaController, double?>(
-  RadioBusquedaController.new,
+final mapaDistanciaProvider =
+    NotifierProvider<DistanciaMapaController, FiltroDistanciaMapa>(
+  DistanciaMapaController.new,
 );
+
+class DistanciaMapaController extends Notifier<FiltroDistanciaMapa> {
+  @override
+  FiltroDistanciaMapa build() => const FiltroDistanciaMapa.zonaVisible();
+
+  // ignore: use_setters_to_change_properties
+  void seleccionar(FiltroDistanciaMapa value) => state = value;
+}
 
 /// Aplica el pipeline completo de filtros del feed (búsqueda, categoría,
 /// etiquetas, alérgenos excluidos, tipo de oferta y orden) sobre una lista
@@ -228,13 +254,15 @@ final filtrosActivosCountProvider = Provider<int>((ref) {
 });
 
 final filtrosMapaActivosCountProvider = Provider<int>((ref) {
+  final distancia = ref.watch(mapaDistanciaProvider);
   return contarFiltrosActivos(
-    radio: ref.watch(mapaRadioBusquedaProvider),
-    orden: ref.watch(mapaOrdenacionFeedProvider),
-    etiquetas: ref.watch(mapaEtiquetasSeleccionadasProvider),
-    alergenosExcluidos: ref.watch(mapaAlergenosExcluidosProvider),
-    tipoOferta: ref.watch(mapaTipoOfertaFiltroProvider),
-  );
+        radio: null,
+        orden: ref.watch(mapaOrdenacionFeedProvider),
+        etiquetas: ref.watch(mapaEtiquetasSeleccionadasProvider),
+        alergenosExcluidos: ref.watch(mapaAlergenosExcluidosProvider),
+        tipoOferta: ref.watch(mapaTipoOfertaFiltroProvider),
+      ) +
+      (distancia.modo == ModoDistanciaMapa.zonaVisible ? 0 : 1);
 });
 
 int contarFiltrosActivos({
