@@ -7,11 +7,14 @@ class UsuarioModel {
   final String correo;
   final String urlImagenPerfil;
   final String? ciudad;
+  final String? bio;
   final List<String> preferencias;
   final String? certificacionSanitaria;
   final bool esModerador;
   final double valoracionMedia;
   final int numeroValoraciones;
+  final int pedidosCompletados;
+  final DateTime? creadoEn;
   final double? latitudPredeterminada;
   final double? longitudPredeterminada;
 
@@ -21,11 +24,14 @@ class UsuarioModel {
     required this.correo,
     required this.urlImagenPerfil,
     this.ciudad,
+    this.bio,
     this.preferencias = const [],
     this.certificacionSanitaria,
     this.esModerador = false,
     this.valoracionMedia = 0,
     this.numeroValoraciones = 0,
+    this.pedidosCompletados = 0,
+    this.creadoEn,
     this.latitudPredeterminada,
     this.longitudPredeterminada,
   });
@@ -45,11 +51,14 @@ class UsuarioModel {
     String? correo,
     String? urlImagenPerfil,
     String? ciudad,
+    String? bio,
     List<String>? preferencias,
     String? certificacionSanitaria,
     bool? esModerador,
     double? valoracionMedia,
     int? numeroValoraciones,
+    int? pedidosCompletados,
+    DateTime? creadoEn,
     double? latitudPredeterminada,
     double? longitudPredeterminada,
   }) {
@@ -59,12 +68,15 @@ class UsuarioModel {
       correo: correo ?? this.correo,
       urlImagenPerfil: urlImagenPerfil ?? this.urlImagenPerfil,
       ciudad: ciudad ?? this.ciudad,
+      bio: bio ?? this.bio,
       preferencias: preferencias ?? this.preferencias,
       certificacionSanitaria:
           certificacionSanitaria ?? this.certificacionSanitaria,
       esModerador: esModerador ?? this.esModerador,
       valoracionMedia: valoracionMedia ?? this.valoracionMedia,
       numeroValoraciones: numeroValoraciones ?? this.numeroValoraciones,
+      pedidosCompletados: pedidosCompletados ?? this.pedidosCompletados,
+      creadoEn: creadoEn ?? this.creadoEn,
       latitudPredeterminada:
           latitudPredeterminada ?? this.latitudPredeterminada,
       longitudPredeterminada:

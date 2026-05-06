@@ -21,6 +21,7 @@ class EditarPerfilController extends Notifier<AsyncValue<void>> {
   Future<void> actualizarPerfil({
     required String nombre,
     required String ciudad,
+    required String bio,
     required List<String> preferencias,
     File? nuevoAvatar,
   }) async {
@@ -52,6 +53,7 @@ class EditarPerfilController extends Notifier<AsyncValue<void>> {
       final usuarioActualizado = usuarioActual.copyWith(
         nombre: nombre.trim(),
         ciudad: ciudad.trim(),
+        bio: bio.trim(),
         preferencias: preferencias,
         urlImagenPerfil: urlAvatar,
       );

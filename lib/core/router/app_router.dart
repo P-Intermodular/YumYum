@@ -16,6 +16,8 @@ import '../../features/perfil/screens/editar_perfil_screen.dart';
 import '../../features/perfil/screens/perfil_screen.dart';
 import '../../features/notificaciones/screens/notificaciones_screen.dart';
 import '../../features/perfil/screens/editar_ubicacion_perfil_screen.dart';
+import '../../features/perfil/screens/perfil_publico_screen.dart';
+import '../../features/ajustes/screens/ajustes_screen.dart';
 import '../../features/producto/screens/publicar_producto_screen.dart';
 import '../../features/producto/screens/detalle_producto_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
@@ -122,6 +124,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RutasApp.notificaciones,
             builder: (context, state) => const NotificacionesScreen(),
+          ),
+          GoRoute(
+            path: RutasApp.ajustes,
+            builder: (context, state) => const AjustesScreen(),
+          ),
+          GoRoute(
+            path: RutasApp.perfilUsuarioParametro,
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return PerfilPublicoScreen(usuarioId: id);
+            },
           ),
           GoRoute(
             path: RutasApp.aliasProfile,

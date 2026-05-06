@@ -33,6 +33,7 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
   final _ciudadController = TextEditingController();
+  final _bioController = TextEditingController();
 
   final List<String> _preferenciasSeleccionadas = [];
   File? _nuevaImagenLocal;
@@ -45,6 +46,7 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
     if (usuario != null) {
       _nombreController.text = usuario.nombre;
       _ciudadController.text = usuario.ciudad ?? '';
+      _bioController.text = usuario.bio ?? '';
       _preferenciasSeleccionadas.addAll(usuario.preferencias);
     }
   }
@@ -53,6 +55,7 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
   void dispose() {
     _nombreController.dispose();
     _ciudadController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
@@ -81,6 +84,7 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
       await ref.read(editarPerfilControllerProvider.notifier).actualizarPerfil(
             nombre: _nombreController.text,
             ciudad: _ciudadController.text,
+            bio: _bioController.text,
             preferencias: _preferenciasSeleccionadas,
             nuevoAvatar: _nuevaImagenLocal,
           );
@@ -173,7 +177,26 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+
+            TextFormField(
+              controller: _bioController,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: 280,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Biografía',
+                hintText: 'Cuéntale a tus vecinos qué cocinas y qué te inspira…',
+                alignLabelWithHint: true,
+                prefixIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 56),
+                  child: Icon(Icons.menu_book_outlined),
+                ),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 24),
 
             // Selector de preferencias (Chips)
             const Text(

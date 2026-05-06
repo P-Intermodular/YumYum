@@ -18,6 +18,7 @@ abstract final class UsuarioDto {
               ? json['url_avatar'] as String
               : '',
       ciudad: json['ciudad'] as String?,
+      bio: json['bio'] as String?,
       preferencias: (json['preferencias'] as List<dynamic>?)
               ?.map((item) => item.toString())
               .toList() ??
@@ -26,6 +27,8 @@ abstract final class UsuarioDto {
       esModerador: json['es_moderador'] as bool? ?? false,
       valoracionMedia: _toDouble(json['valoracion_media']),
       numeroValoraciones: json['numero_valoraciones'] as int? ?? 0,
+      pedidosCompletados: json['pedidos_completados'] as int? ?? 0,
+      creadoEn: _toDateTime(json['creado_en']),
       latitudPredeterminada: json['latitud_predeterminada'] != null
           ? _toDouble(json['latitud_predeterminada'])
           : null,
@@ -37,10 +40,14 @@ abstract final class UsuarioDto {
 
   /// Genera el payload compatible con la tabla `perfiles`.
   static Map<String, dynamic> aActualizacionPerfil(UsuarioModel usuario) {
+    final bioNormalizada = usuario.bio?.trim();
     return {
       'nombre': usuario.nombre,
       'url_avatar': usuario.urlImagenPerfil,
       'ciudad': usuario.ciudad,
+      'bio': bioNormalizada == null || bioNormalizada.isEmpty
+          ? null
+          : bioNormalizada,
       'preferencias': usuario.preferencias,
       'certificacion_sanitaria': usuario.certificacionSanitaria,
       'latitud_predeterminada': usuario.latitudPredeterminada,
@@ -60,5 +67,12 @@ abstract final class UsuarioDto {
   static double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  /// Normaliza fechas que pueden llegar como `String` ISO-8601 o `DateTime`.
+  static DateTime? _toDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    return DateTime.tryParse(value.toString());
   }
 }
