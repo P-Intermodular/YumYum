@@ -47,6 +47,11 @@ app.*.map.json
 # Local environment
 .env.*
 !.env.example
+
+# Prototipos de referencia (Figma + funciones). Se mantienen en local
+# como guía visual y de estructura, no forman parte del código entregable.
+prototipo-figma/
+prototipo-funciones/
 .render/
 
 # Large documentation exports stay local; keep the backend divergence note versioned.
