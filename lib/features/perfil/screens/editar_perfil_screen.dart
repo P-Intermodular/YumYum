@@ -6,7 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/feedback/app_feedback.dart';
+import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/avatar_usuario.dart';
+import '../../../core/widgets/ui/yum_background.dart';
+import '../../../core/widgets/ui/yum_button.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/editar_perfil_controller.dart';
@@ -41,7 +44,6 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-poblar los datos actuales del usuario al abrir la pantalla
     final usuario = ref.read(autenticacionProvider).value;
     if (usuario != null) {
       _nombreController.text = usuario.nombre;
@@ -59,7 +61,6 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
     super.dispose();
   }
 
-  /// Abre la galería para seleccionar una nueva foto de perfil.
   Future<void> _seleccionarImagen() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
@@ -76,7 +77,6 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
     }
   }
 
-  /// Valida el formulario y solicita la actualización al controlador.
   Future<void> _guardarPerfil() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -91,7 +91,7 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
 
       if (mounted) {
         mostrarExito(context, 'Perfil actualizado correctamente');
-        context.pop(); // Volver a la pantalla de perfil
+        context.pop();
       }
     } catch (e) {
       if (mounted) {
@@ -104,6 +104,7 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
   Widget build(BuildContext context) {
     final usuario = ref.watch(autenticacionProvider).value;
     final estadoGuardado = ref.watch(editarPerfilControllerProvider);
+    final colors = context.yumColors;
 
     if (usuario == null) {
       return const Scaffold(
@@ -113,143 +114,196 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
 
     return Scaffold(
       appBar: const YumYumAppBar(
-        titulo: 'Editar Perfil',
+        titulo: 'Editar perfil',
         mostrarBotonVolver: true,
         mostrarBotonPerfil: false,
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            // Sección de Avatar
-            Center(
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  if (_nuevaImagenLocal != null)
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundImage: FileImage(_nuevaImagenLocal!),
-                    )
-                  else
-                    AvatarUsuario(
-                      nombre: usuario.nombre,
-                      identificadorColor: usuario.id,
-                      urlImagen: usuario.urlImagenPerfil,
-                      radius: 50,
+      body: YumBackground(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            children: [
+              // Avatar con botón de cámara terracotta
+              Center(
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    if (_nuevaImagenLocal != null)
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundImage: FileImage(_nuevaImagenLocal!),
+                      )
+                    else
+                      AvatarUsuario(
+                        nombre: usuario.nombre,
+                        identificadorColor: usuario.id,
+                        urlImagen: usuario.urlImagenPerfil,
+                        radius: 50,
+                      ),
+                    Material(
+                      color: colors.terracotta,
+                      shape: const CircleBorder(),
+                      elevation: 2,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _seleccionarImagen,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.camera_alt_rounded,
+                            color: colors.paper,
+                            size: 18,
+                          ),
+                        ),
+                      ),
                     ),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF1F4A5B),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.camera_alt, color: Colors.white),
-                      iconSize: 20,
-                      onPressed: _seleccionarImagen,
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Campos de texto
+              TextFormField(
+                controller: _nombreController,
+                decoration: InputDecoration(
+                  labelText: 'Nombre público',
+                  prefixIcon:
+                      Icon(Icons.person_outline, color: colors.inkSoft, size: 20),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'El nombre es obligatorio'
+                    : null,
+              ),
+              const SizedBox(height: 14),
+
+              TextFormField(
+                controller: _ciudadController,
+                decoration: InputDecoration(
+                  labelText: 'Ciudad de residencia',
+                  prefixIcon: Icon(
+                    Icons.location_city_outlined,
+                    color: colors.inkSoft,
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              TextFormField(
+                controller: _bioController,
+                minLines: 3,
+                maxLines: 5,
+                maxLength: 280,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  labelText: 'Biografía',
+                  hintText:
+                      'Cuéntale a tus vecinos qué cocinas y qué te inspira…',
+                  alignLabelWithHint: true,
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(bottom: 56),
+                    child: Icon(
+                      Icons.menu_book_outlined,
+                      color: colors.inkSoft,
+                      size: 20,
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Campos de texto
-            TextFormField(
-              controller: _nombreController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre público',
-                prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) => v == null || v.trim().isEmpty
-                  ? 'El nombre es obligatorio'
-                  : null,
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _ciudadController,
-              decoration: const InputDecoration(
-                labelText: 'Ciudad de residencia',
-                prefixIcon: Icon(Icons.location_city),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _bioController,
-              minLines: 3,
-              maxLines: 5,
-              maxLength: 280,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Biografía',
-                hintText: 'Cuéntale a tus vecinos qué cocinas y qué te inspira…',
-                alignLabelWithHint: true,
-                prefixIcon: Padding(
-                  padding: EdgeInsets.only(bottom: 56),
-                  child: Icon(Icons.menu_book_outlined),
-                ),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Selector de preferencias (Chips)
-            const Text(
-              'Preferencias Alimentarias',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _opcionesPreferencias.map((opcion) {
-                final seleccionada =
-                    _preferenciasSeleccionadas.contains(opcion);
-                return FilterChip(
-                  label: Text(opcion),
-                  selected: seleccionada,
-                  selectedColor: Colors.green.shade100,
-                  checkmarkColor: Colors.green.shade800,
-                  onSelected: (bool selected) {
-                    setState(() {
-                      if (selected) {
-                        _preferenciasSeleccionadas.add(opcion);
-                      } else {
-                        _preferenciasSeleccionadas.remove(opcion);
-                      }
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 48),
-
-            // Botón Guardar
-            ElevatedButton(
-              onPressed: estadoGuardado.isLoading ? null : _guardarPerfil,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1F4A5B),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: estadoGuardado.isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Text('Guardar Cambios',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+
+              // Preferencias alimentarias
+              Text(
+                'Preferencias alimentarias',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 16,
+                      color: colors.ink,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _opcionesPreferencias.map((opcion) {
+                  return _ChipPreferencia(
+                    label: opcion,
+                    seleccionada: _preferenciasSeleccionadas.contains(opcion),
+                    onTap: () {
+                      setState(() {
+                        if (_preferenciasSeleccionadas.contains(opcion)) {
+                          _preferenciasSeleccionadas.remove(opcion);
+                        } else {
+                          _preferenciasSeleccionadas.add(opcion);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 36),
+
+              // Botón Guardar
+              YumButton(
+                text: estadoGuardado.isLoading ? 'Guardando…' : 'Guardar cambios',
+                fullWidth: true,
+                onPressed: estadoGuardado.isLoading ? null : _guardarPerfil,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Chip de selección con tinte olive cuando está activo (no Material green).
+class _ChipPreferencia extends StatelessWidget {
+  final String label;
+  final bool seleccionada;
+  final VoidCallback onTap;
+
+  const _ChipPreferencia({
+    required this.label,
+    required this.seleccionada,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: seleccionada
+              ? colors.olive.withValues(alpha: 0.18)
+              : colors.cream2,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: seleccionada
+                ? colors.olive.withValues(alpha: 0.45)
+                : colors.line,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (seleccionada) ...[
+              Icon(Icons.check_rounded, size: 14, color: colors.oliveDeep),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: seleccionada ? colors.oliveDeep : colors.ink,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

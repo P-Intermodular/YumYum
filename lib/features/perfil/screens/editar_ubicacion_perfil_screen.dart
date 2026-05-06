@@ -7,7 +7,10 @@ import 'package:latlong2/latlong.dart';
 import '../../../core/feedback/app_feedback.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
 import '../../../core/providers_refresher.dart';
+import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/selector_ubicacion_mapa.dart';
+import '../../../core/widgets/ui/yum_background.dart';
+import '../../../core/widgets/ui/yum_button.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
 
@@ -89,6 +92,7 @@ class _EditarUbicacionPerfilScreenState
     final ubicacionActualAsync = ref.watch(ubicacionActualProvider);
     final gpsResolviendo = ubicacionActualAsync.isLoading;
     final gpsFallido = !gpsResolviendo && ubicacionActualAsync.value == null;
+    final colors = context.yumColors;
 
     if (!_inicializado && usuario != null) {
       final ubicacionPerfil = usuario.ubicacionPredeterminada;
@@ -114,46 +118,54 @@ class _EditarUbicacionPerfilScreenState
     }
 
     return Scaffold(
-      appBar: const YumYumAppBar(titulo: 'Editar ubicación'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SelectorUbicacionMapa(
-              mapController: _mapController,
-              ubicacionElegida: _ubicacionElegida,
-              ubicacionUsuario: ubicacionActualAsync.value,
-              gpsResolviendo: gpsResolviendo,
-              gpsFallido: gpsFallido,
-              onTap: _guardando ? null : _seleccionarUbicacion,
-              titulo: 'Ubicación predeterminada',
-              subtitulo: 'Toca el mapa para establecer tu ubicación habitual. '
-                  'Será la predeterminada al publicar platos.',
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: _guardando ? null : _usarUbicacionActual,
-                icon: const Icon(Icons.my_location, size: 18),
-                label: const Text('Usar mi ubicación actual'),
+      appBar: const YumYumAppBar(
+        titulo: 'Editar ubicación',
+        mostrarBotonVolver: true,
+        mostrarBotonPerfil: false,
+      ),
+      body: YumBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SelectorUbicacionMapa(
+                mapController: _mapController,
+                ubicacionElegida: _ubicacionElegida,
+                ubicacionUsuario: ubicacionActualAsync.value,
+                gpsResolviendo: gpsResolviendo,
+                gpsFallido: gpsFallido,
+                onTap: _guardando ? null : _seleccionarUbicacion,
+                titulo: 'Ubicación predeterminada',
+                subtitulo:
+                    'Toca el mapa para fijar tu ubicación habitual. Será la predeterminada al publicar platos.',
               ),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed:
-                  (_guardando || _ubicacionElegida == null) ? null : _guardar,
-              child: _guardando
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Text('Guardar'),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _guardando ? null : _usarUbicacionActual,
+                  icon: Icon(Icons.my_location, size: 18, color: colors.terracotta),
+                  label: Text(
+                    'Usar mi ubicación actual',
+                    style: TextStyle(
+                      color: colors.terracotta,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+              YumButton(
+                text: _guardando ? 'Guardando…' : 'Guardar',
+                fullWidth: true,
+                onPressed: (_guardando || _ubicacionElegida == null)
+                    ? null
+                    : _guardar,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -6,7 +6,11 @@ import '../../../core/constants/estados_app.dart';
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/feedback/app_feedback.dart';
+import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/avatar_usuario.dart';
+import '../../../core/widgets/ui/yum_background.dart';
+import '../../../core/widgets/ui/yum_button.dart';
+import '../../../core/widgets/ui/yum_card.dart';
 import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../pedidos/domain/entities/transaccion_model.dart';
@@ -77,80 +81,100 @@ class _ValorarTransaccionScreenState
       appBar: const YumYumAppBar(
         titulo: 'Valorar',
         mostrarBotonVolver: true,
+        mostrarBotonPerfil: false,
       ),
-      body: transaccionAsync.when(
-        data: (transaccion) {
-          if (transaccion == null || usuario == null) {
-            return const Center(child: Text('Transacción no encontrada'));
-          }
+      body: YumBackground(
+        child: transaccionAsync.when(
+          data: (transaccion) {
+            if (transaccion == null || usuario == null) {
+              return _buildMensajeCentrado('Transacción no encontrada');
+            }
 
-          if (transaccion.estado != EstadoTransaccion.completada) {
-            return _buildBloqueoValoracion();
-          }
+            if (transaccion.estado != EstadoTransaccion.completada) {
+              return _buildBloqueoValoracion();
+            }
 
-          final valoracionAsync = ref.watch(
-            valoracionUsuarioProvider((transaccion.id, usuario.id)),
-          );
+            final valoracionAsync = ref.watch(
+              valoracionUsuarioProvider((transaccion.id, usuario.id)),
+            );
 
-          return valoracionAsync.when(
-            data: (valoracionExistente) {
-              if (valoracionExistente != null) {
-                return _VistaValoracionExistente(
-                  nombreContraparte: transaccion.nombreContraparte,
-                  urlAvatar: transaccion.urlAvatarContraparte,
-                  idContraparte: transaccion.contraparte(usuario.id),
-                  puntuacion: valoracionExistente.puntuacion,
-                  comentario: valoracionExistente.comentario,
-                );
-              }
+            return valoracionAsync.when(
+              data: (valoracionExistente) {
+                if (valoracionExistente != null) {
+                  return _VistaValoracionExistente(
+                    nombreContraparte: transaccion.nombreContraparte,
+                    urlAvatar: transaccion.urlAvatarContraparte,
+                    idContraparte: transaccion.contraparte(usuario.id),
+                    puntuacion: valoracionExistente.puntuacion,
+                    comentario: valoracionExistente.comentario,
+                  );
+                }
 
-              return _buildFormulario(transaccion, usuario.id, cargando);
-            },
-            loading: () =>
-                const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Center(child: Text(mensajeError(e))),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text(mensajeError(e))),
+                return _buildFormulario(transaccion, usuario.id, cargando);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => _buildMensajeCentrado(mensajeError(e)),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => _buildMensajeCentrado(mensajeError(e)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMensajeCentrado(String texto) {
+    final colors = context.yumColors;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          texto,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: colors.inkSoft),
+        ),
       ),
     );
   }
 
   Widget _buildBloqueoValoracion() {
+    final colors = context.yumColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.lock_clock_outlined,
-              size: 48,
-              color: Color(0xFF1F4A5B),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Esta transacción todavía no se puede valorar.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F4A5B),
+        child: YumCard(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.lock_clock_outlined,
+                size: 40,
+                color: colors.terracottaDeep,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Solo podrás enviar una valoración cuando figure como completada.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade700),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => context.go(RutasApp.pedidos),
-              child: const Text('Volver a pedidos'),
-            ),
-          ],
+              const SizedBox(height: 14),
+              Text(
+                'Aún no se puede valorar',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 20,
+                      color: colors.ink,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Solo podrás enviar una valoración cuando la transacción figure como completada.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: colors.inkSoft, fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              YumButton(
+                text: 'Volver a pedidos',
+                fullWidth: true,
+                onPressed: () => context.go(RutasApp.pedidos),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -161,8 +185,9 @@ class _ValorarTransaccionScreenState
     String usuarioId,
     bool cargando,
   ) {
+    final colors = context.yumColors;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       child: Column(
         children: [
           AvatarUsuario(
@@ -174,44 +199,29 @@ class _ValorarTransaccionScreenState
           const SizedBox(height: 12),
           Text(
             transaccion.nombreContraparte,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1F4A5B),
-            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 22,
+                  color: colors.ink,
+                ),
           ),
           const SizedBox(height: 4),
           Text(
             transaccion.tituloProducto,
-            style: TextStyle(color: Colors.grey.shade700),
+            style: TextStyle(color: colors.inkSoft, fontSize: 13),
           ),
           const SizedBox(height: 32),
-          const Text(
+          Text(
             '¿Cómo fue tu experiencia?',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1F4A5B),
+              color: colors.ink,
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (index) {
-              final estrella = index + 1;
-              return IconButton(
-                onPressed: cargando
-                    ? null
-                    : () => setState(() => _puntuacion = estrella),
-                icon: Icon(
-                  estrella <= _puntuacion
-                      ? Icons.star_rounded
-                      : Icons.star_outline_rounded,
-                  size: 40,
-                  color: Colors.amber,
-                ),
-              );
-            }),
+          const SizedBox(height: 12),
+          _SelectorEstrellas(
+            valor: _puntuacion,
+            onChanged: cargando ? null : (v) => setState(() => _puntuacion = v),
           ),
           const SizedBox(height: 24),
           TextFormField(
@@ -223,24 +233,11 @@ class _ValorarTransaccionScreenState
             maxLines: 3,
             enabled: !cargando,
           ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (cargando || _puntuacion == 0)
-                  ? null
-                  : _enviarValoracion,
-              child: cargando
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text('Enviar valoración'),
-            ),
+          const SizedBox(height: 28),
+          YumButton(
+            text: cargando ? 'Enviando…' : 'Enviar valoración',
+            fullWidth: true,
+            onPressed: (cargando || _puntuacion == 0) ? null : _enviarValoracion,
           ),
         ],
       ),
@@ -266,8 +263,9 @@ class _VistaValoracionExistente extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.yumColors;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       child: Column(
         children: [
           AvatarUsuario(
@@ -279,73 +277,104 @@ class _VistaValoracionExistente extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             nombreContraparte,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1F4A5B),
-            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 22,
+                  color: colors.ink,
+                ),
           ),
-          const SizedBox(height: 32),
-          const Text(
+          const SizedBox(height: 24),
+          Text(
             'Tu valoración',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1F4A5B),
+              color: colors.ink,
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (index) {
-              return Icon(
-                index < puntuacion
-                    ? Icons.star_rounded
-                    : Icons.star_outline_rounded,
-                size: 40,
-                color: Colors.amber,
-              );
-            }),
-          ),
+          const SizedBox(height: 12),
+          _SelectorEstrellas(valor: puntuacion, onChanged: null),
           if (comentario != null && comentario!.isNotEmpty) ...[
             const SizedBox(height: 24),
-            Container(
-              width: double.infinity,
+            YumCard(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
               child: Text(
                 comentario!,
                 style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey.shade800,
+                  fontSize: 14,
+                  color: colors.ink,
                   height: 1.4,
                 ),
               ),
             ),
           ],
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.green.shade50,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check_circle, color: Colors.green.shade700, size: 18),
-                const SizedBox(width: 6),
-                Text(
-                  'Valoración enviada',
-                  style: TextStyle(
-                    color: Colors.green.shade800,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 24),
+          const _ChipExito(texto: 'Valoración enviada'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Selector de 5 estrellas con tinte mustard.
+class _SelectorEstrellas extends StatelessWidget {
+  final int valor;
+  final ValueChanged<int>? onChanged;
+
+  const _SelectorEstrellas({required this.valor, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    final desactivado = onChanged == null;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(5, (index) {
+        final estrella = index + 1;
+        final activa = estrella <= valor;
+        return IconButton(
+          onPressed: desactivado ? null : () => onChanged!(estrella),
+          icon: Icon(
+            activa ? Icons.star_rounded : Icons.star_outline_rounded,
+            size: 38,
+            color: activa ? colors.mustard : colors.inkSoft,
+          ),
+        );
+      }),
+    );
+  }
+}
+
+/// Pill de éxito con tinte olive (alineado con la marca).
+class _ChipExito extends StatelessWidget {
+  final String texto;
+
+  const _ChipExito({required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: colors.olive.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.check_circle_outline_rounded,
+            color: colors.oliveDeep,
+            size: 18,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            texto,
+            style: TextStyle(
+              color: colors.oliveDeep,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
           ),
         ],
