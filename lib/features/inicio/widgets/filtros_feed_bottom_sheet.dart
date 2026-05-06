@@ -76,7 +76,7 @@ class _FiltrosFeedSheet extends ConsumerWidget {
                 InkWell(
                   borderRadius: BorderRadius.circular(8),
                   onTap: () {
-                    ref.read(radioBusquedaProvider.notifier).seleccionar(10);
+                    ref.read(radioBusquedaProvider.notifier).seleccionar(null);
                     ref
                         .read(ordenacionFeedProvider.notifier)
                         .set(OrdenFeed.recientes);
@@ -107,7 +107,7 @@ class _FiltrosFeedSheet extends ConsumerWidget {
               children: [
                 for (final radio in radiosDisponiblesKm)
                   _Pill(
-                    label: '${radio.toInt()} km',
+                    label: radio == null ? 'Todas' : '${radio.toInt()} km',
                     activa: radio == radioActivo,
                     onTap: () => ref
                         .read(radioBusquedaProvider.notifier)

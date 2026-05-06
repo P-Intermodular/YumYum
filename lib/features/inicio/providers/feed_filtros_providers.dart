@@ -185,7 +185,8 @@ final filtrosActivosCountProvider = Provider<int>((ref) {
   final tipoOferta = ref.watch(tipoOfertaFiltroProvider);
 
   var count = 0;
-  if (radio != 10) count += 1;
+  // El default es "Todas" (null). Cualquier radio concreto cuenta como filtro.
+  if (radio != null) count += 1;
   if (orden != OrdenFeed.recientes) count += 1;
   if (etiquetas.isNotEmpty) count += 1;
   if (alergenosExcluidos.isNotEmpty) count += 1;

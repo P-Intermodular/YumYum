@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -8,6 +6,7 @@ import 'package:yumyum/core/location/ubicacion_actual_provider.dart';
 import 'package:yumyum/core/supabase/supabase_client_provider.dart';
 import 'package:yumyum/features/auth/controllers/auth_controller.dart';
 import 'package:yumyum/features/auth/providers/auth_repository_provider.dart';
+import 'package:yumyum/features/producto/controllers/datos_publicacion_producto.dart';
 import 'package:yumyum/features/producto/domain/entities/producto_model.dart';
 import 'package:yumyum/features/producto/domain/repositories/producto_repository.dart';
 import 'package:yumyum/features/producto/providers/producto_providers.dart';
@@ -17,8 +16,9 @@ import '../../../helpers/auth_test_utils.dart';
 
 void main() {
   group('radioBusquedaProvider', () {
-    test('actualiza el radio y productosCercanosProvider usa el nuevo valor',
-        () async {
+    test(
+        'por defecto pide "Todas las distancias" y al seleccionar un radio se '
+        'propaga al productosCercanosProvider', () async {
       final repository = _ProductoRepositoryFake();
       final container = ProviderContainer(
         overrides: [
@@ -50,8 +50,12 @@ void main() {
       );
       addTearDown(subscription.close);
 
+      // Default null -> "Todas". El provider llama a la RPC con un radio muy
+      // amplio y un limite mas grande para no quedarse corto.
+      expect(container.read(radioBusquedaProvider), isNull);
       await container.read(productosCercanosProvider.future);
-      expect(repository.ultimoRadioKm, 10);
+      expect(repository.ultimoRadioKm, greaterThanOrEqualTo(900));
+      expect(repository.ultimoLimite, greaterThan(50));
 
       container.read(radioBusquedaProvider.notifier).seleccionar(25);
       await container.pump();
@@ -59,12 +63,20 @@ void main() {
       await container.read(productosCercanosProvider.future);
       expect(container.read(radioBusquedaProvider), 25);
       expect(repository.ultimoRadioKm, 25);
+      expect(repository.ultimoLimite, 50);
+
+      // Volver a "Todas" funciona igual que el default.
+      container.read(radioBusquedaProvider.notifier).seleccionar(null);
+      await container.pump();
+      await container.read(productosCercanosProvider.future);
+      expect(repository.ultimoRadioKm, greaterThanOrEqualTo(900));
     });
   });
 }
 
 class _ProductoRepositoryFake implements ProductoRepository {
   double? ultimoRadioKm;
+  int? ultimoLimite;
 
   @override
   Future<List<ProductoModel>> obtenerProductos() async => [];
@@ -77,6 +89,7 @@ class _ProductoRepositoryFake implements ProductoRepository {
     int limite = 50,
   }) async {
     ultimoRadioKm = radioKm;
+    ultimoLimite = limite;
     return [];
   }
 
@@ -94,8 +107,7 @@ class _ProductoRepositoryFake implements ProductoRepository {
   Future<ProductoModel> crearProducto(
     ProductoModel producto, {
     required LatLng ubicacionExacta,
-    Uint8List? bytesImagen,
-    String extensionImagen = 'jpg',
+    List<ImagenSeleccionada> imagenes = const [],
   }) async {
     return producto;
   }

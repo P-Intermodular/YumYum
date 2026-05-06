@@ -29,20 +29,32 @@ final productosProvider = FutureProvider<List<ProductoModel>>((ref) async {
   return ref.watch(productoRepositoryProvider).obtenerProductos();
 });
 
-/// Opciones discretas de radio para la busqueda por cercania.
-const radiosDisponiblesKm = <double>[1, 3, 5, 10, 25, 50];
+/// Opciones discretas de radio para la busqueda por cercania. `null`
+/// representa "Todas las distancias" y es la opcion por defecto.
+const radiosDisponiblesKm = <double?>[null, 1, 3, 5, 10, 25, 50];
 
-/// Radio activo para el filtrado por proximidad durante la sesion.
-final radioBusquedaProvider = NotifierProvider<RadioBusquedaController, double>(
+/// Radio amplio que la RPC trata como "sin filtro geografico real": cubre
+/// cualquier distancia continental conservando el calculo de distancia y el
+/// orden por proximidad cuando hay GPS.
+const _radioSinLimiteKm = 999.0;
+
+/// Limite de resultados cuando el usuario elige "Todas". El feed habitual
+/// pide 50; cuando se quita el filtro pedimos mas para no quedarnos cortos.
+const _limiteSinLimite = 200;
+
+/// Radio activo para el filtrado por proximidad durante la sesion. `null`
+/// significa "Todas las distancias" (sin limitacion geografica).
+final radioBusquedaProvider =
+    NotifierProvider<RadioBusquedaController, double?>(
   RadioBusquedaController.new,
 );
 
 /// Gestiona el radio activo para busquedas por proximidad.
-class RadioBusquedaController extends Notifier<double> {
+class RadioBusquedaController extends Notifier<double?> {
   @override
-  double build() => 10;
+  double? build() => null;
 
-  void seleccionar(double radio) {
+  void seleccionar(double? radio) {
     state = radio;
   }
 }
@@ -50,7 +62,9 @@ class RadioBusquedaController extends Notifier<double> {
 /// Lista reactiva de productos cercanos a la ubicacion actual.
 ///
 /// Si no hay permiso o no puede resolverse el GPS, hace fallback al catalogo
-/// general para no bloquear el feed ni el mapa.
+/// general para no bloquear el feed ni el mapa. Si el radio es `null`, la
+/// RPC se invoca con un radio muy amplio para que devuelva todo el catalogo
+/// pero conservando la distancia calculada y el orden por proximidad.
 final productosCercanosProvider = FutureProvider<List<ProductoModel>>(
   (ref) async {
     await _esperarSesionLista(ref);
@@ -69,7 +83,8 @@ final productosCercanosProvider = FutureProvider<List<ProductoModel>>(
     return repositorio.obtenerProductosCercanos(
       latitud: ubicacion.latitud,
       longitud: ubicacion.longitud,
-      radioKm: radioKm,
+      radioKm: radioKm ?? _radioSinLimiteKm,
+      limite: radioKm == null ? _limiteSinLimite : 50,
     );
   },
 );

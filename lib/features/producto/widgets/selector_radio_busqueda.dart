@@ -5,6 +5,10 @@ import '../../../core/theme/yum_colors.dart';
 import '../providers/producto_providers.dart';
 
 /// Selector del radio de busqueda por proximidad.
+///
+/// Acepta `null` como "Todas las distancias" (opcion por defecto, sin
+/// limitacion geografica). Las demas opciones son los radios discretos
+/// definidos en `radiosDisponiblesKm`.
 class SelectorRadioBusqueda extends ConsumerWidget {
   const SelectorRadioBusqueda({super.key});
 
@@ -31,23 +35,34 @@ class SelectorRadioBusqueda extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Radio:',
-              style: TextStyle(
-                color: colors.inkSoft,
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
+            if (radioActual == null)
+              Text(
+                'Cualquier distancia',
+                style: TextStyle(
+                  color: colors.ink,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              )
+            else ...[
+              Text(
+                'Radio:',
+                style: TextStyle(
+                  color: colors.inkSoft,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '${radioActual.toInt()} km',
-              style: TextStyle(
-                color: colors.ink,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
+              const SizedBox(width: 6),
+              Text(
+                '${radioActual.toInt()} km',
+                style: TextStyle(
+                  color: colors.ink,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
-            ),
+            ],
             const SizedBox(width: 4),
             Icon(Icons.keyboard_arrow_down, color: colors.inkSoft, size: 20),
           ],
@@ -56,7 +71,12 @@ class SelectorRadioBusqueda extends ConsumerWidget {
     );
   }
 
-  void _mostrarOpciones(BuildContext context, WidgetRef ref, double radioActual, YumColors colors) {
+  void _mostrarOpciones(
+    BuildContext context,
+    WidgetRef ref,
+    double? radioActual,
+    YumColors colors,
+  ) {
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
@@ -81,7 +101,7 @@ class SelectorRadioBusqueda extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Selecciona el radio de búsqueda',
+              'Distancia máxima',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -94,13 +114,17 @@ class SelectorRadioBusqueda extends ConsumerWidget {
               runSpacing: 12,
               children: radiosDisponiblesKm.map((radio) {
                 final seleccionado = radio == radioActual;
+                final etiqueta = radio == null ? 'Todas' : '${radio.toInt()} km';
                 return GestureDetector(
                   onTap: () {
                     ref.read(radioBusquedaProvider.notifier).seleccionar(radio);
                     Navigator.pop(context);
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: seleccionado ? colors.terracotta : colors.cream,
                       borderRadius: BorderRadius.circular(24),
@@ -109,10 +133,12 @@ class SelectorRadioBusqueda extends ConsumerWidget {
                       ),
                     ),
                     child: Text(
-                      '${radio.toInt()} km',
+                      etiqueta,
                       style: TextStyle(
                         color: seleccionado ? colors.paper : colors.inkSoft,
-                        fontWeight: seleccionado ? FontWeight.bold : FontWeight.w600,
+                        fontWeight: seleccionado
+                            ? FontWeight.bold
+                            : FontWeight.w600,
                       ),
                     ),
                   ),
