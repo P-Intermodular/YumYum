@@ -5,6 +5,7 @@ import '../../../core/errors/app_exception.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
 import '../../../core/providers_refresher.dart';
 import '../../../core/theme/yum_colors.dart';
+import '../../../core/widgets/ui/boton_ia_global.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../producto/domain/entities/producto_model.dart';
@@ -32,42 +33,54 @@ class InicioScreen extends ConsumerWidget {
 
     return Scaffold(
       body: YumBackground(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.refrescarUbicacionYProductosCercanos();
-            await ref.read(productosCercanosProvider.future);
-          },
-          child: feed.when(
-            data: (lista) => _buildScroll(
-              context: context,
-              ref: ref,
-              productos: lista,
-              ciudadUsuario: usuario?.ciudad,
-              tieneUbicacion: ubicacion.value != null,
-              ubicacionCargando: ubicacion.isLoading,
-              colors: colors,
-            ),
-            loading: () => _buildScroll(
-              context: context,
-              ref: ref,
-              productos: const [],
-              ciudadUsuario: usuario?.ciudad,
-              tieneUbicacion: ubicacion.value != null,
-              ubicacionCargando: ubicacion.isLoading,
-              colors: colors,
-              cargando: true,
-            ),
-            error: (e, st) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  mensajeError(e),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: colors.inkSoft),
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: () async {
+                ref.refrescarUbicacionYProductosCercanos();
+                await ref.read(productosCercanosProvider.future);
+              },
+              child: feed.when(
+                data: (lista) => _buildScroll(
+                  context: context,
+                  ref: ref,
+                  productos: lista,
+                  ciudadUsuario: usuario?.ciudad,
+                  tieneUbicacion: ubicacion.value != null,
+                  ubicacionCargando: ubicacion.isLoading,
+                  colors: colors,
+                ),
+                loading: () => _buildScroll(
+                  context: context,
+                  ref: ref,
+                  productos: const [],
+                  ciudadUsuario: usuario?.ciudad,
+                  tieneUbicacion: ubicacion.value != null,
+                  ubicacionCargando: ubicacion.isLoading,
+                  colors: colors,
+                  cargando: true,
+                ),
+                error: (e, st) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      mensajeError(e),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: colors.inkSoft),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            // Asistente IA solo en Inicio: aquí la "intención" del usuario
+            // es difusa (descubrir, buscar, publicar) y la ayuda contextual
+            // tiene sentido. En el resto de tabs es ruido.
+            const Positioned(
+              right: 16,
+              bottom: 110,
+              child: BotonIAGlobal(),
+            ),
+          ],
         ),
       ),
     );
