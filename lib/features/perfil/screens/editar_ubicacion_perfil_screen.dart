@@ -4,22 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
 import '../../../core/providers_refresher.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/selector_ubicacion_mapa.dart';
+import '../../../core/widgets/ui/yum_app_bar.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../../core/widgets/ui/yum_button.dart';
 import '../../auth/controllers/auth_controller.dart';
 
 /// Pantalla para editar la ubicación predeterminada del perfil.
 ///
-/// Sigue el patrón visual de las subpantallas nuevas (Editar Perfil,
-/// Preferencias notificaciones): cabecera grande sin AppBar, Guardar sutil
-/// en la esquina superior derecha como atajo y CTA grande al final del
-/// scroll.
+/// Subpantalla del flujo de Ajustes — sigue el patrón Figma de TopBar
+/// compacta (`<TopBar title subtitle back />`) con el mapa y el banner de
+/// privacidad debajo.
 class EditarUbicacionPerfilScreen extends ConsumerStatefulWidget {
   const EditarUbicacionPerfilScreen({super.key});
 
@@ -123,118 +122,46 @@ class _EditarUbicacionPerfilScreenState
     }
 
     return Scaffold(
+      appBar: const YumAppBar(
+        title: 'Editar ubicación',
+        subtitle: 'Define tu zona predeterminada',
+        showBack: true,
+      ),
+      backgroundColor: colors.cream,
       body: YumBackground(
         child: SafeArea(
           bottom: false,
-          child: Stack(
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              MediaQuery.of(context).padding.bottom + 28,
+            ),
             children: [
-              ListView(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  12,
-                  20,
-                  MediaQuery.of(context).padding.bottom + 28,
-                ),
-                children: [
-                  _Header(),
-                  const SizedBox(height: 24),
-                  SelectorUbicacionMapa(
-                    mapController: _mapController,
-                    ubicacionElegida: _ubicacionElegida,
-                    ubicacionUsuario: ubicacionActualAsync.value,
-                    gpsResolviendo: gpsResolviendo,
-                    gpsFallido: gpsFallido,
-                    onPuntoCambiado: _guardando ? null : _actualizarPunto,
-                    onUsarUbicacionActual:
-                        _guardando ? null : _usarUbicacionActual,
-                    subtitulo: 'Arrastra el mapa para fijar tu zona habitual.',
-                    altura: 380,
-                  ),
-                  const SizedBox(height: 16),
-                  _BannerPrivacidad(),
-                  const SizedBox(height: 28),
-                  YumButton(
-                    text: _guardando ? 'Guardando…' : 'Guardar ubicación',
-                    fullWidth: true,
-                    onPressed: (_guardando || _ubicacionElegida == null)
-                        ? null
-                        : _guardar,
-                  ),
-                ],
+              SelectorUbicacionMapa(
+                mapController: _mapController,
+                ubicacionElegida: _ubicacionElegida,
+                ubicacionUsuario: ubicacionActualAsync.value,
+                gpsResolviendo: gpsResolviendo,
+                gpsFallido: gpsFallido,
+                onPuntoCambiado: _guardando ? null : _actualizarPunto,
+                onUsarUbicacionActual:
+                    _guardando ? null : _usarUbicacionActual,
+                subtitulo: 'Arrastra el mapa para fijar tu zona habitual.',
+                altura: 380,
               ),
-              Positioned(
-                top: 12,
-                left: 12,
-                child: _BotonAtras(),
+              const SizedBox(height: 16),
+              _BannerPrivacidad(),
+              const SizedBox(height: 28),
+              YumButton(
+                text: _guardando ? 'Guardando…' : 'Guardar ubicación',
+                fullWidth: true,
+                onPressed: (_guardando || _ubicacionElegida == null)
+                    ? null
+                    : _guardar,
               ),
             ],
-          ),
-        ),
-      ),
-      backgroundColor: colors.cream,
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.yumColors;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(56, 0, 56, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Editar ubicación',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontSize: 26,
-                  height: 1.1,
-                  fontWeight: FontWeight.w600,
-                  color: colors.ink,
-                ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Define tu zona predeterminada',
-            style: TextStyle(color: colors.inkSoft, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BotonAtras extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.yumColors;
-    return Material(
-      color: colors.paper,
-      shape: const CircleBorder(),
-      elevation: 0,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          } else {
-            context.go(RutasApp.ajustes);
-          }
-        },
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: colors.paper,
-            shape: BoxShape.circle,
-            border: Border.all(color: colors.line),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 16,
-            color: colors.ink,
           ),
         ),
       ),

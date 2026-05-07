@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
 import '../../../core/theme/yum_colors.dart';
+import '../../../core/widgets/ui/yum_app_bar.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../auth/controllers/auth_controller.dart';
 
@@ -91,84 +90,54 @@ class _PreferenciasNotificacionesScreenState
     final colors = context.yumColors;
 
     return Scaffold(
+      appBar: const YumAppBar(
+        title: 'Notificaciones',
+        subtitle: 'Elige qué quieres recibir en la bandeja',
+        showBack: true,
+      ),
       body: YumBackground(
         child: SafeArea(
           bottom: false,
-          child: Stack(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             children: [
-              ListView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(56, 0, 0, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Notificaciones',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                fontSize: 26,
-                                height: 1.1,
-                                fontWeight: FontWeight.w600,
-                                color: colors.ink,
-                              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: colors.paper,
+                  border: Border.all(color: colors.line),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < _categorias.length; i++) ...[
+                      _TileSwitch(
+                        categoria: _categorias[i],
+                        activo: _local[_categorias[i].clave] ?? true,
+                        cargando: _guardando.contains(
+                          _categorias[i].clave,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Elige qué quieres recibir en la bandeja.',
-                          style: TextStyle(color: colors.inkSoft, fontSize: 12),
+                        onCambio: () => _alternar(
+                          _categorias[i].clave,
+                          _local[_categorias[i].clave] ?? true,
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colors.paper,
-                      border: Border.all(color: colors.line),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      children: [
-                        for (var i = 0; i < _categorias.length; i++) ...[
-                          _TileSwitch(
-                            categoria: _categorias[i],
-                            activo: _local[_categorias[i].clave] ?? true,
-                            cargando: _guardando.contains(
-                              _categorias[i].clave,
-                            ),
-                            onCambio: () => _alternar(
-                              _categorias[i].clave,
-                              _local[_categorias[i].clave] ?? true,
-                            ),
-                            ultimo: i == _categorias.length - 1,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tu bandeja se filtra automáticamente según estas '
-                    'preferencias. Las notificaciones siguen llegando al '
-                    'sistema, pero las ocultas no se muestran ni cuentan '
-                    'como no leídas.',
-                    style: TextStyle(
-                      color: colors.inkSoft,
-                      fontSize: 12,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
+                        ultimo: i == _categorias.length - 1,
+                      ),
+                    ],
+                  ],
+                ),
               ),
-              Positioned(
-                top: 12,
-                left: 12,
-                child: _BotonAtras(),
+              const SizedBox(height: 16),
+              Text(
+                'Tu bandeja se filtra automáticamente según estas '
+                'preferencias. Las notificaciones siguen llegando al '
+                'sistema, pero las ocultas no se muestran ni cuentan '
+                'como no leídas.',
+                style: TextStyle(
+                  color: colors.inkSoft,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -258,43 +227,6 @@ class _TileSwitch extends StatelessWidget {
             onChanged: cargando ? null : (_) => onCambio(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _BotonAtras extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.yumColors;
-    return Material(
-      color: colors.paper,
-      shape: const CircleBorder(),
-      elevation: 0,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          } else {
-            context.go(RutasApp.ajustes);
-          }
-        },
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: colors.paper,
-            shape: BoxShape.circle,
-            border: Border.all(color: colors.line),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 16,
-            color: colors.ink,
-          ),
-        ),
       ),
     );
   }

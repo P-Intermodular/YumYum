@@ -7,11 +7,11 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/alergenos_ue.dart';
 import '../../../core/constants/etiquetas_dieteticas.dart';
-import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/avatar_usuario.dart';
 import '../../../core/widgets/ui/label_seccion.dart';
+import '../../../core/widgets/ui/yum_app_bar.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../../core/widgets/ui/yum_button.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -19,10 +19,11 @@ import '../controllers/editar_perfil_controller.dart';
 
 /// Pantalla de edición del perfil del usuario.
 ///
-/// Sigue el patrón visual del prototipo Figma: header sin AppBar tradicional
-/// con un "Guardar" sutil en la esquina superior derecha, marcado uniforme
-/// de obligatorios/opcionales con `LabelSeccion`, y un CTA grande al final
-/// del scroll (no sticky, para que no tape los chips de alérgenos).
+/// Sigue el patrón Figma para subpantallas: TopBar compacta con back y
+/// 'Guardar' sutil a la derecha como atajo, marcado uniforme de
+/// obligatorios/opcionales con `LabelSeccion`, y un CTA grande al final
+/// del scroll para usuarios que prefieren ver todo el formulario antes
+/// de guardar.
 class EditarPerfilScreen extends ConsumerStatefulWidget {
   const EditarPerfilScreen({super.key});
 
@@ -200,159 +201,146 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
     }
 
     return Scaffold(
+      appBar: YumAppBar(
+        title: 'Editar perfil',
+        showBack: true,
+        action: _BotonGuardarSutil(
+          cargando: cargando,
+          onPressed: _guardar,
+        ),
+      ),
       body: YumBackground(
         child: SafeArea(
           bottom: false,
-          child: Stack(
-            children: [
-              Form(
-                key: _formKey,
-                child: ListView(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    12,
-                    20,
-                    MediaQuery.of(context).padding.bottom + 28,
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                12,
+                20,
+                MediaQuery.of(context).padding.bottom + 28,
+              ),
+              children: [
+                Center(
+                  child: _AvatarEditable(
+                    usuario: usuario,
+                    nuevoAvatar: _nuevoAvatar,
+                    quitarAvatar: _quitarAvatar,
+                    onTap: () => _abrirSheetAvatar(
+                      _nuevoAvatar != null ||
+                          (!_quitarAvatar &&
+                              usuario.urlImagenPerfil.isNotEmpty),
+                    ),
                   ),
+                ),
+                const SizedBox(height: 28),
+                const LabelSeccion(text: 'Email'),
+                const SizedBox(height: 8),
+                _CampoEmailReadonly(correo: usuario.correo),
+                const SizedBox(height: 18),
+                const LabelSeccion(text: 'Nombre público', obligatorio: true),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _nombreController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _decoracion('Cómo te ven tus vecinos'),
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? 'El nombre es obligatorio'
+                      : null,
+                ),
+                const SizedBox(height: 18),
+                const LabelSeccion(text: 'Ciudad o zona', opcional: true),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _ciudadController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _decoracion('Ej. Malasaña, Madrid'),
+                ),
+                const SizedBox(height: 18),
+                const LabelSeccion(text: 'Bio', opcional: true),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _bioController,
+                  maxLength: 280,
+                  maxLines: 4,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: _decoracion(
+                    'Cuéntale a tus vecinos qué cocinas y qué te inspira…',
+                  ).copyWith(
+                    // Quitamos el contador automático de Material; lo pintamos
+                    // nosotros mismos justo debajo para integrarlo con la estética.
+                    counterText: '',
+                  ),
+                ),
+                _ContadorBio(longitud: _bioController.text.length),
+                const SizedBox(height: 18),
+                const LabelSeccion(
+                  text: 'Preferencias dietéticas',
+                  opcional: true,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    _Header(),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: _AvatarEditable(
-                        usuario: usuario,
-                        nuevoAvatar: _nuevoAvatar,
-                        quitarAvatar: _quitarAvatar,
-                        onTap: () => _abrirSheetAvatar(
-                          _nuevoAvatar != null ||
-                              (!_quitarAvatar &&
-                                  usuario.urlImagenPerfil.isNotEmpty),
-                        ),
+                    for (final etq in EtiquetasDieteticas.todas)
+                      _ChipSeleccionable(
+                        label: etq,
+                        activa: _preferencias.contains(etq),
+                        tono: _TonoChip.olive,
+                        onTap: () => setState(() {
+                          _preferencias.contains(etq)
+                              ? _preferencias.remove(etq)
+                              : _preferencias.add(etq);
+                        }),
                       ),
-                    ),
-                    const SizedBox(height: 28),
-                    const LabelSeccion(text: 'Email'),
-                    const SizedBox(height: 8),
-                    _CampoEmailReadonly(correo: usuario.correo),
-                    const SizedBox(height: 18),
-                    const LabelSeccion(text: 'Nombre público', obligatorio: true),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _nombreController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: _decoracion('Cómo te ven tus vecinos'),
-                      validator: (v) => v == null || v.trim().isEmpty
-                          ? 'El nombre es obligatorio'
-                          : null,
-                    ),
-                    const SizedBox(height: 18),
-                    const LabelSeccion(text: 'Ciudad o zona', opcional: true),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _ciudadController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: _decoracion('Ej. Malasaña, Madrid'),
-                    ),
-                    const SizedBox(height: 18),
-                    const LabelSeccion(text: 'Bio', opcional: true),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _bioController,
-                      maxLength: 280,
-                      maxLines: 4,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: _decoracion(
-                        'Cuéntale a tus vecinos qué cocinas y qué te inspira…',
-                      ).copyWith(
-                        // Quitamos el contador automático de Material; lo pintamos
-                        // nosotros mismos justo debajo para integrarlo con la estética.
-                        counterText: '',
-                      ),
-                    ),
-                    _ContadorBio(longitud: _bioController.text.length),
-                    const SizedBox(height: 18),
-                    const LabelSeccion(
-                      text: 'Preferencias dietéticas',
-                      opcional: true,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final etq in EtiquetasDieteticas.todas)
-                          _ChipSeleccionable(
-                            label: etq,
-                            activa: _preferencias.contains(etq),
-                            tono: _TonoChip.olive,
-                            onTap: () => setState(() {
-                              _preferencias.contains(etq)
-                                  ? _preferencias.remove(etq)
-                                  : _preferencias.add(etq);
-                            }),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    const LabelSeccion(
-                      text: 'Tus alérgenos personales',
-                      opcional: true,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Si declaras alérgenos, podrás filtrar el feed para evitar '
-                      'platos que los contengan.',
-                      style: TextStyle(
-                        color: context.yumColors.inkSoft,
-                        fontSize: 12,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final a in AlergenosUe.todos)
-                          _ChipSeleccionable(
-                            label: a,
-                            activa: _alergenos.contains(a),
-                            tono: _TonoChip.warn,
-                            onTap: () => setState(() {
-                              _alergenos.contains(a)
-                                  ? _alergenos.remove(a)
-                                  : _alergenos.add(a);
-                            }),
-                          ),
-                      ],
-                    ),
-                    // La sección "Cuenta" (cambiar contraseña, ubicación
-                    // predeterminada) vive ahora en Ajustes — son acciones de
-                    // cuenta/seguridad, no datos personales editables.
-                    const SizedBox(height: 32),
-                    YumButton(
-                      text: cargando ? 'Guardando…' : 'Guardar cambios',
-                      fullWidth: true,
-                      onPressed: cargando ? null : _guardar,
-                    ),
                   ],
                 ),
-              ),
-              // Botón atrás flotante en la esquina superior izquierda.
-              Positioned(
-                top: 12,
-                left: 12,
-                child: _BotonAtras(),
-              ),
-              // "Guardar" sutil en la esquina superior derecha (patrón Figma).
-              Positioned(
-                top: 12,
-                right: 12,
-                child: _BotonGuardarSutil(
-                  cargando: cargando,
-                  onPressed: _guardar,
+                const SizedBox(height: 18),
+                const LabelSeccion(
+                  text: 'Tus alérgenos personales',
+                  opcional: true,
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  'Si declaras alérgenos, podrás filtrar el feed para evitar '
+                  'platos que los contengan.',
+                  style: TextStyle(
+                    color: context.yumColors.inkSoft,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final a in AlergenosUe.todos)
+                      _ChipSeleccionable(
+                        label: a,
+                        activa: _alergenos.contains(a),
+                        tono: _TonoChip.warn,
+                        onTap: () => setState(() {
+                          _alergenos.contains(a)
+                              ? _alergenos.remove(a)
+                              : _alergenos.add(a);
+                        }),
+                      ),
+                  ],
+                ),
+                // La sección "Cuenta" (cambiar contraseña, ubicación
+                // predeterminada) vive ahora en Ajustes — son acciones de
+                // cuenta/seguridad, no datos personales editables.
+                const SizedBox(height: 32),
+                YumButton(
+                  text: cargando ? 'Guardando…' : 'Guardar cambios',
+                  fullWidth: true,
+                  onPressed: cargando ? null : _guardar,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -372,71 +360,8 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
 // ─────────────────────────────────────────────────────────────────────────────
 // Header
 
-class _Header extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.yumColors;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(56, 0, 0, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Editar perfil',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontSize: 26,
-                  height: 1.1,
-                  fontWeight: FontWeight.w600,
-                  color: colors.ink,
-                ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Mantén tu información al día',
-            style: TextStyle(color: colors.inkSoft, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BotonAtras extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.yumColors;
-    return Material(
-      color: colors.paper,
-      shape: const CircleBorder(),
-      elevation: 0,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          } else {
-            context.go(RutasApp.perfil);
-          }
-        },
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: colors.paper,
-            shape: BoxShape.circle,
-            border: Border.all(color: colors.line),
-          ),
-          alignment: Alignment.center,
-          child: Icon(Icons.arrow_back_ios_new_rounded,
-              size: 16, color: colors.ink),
-        ),
-      ),
-    );
-  }
-}
-
-/// Acción "Guardar" sutil en la esquina superior derecha. Replica el patrón
-/// del prototipo Figma para usuarios que no quieren scrollear hasta el CTA.
+/// Acción "Guardar" sutil en la esquina superior derecha de la TopBar.
+/// Atajo para usuarios que no quieren scrollear hasta el CTA grande final.
 class _BotonGuardarSutil extends StatelessWidget {
   final bool cargando;
   final VoidCallback onPressed;
