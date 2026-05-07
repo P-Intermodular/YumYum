@@ -49,20 +49,47 @@ class _NotificacionesScreenState extends ConsumerState<NotificacionesScreen> {
     }
   }
 
+  /// Decide la ruta a abrir según el tipo de notificación.
+  ///
+  /// Llevamos al usuario a la pantalla donde puede *actuar* (aceptar, denegar,
+  /// completar…) y no a la ficha pública del plato. Las cuatro variantes "de
+  /// solicitud" caen en `pedidoPorSolicitud`, que renderiza el detalle con los
+  /// botones correspondientes y un acceso al chat en el footer. Las dos
+  /// "post-aceptación" caen en el detalle de transacción, por la misma razón.
+  /// El chat nunca se abre directo desde aquí: se accede desde la pantalla
+  /// destino para no perder el contexto de la novedad.
   void _abrirNotificacion(NotificacionModel n) {
     final datos = n.datos;
-    if (datos['conversacion_id'] is String) {
-      context.push(RutasApp.chat(datos['conversacion_id'] as String));
-      return;
+    final solicitudId = datos['solicitud_id'] as String?;
+    final transaccionId = datos['transaccion_id'] as String?;
+    final productoId = datos['producto_id'] as String?;
+
+    switch (n.tipo) {
+      case 'solicitud_oferta_creada':
+      case 'solicitud_oferta_denegada':
+      case 'solicitud_oferta_auto_denegada':
+      case 'solicitud_oferta_cancelada':
+        if (solicitudId != null) {
+          context.push(RutasApp.pedidoPorSolicitud(solicitudId));
+          return;
+        }
+        break;
+      case 'solicitud_oferta_aceptada':
+      case 'transaccion_cancelada':
+        if (transaccionId != null) {
+          context.push(RutasApp.transaccionDetalle(transaccionId));
+          return;
+        }
+        break;
     }
-    if (datos['transaccion_id'] is String) {
-      context.push(
-        RutasApp.transaccionDetalle(datos['transaccion_id'] as String),
-      );
-      return;
-    }
-    if (datos['producto_id'] is String) {
-      context.push(RutasApp.productoDetalle(datos['producto_id'] as String));
+
+    // Fallback por presencia de id si el tipo no calza o el id esperado falta.
+    if (transaccionId != null) {
+      context.push(RutasApp.transaccionDetalle(transaccionId));
+    } else if (solicitudId != null) {
+      context.push(RutasApp.pedidoPorSolicitud(solicitudId));
+    } else if (productoId != null) {
+      context.push(RutasApp.productoDetalle(productoId));
     }
   }
 
