@@ -26,6 +26,28 @@ abstract final class SolicitudOfertaDto {
       esEntrante: esEntrante,
       cantidad: solicitud['cantidad'] as int? ?? 1,
       cantidadOfrecida: solicitud['cantidad_ofrecida'] as int?,
+      urlImagenProducto: _primeraImagen(producto),
+      precioUnitario: _toDoubleOrNull(producto?['precio']),
     );
+  }
+
+  /// Devuelve la URL pública de la primera imagen del plato (la de menor
+  /// `posicion`). Si el join no trajo imágenes, devuelve cadena vacía para
+  /// que la card pinte un fallback.
+  static String _primeraImagen(Map<String, dynamic>? productoJson) {
+    final imagenes =
+        (productoJson?['imagenes_producto'] as List<dynamic>? ?? const [])
+            .cast<Map<String, dynamic>>();
+    if (imagenes.isEmpty) return '';
+    final ordenadas = [...imagenes]
+      ..sort((a, b) =>
+          (a['posicion'] as int? ?? 0).compareTo(b['posicion'] as int? ?? 0));
+    return (ordenadas.first['url_publica'] as String?) ?? '';
+  }
+
+  static double? _toDoubleOrNull(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 }

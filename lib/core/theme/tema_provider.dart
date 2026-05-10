@@ -6,7 +6,7 @@ import 'yum_colors.dart';
 const _clavePrefTema = 'tema_app';
 
 /// Tema visual activo. Lee la preferencia persistida en `SharedPreferences`
-/// al construirse y publica `YumTheme.mesaBarrio` por defecto.
+/// al construirse y publica `YumTheme.huertoModerno` por defecto.
 ///
 /// El cambio de tema es inmediato: `MaterialApp.router.theme` watchea este
 /// provider, asi que cualquier `seleccionar(...)` desencadena un rebuild
@@ -19,7 +19,7 @@ class TemaController extends Notifier<YumTheme> {
   YumTheme build() {
     final prefs = ref.read(preferenciasLocalesProvider);
     return YumThemeX.deId(prefs.getString(_clavePrefTema)) ??
-        YumTheme.mesaBarrio;
+        YumTheme.huertoModerno;
   }
 
   Future<void> seleccionar(YumTheme tema) async {

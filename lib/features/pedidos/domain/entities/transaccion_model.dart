@@ -18,6 +18,20 @@ class TransaccionModel {
   final int cantidad;
   final int? cantidadOfrecida;
 
+  /// Id de la solicitud que dio origen a esta transacción. Permite a la
+  /// pantalla de listado deduplicar contra las solicitudes (cuando una
+  /// solicitud está aceptada, se pinta la transacción y no la solicitud).
+  final String? solicitudId;
+
+  /// URL pública de la primera imagen del plato. Para que el listado pueda
+  /// pintar la card sin pasar por el detalle del producto.
+  final String urlImagenProducto;
+
+  /// Precio unitario del plato (€). Útil cuando la transacción es de
+  /// intercambio y `total` es null, pero queremos seguir mostrando el precio
+  /// de referencia del plato en la card.
+  final double? precioUnitario;
+
   const TransaccionModel({
     required this.id,
     required this.tipo,
@@ -36,6 +50,9 @@ class TransaccionModel {
     this.completadoEn,
     this.cantidad = 1,
     this.cantidadOfrecida,
+    this.solicitudId,
+    this.urlImagenProducto = '',
+    this.precioUnitario,
   });
 
   /// Devuelve el ID de la contraparte en la transacción.

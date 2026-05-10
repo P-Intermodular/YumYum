@@ -27,11 +27,10 @@ class PrincipalScreen extends StatelessWidget {
     if (location.startsWith(RutasApp.inicio)) return YumNavTab.home;
     if (location.startsWith(RutasApp.mapa)) return YumNavTab.map;
     if (location.startsWith(RutasApp.publicar)) return YumNavTab.publish;
+    if (location.startsWith(RutasApp.pedidos)) return YumNavTab.pedidos;
     if (location.startsWith(RutasApp.chats)) return YumNavTab.chats;
-    // Pedidos pasa a ser una pantalla derivada del perfil; al estar en
-    // /pedidos resaltamos la pestaña Perfil para mantener coherencia visual.
-    if (location.startsWith(RutasApp.pedidos)) return YumNavTab.profile;
-    if (location.startsWith(RutasApp.perfil)) return YumNavTab.profile;
+    // Perfil ya no tiene tab propia: se accede desde el avatar del feed. No
+    // resaltamos ninguna pestaña cuando el usuario está en /perfil.
     return YumNavTab.home;
   }
 
@@ -46,11 +45,11 @@ class PrincipalScreen extends StatelessWidget {
       case YumNavTab.publish:
         context.go(RutasApp.publicar);
         break;
+      case YumNavTab.pedidos:
+        context.go(RutasApp.pedidos);
+        break;
       case YumNavTab.chats:
         context.go(RutasApp.chats);
-        break;
-      case YumNavTab.profile:
-        context.go(RutasApp.perfil);
         break;
     }
   }

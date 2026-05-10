@@ -134,7 +134,7 @@ class SupabaseTransaccionRepository implements TransaccionRepository {
 
     final rows = await _client
         .from(TablasSupabase.productos)
-        .select('id, titulo')
+        .select('id, titulo, precio, imagenes_producto(url_publica, posicion)')
         .inFilter('id', idsUnicos);
 
     return {

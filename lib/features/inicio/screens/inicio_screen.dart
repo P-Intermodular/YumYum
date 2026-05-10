@@ -18,6 +18,9 @@ import '../widgets/filtros_feed_bottom_sheet.dart';
 import '../widgets/hero_plato.dart';
 import '../widgets/seccion_titulo.dart';
 
+const _kBottomNavOverlayHeight = 120.0;
+const _kBotonSubirGap = 16.0;
+
 /// Feed principal: cabecera personal + búsqueda + chips + plato destacado +
 /// recomendados. Replica la estética del prototipo-figma `FeedScreen`.
 class InicioScreen extends ConsumerStatefulWidget {
@@ -139,7 +142,10 @@ class _InicioScreenState extends ConsumerState<InicioScreen> {
 
     return ListView(
       controller: _scrollController,
-      padding: EdgeInsets.only(top: padding.top + 4, bottom: 120),
+      padding: EdgeInsets.only(
+        top: padding.top + 4,
+        bottom: _kBottomNavOverlayHeight + 64,
+      ),
       children: [
         CabeceraInicio(ciudad: ciudadUsuario),
         const SizedBox(height: 14),
@@ -197,7 +203,7 @@ class _BotonSubirInicio extends StatelessWidget {
 
     return Positioned(
       right: 20,
-      bottom: padding.bottom + 112,
+      bottom: padding.bottom + _kBottomNavOverlayHeight + _kBotonSubirGap,
       child: IgnorePointer(
         ignoring: !visible,
         child: AnimatedOpacity(
@@ -215,6 +221,7 @@ class _BotonSubirInicio extends StatelessWidget {
                 child: Material(
                   color: colors.terracotta,
                   shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
                   elevation: 8,
                   shadowColor: colors.ink.withValues(alpha: 0.22),
                   child: InkWell(

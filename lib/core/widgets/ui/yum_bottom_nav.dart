@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/yum_colors.dart';
 
-enum YumNavTab { home, map, publish, chats, profile }
+enum YumNavTab { home, map, publish, pedidos, chats }
 
 class YumBottomNav extends StatelessWidget {
   final YumNavTab currentTab;
@@ -68,16 +68,16 @@ class YumBottomNav extends StatelessWidget {
               onTap: () => onTabSelected(YumNavTab.publish),
             ),
             _NavItem(
+              icon: Icons.receipt_long_outlined,
+              label: 'Pedidos',
+              isSelected: currentTab == YumNavTab.pedidos,
+              onTap: () => onTabSelected(YumNavTab.pedidos),
+            ),
+            _NavItem(
               icon: Icons.chat_bubble_outline_rounded,
               label: 'Chats',
               isSelected: currentTab == YumNavTab.chats,
               onTap: () => onTabSelected(YumNavTab.chats),
-            ),
-            _NavItem(
-              icon: Icons.person_outline,
-              label: 'Perfil',
-              isSelected: currentTab == YumNavTab.profile,
-              onTap: () => onTabSelected(YumNavTab.profile),
             ),
           ],
         ),
