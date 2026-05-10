@@ -176,6 +176,24 @@ class _ProductoRepositoryFake implements ProductoRepository {
   Future<LatLng?> obtenerUbicacionExactaProducto(String productoId) async {
     return null;
   }
+
+  @override
+  Future<List<ImagenSeleccionada>> obtenerImagenesProducto(
+    String productoId,
+  ) async {
+    return const [];
+  }
+
+  @override
+  Future<void> actualizarProducto({
+    required String productoId,
+    required ProductoModel producto,
+    required List<ImagenSeleccionada> imagenesFinales,
+    required List<String> idsImagenesAEliminar,
+  }) async {}
+
+  @override
+  Future<bool> eliminarProducto(String productoId) async => true;
 }
 
 class _SolicitudOfertaRepositoryFake implements SolicitudOfertaRepository {

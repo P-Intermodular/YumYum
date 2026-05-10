@@ -65,6 +65,14 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colors.paper,
+        // El default de Flutter pinta el hint con bodyText.color al 60 %.
+        // Como nuestra `inkSoft` es bastante saturada, el placeholder se
+        // confundía con texto real. Lo bajamos al 45 % y peso normal para
+        // que se lea como "sugerencia", no como contenido escrito.
+        hintStyle: TextStyle(
+          color: colors.inkSoft.withValues(alpha: 0.45),
+          fontWeight: FontWeight.w400,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: colors.line),

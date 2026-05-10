@@ -9,12 +9,16 @@ import '../../../core/location/ubicacion_actual_provider.dart';
 import '../../../core/providers_refresher.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/selector_ubicacion_mapa.dart';
+import '../../../core/widgets/ui/yum_app_bar.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../../core/widgets/ui/yum_button.dart';
-import '../../../core/widgets/yumyum_app_bar.dart';
 import '../../auth/controllers/auth_controller.dart';
 
 /// Pantalla para editar la ubicación predeterminada del perfil.
+///
+/// Subpantalla del flujo de Ajustes — sigue el patrón Figma de TopBar
+/// compacta (`<TopBar title subtitle back />`) con el mapa y el banner de
+/// privacidad debajo.
 class EditarUbicacionPerfilScreen extends ConsumerStatefulWidget {
   const EditarUbicacionPerfilScreen({super.key});
 
@@ -38,7 +42,7 @@ class _EditarUbicacionPerfilScreenState
     super.dispose();
   }
 
-  void _seleccionarUbicacion(LatLng punto) {
+  void _actualizarPunto(LatLng punto) {
     setState(() => _ubicacionElegida = punto);
   }
 
@@ -53,7 +57,9 @@ class _EditarUbicacionPerfilScreenState
       _mapController.move(punto, _zoomMapa);
     } else {
       mostrarError(
-          context, Exception('No se pudo obtener la ubicación actual.'));
+        context,
+        Exception('No se pudo obtener la ubicación actual.'),
+      );
     }
   }
 
@@ -78,9 +84,7 @@ class _EditarUbicacionPerfilScreenState
       context.pop();
       mostrarExito(context, 'Ubicación actualizada correctamente');
     } catch (error) {
-      if (mounted) {
-        mostrarError(context, error);
-      }
+      if (mounted) mostrarError(context, error);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -118,16 +122,22 @@ class _EditarUbicacionPerfilScreenState
     }
 
     return Scaffold(
-      appBar: const YumYumAppBar(
-        titulo: 'Editar ubicación',
-        mostrarBotonVolver: true,
-        mostrarBotonPerfil: false,
+      appBar: const YumAppBar(
+        title: 'Editar ubicación',
+        subtitle: 'Define tu zona predeterminada',
+        showBack: true,
       ),
+      backgroundColor: colors.cream,
       body: YumBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: SafeArea(
+          bottom: false,
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              MediaQuery.of(context).padding.bottom + 28,
+            ),
             children: [
               SelectorUbicacionMapa(
                 mapController: _mapController,
@@ -135,30 +145,17 @@ class _EditarUbicacionPerfilScreenState
                 ubicacionUsuario: ubicacionActualAsync.value,
                 gpsResolviendo: gpsResolviendo,
                 gpsFallido: gpsFallido,
-                onTap: _guardando ? null : _seleccionarUbicacion,
-                titulo: 'Ubicación predeterminada',
-                subtitulo:
-                    'Toca el mapa para fijar tu ubicación habitual. Será la predeterminada al publicar platos.',
+                onPuntoCambiado: _guardando ? null : _actualizarPunto,
+                onUsarUbicacionActual:
+                    _guardando ? null : _usarUbicacionActual,
+                subtitulo: 'Arrastra el mapa para fijar tu zona habitual.',
+                altura: 380,
               ),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _guardando ? null : _usarUbicacionActual,
-                  icon: Icon(Icons.my_location, size: 18, color: colors.terracotta),
-                  label: Text(
-                    'Usar mi ubicación actual',
-                    style: TextStyle(
-                      color: colors.terracotta,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 16),
+              _BannerPrivacidad(),
               const SizedBox(height: 28),
               YumButton(
-                text: _guardando ? 'Guardando…' : 'Guardar',
+                text: _guardando ? 'Guardando…' : 'Guardar ubicación',
                 fullWidth: true,
                 onPressed: (_guardando || _ubicacionElegida == null)
                     ? null
@@ -167,6 +164,45 @@ class _EditarUbicacionPerfilScreenState
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Banner olive con el copy de privacidad. Refuerza la confianza del
+/// usuario al pedirle la ubicación: explica qué guardamos y qué no.
+class _BannerPrivacidad extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: colors.olive.withValues(alpha: 0.10),
+        border: Border.all(color: colors.olive.withValues(alpha: 0.30)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.shield_outlined,
+            color: colors.oliveDeep,
+            size: 16,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Solo guardamos esta zona como referencia. Tu dirección exacta '
+              'únicamente se comparte al confirmar un pedido.',
+              style: TextStyle(
+                color: colors.oliveDeep,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

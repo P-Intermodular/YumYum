@@ -5,6 +5,7 @@ import '../../../core/errors/app_exception.dart';
 import '../../../core/location/ubicacion_actual_provider.dart';
 import '../../../core/providers_refresher.dart';
 import '../../../core/theme/yum_colors.dart';
+import '../../../core/widgets/ui/boton_ia_global.dart';
 import '../../../core/widgets/ui/yum_background.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../producto/domain/entities/producto_model.dart';
@@ -171,11 +172,12 @@ class _InicioScreenState extends ConsumerState<InicioScreen> {
           const SeccionTitulo(titulo: 'Cerca de ti'),
           HeroPlato(producto: productos.first),
           if (productos.length > 1) ...[
-            SeccionTitulo(
-              titulo: 'Recomendados',
-              cta: 'Ordenar',
-              onCtaTap: () => mostrarFiltrosFeed(context),
-            ),
+            // El nombre antiguo "Recomendados" prometía un sistema de
+            // recomendación que no existe: la lista solo está ordenada por
+            // el criterio activo (recientes por defecto). El CTA "Ordenar"
+            // duplicaba el botón de filtros del buscador, así que también
+            // lo retiramos.
+            const SeccionTitulo(titulo: 'Otras ofertas cerca'),
             for (final producto in productos.skip(1)) ...[
               FilaPlato(producto: producto),
               const SizedBox(height: 10),

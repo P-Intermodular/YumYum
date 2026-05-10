@@ -14,10 +14,12 @@ import '../../features/mapa/screens/mapa_screen.dart';
 import '../../features/chat/screens/lista_chats_screen.dart';
 import '../../features/perfil/screens/editar_perfil_screen.dart';
 import '../../features/perfil/screens/perfil_screen.dart';
+import '../../features/favoritos/screens/guardados_screen.dart';
 import '../../features/notificaciones/screens/notificaciones_screen.dart';
 import '../../features/perfil/screens/editar_ubicacion_perfil_screen.dart';
 import '../../features/perfil/screens/perfil_publico_screen.dart';
 import '../../features/ajustes/screens/ajustes_screen.dart';
+import '../../features/ajustes/screens/preferencias_notificaciones_screen.dart';
 import '../../features/producto/screens/publicar_producto_screen.dart';
 import '../../features/producto/screens/detalle_producto_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
@@ -126,8 +128,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const NotificacionesScreen(),
           ),
           GoRoute(
+            path: RutasApp.guardados,
+            builder: (context, state) => const GuardadosScreen(),
+          ),
+          GoRoute(
             path: RutasApp.ajustes,
             builder: (context, state) => const AjustesScreen(),
+          ),
+          GoRoute(
+            path: RutasApp.preferenciasNotificaciones,
+            builder: (context, state) =>
+                const PreferenciasNotificacionesScreen(),
           ),
           GoRoute(
             path: RutasApp.aliasProfile,
@@ -147,6 +158,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return DetalleProductoScreen(productoId: id);
+        },
+      ),
+      GoRoute(
+        path: RutasApp.editarPlatoParametro,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PublicarProductoScreen(productoId: id);
         },
       ),
       GoRoute(

@@ -1,6 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/constants/supabase_names.dart';
+import '../../../producto/data/dtos/producto_dto.dart';
+import '../../../producto/data/repositories/supabase_producto_repository.dart';
+import '../../domain/entities/producto_guardado_model.dart';
 import '../../domain/repositories/favorito_repository.dart';
 
 /// Implementacion de [FavoritoRepository] respaldada por Supabase realtime.
@@ -21,6 +24,34 @@ class SupabaseFavoritoRepository implements FavoritoRepository {
               .whereType<String>()
               .toSet(),
         );
+  }
+
+  @override
+  Future<List<ProductoGuardadoModel>> obtenerProductosGuardados(
+    String usuarioId,
+  ) async {
+    // Una sola roundtrip: la tabla `favoritos` con embed de `productos`
+    // siguiendo el mismo select base que el feed para que el mapeo del DTO
+    // produzca un ProductoModel idéntico al del resto de pantallas.
+    final rows = await _client
+        .from(TablasSupabase.favoritos)
+        .select(
+          'creado_en, productos!inner(${SupabaseProductoRepository.productoSelect})',
+        )
+        .eq('usuario_id', usuarioId)
+        .order('creado_en', ascending: false);
+
+    return rows.cast<Map<String, dynamic>>().map((row) {
+      final productoJson = row['productos'] as Map<String, dynamic>;
+      final producto = ProductoDto.desdeSupabase(productoJson);
+      final guardadoEn =
+          DateTime.tryParse(row['creado_en']?.toString() ?? '') ??
+              DateTime.now();
+      return ProductoGuardadoModel(
+        producto: producto,
+        guardadoEn: guardadoEn,
+      );
+    }).toList(growable: false);
   }
 
   @override

@@ -1,5 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../constants/rutas_app.dart';
 import '../../theme/yum_colors.dart';
 
 class YumAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -43,8 +46,13 @@ class YumAppBar extends StatelessWidget implements PreferredSizeWidget {
               if (showBack) ...[
                 IconButton(
                   onPressed: () {
+                    // En rutas dentro del shell (p. ej. /publicar) no hay
+                    // nada que popear porque se entra con `go`, así que
+                    // caemos a Inicio para que el botón siempre haga algo.
                     if (Navigator.of(context).canPop()) {
                       Navigator.of(context).pop();
+                    } else {
+                      context.go(RutasApp.inicio);
                     }
                   },
                   icon: const Icon(Icons.chevron_left, size: 28),

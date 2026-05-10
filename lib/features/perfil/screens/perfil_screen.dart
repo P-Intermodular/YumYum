@@ -90,11 +90,11 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: YumButton(
-                            text: 'Mis pedidos',
+                            text: 'Guardados',
                             fullWidth: true,
                             variant: YumButtonVariant.ghost,
-                            icon: const Icon(Icons.receipt_long_outlined),
-                            onPressed: () => context.push(RutasApp.pedidos),
+                            icon: const Icon(Icons.favorite_border_rounded),
+                            onPressed: () => context.push(RutasApp.guardados),
                           ),
                         ),
                       ],

@@ -101,7 +101,7 @@ class _RecuperarPasswordScreenState
                         child: TextFormField(
                           controller: _correoController,
                           decoration: InputDecoration(
-                            hintText: 'hola@vecindario.es',
+                            hintText: 'Ej. hola@vecindario.es',
                             prefixIcon:
                                 Icon(Icons.mail_outline, color: colors.inkSoft, size: 20),
                           ),

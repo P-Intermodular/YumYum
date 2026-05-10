@@ -125,8 +125,10 @@ class YumColors extends ThemeExtension<YumColors> {
 }
 
 /// Temas claros disponibles. Solo cambian colores; tipografia y radii
-/// permanecen iguales entre temas.
-enum YumTheme { mesaBarrio, huertoModerno }
+/// permanecen iguales entre temas. El orden de declaración define el orden
+/// en el selector de Ajustes — Huerto Moderno va primero por ser el tema
+/// por defecto.
+enum YumTheme { huertoModerno, mesaBarrio }
 
 extension YumThemeX on YumTheme {
   String get etiqueta => switch (this) {

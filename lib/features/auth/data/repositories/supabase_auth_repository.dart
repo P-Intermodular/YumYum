@@ -127,6 +127,19 @@ class SupabaseAuthRepository implements AuthRepository {
     return _perfilParaUsuario(usuario.id, correoRespaldo: usuario.correo);
   }
 
+  @override
+  Future<UsuarioModel> actualizarPreferenciasNotificaciones(
+    String usuarioId,
+    Map<String, bool> preferencias,
+  ) async {
+    await _client
+        .from(TablasSupabase.perfiles)
+        .update({'preferencias_notificaciones': preferencias})
+        .eq('id', usuarioId);
+
+    return _perfilParaUsuario(usuarioId);
+  }
+
   Future<UsuarioModel> _perfilParaUsuario(
     String usuarioId, {
     String? correoRespaldo,

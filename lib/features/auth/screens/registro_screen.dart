@@ -91,7 +91,7 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
                       TextFormField(
                         controller: _nombreController,
                         decoration: InputDecoration(
-                          hintText: 'Nombre',
+                          hintText: 'Ej. María García',
                           prefixIcon: Icon(Icons.person_outline, color: colors.inkSoft, size: 20),
                         ),
                         autofillHints: const [AutofillHints.name],
@@ -104,7 +104,7 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
                       TextFormField(
                         controller: _correoController,
                         decoration: InputDecoration(
-                          hintText: 'hola@vecindario.es',
+                          hintText: 'Ej. hola@vecindario.es',
                           prefixIcon: Icon(Icons.mail_outline, color: colors.inkSoft, size: 20),
                         ),
                         keyboardType: TextInputType.emailAddress,
@@ -118,7 +118,7 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
                       TextFormField(
                         controller: _passwordController,
                         decoration: InputDecoration(
-                          hintText: '••••••••',
+                          hintText: 'Contraseña',
                           prefixIcon: Icon(Icons.lock_outline, color: colors.inkSoft, size: 20),
                           suffixIcon: IconButton(
                             icon: Icon(

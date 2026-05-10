@@ -124,24 +124,34 @@ class FilaPlato extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Row(
+                        // Wrap en lugar de Row: en móviles estrechos los
+                        // chips pasan a la siguiente línea en vez de
+                        // desbordarse o cortarse.
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Icon(
-                              Icons.star_rounded,
-                              size: 13,
-                              color: colors.mustard,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.star_rounded,
+                                  size: 13,
+                                  color: colors.mustard,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  tieneRating
+                                      ? '${propietario.valoracionMedia.toStringAsFixed(1)} · ${propietario.numeroValoraciones}'
+                                      : 'Sin reseñas',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colors.inkSoft,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 2),
-                            Text(
-                              tieneRating
-                                  ? '${propietario.valoracionMedia.toStringAsFixed(1)} · ${propietario.numeroValoraciones}'
-                                  : 'Sin reseñas',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colors.inkSoft,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 2),
@@ -158,46 +168,45 @@ class FilaPlato extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: colors.cream2,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                esIntercambio ? 'Intercambio' : 'Venta',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: colors.inkSoft,
-                                  fontWeight: FontWeight.w600,
+                            // Solo pintamos el chip de tipo cuando es Venta:
+                            // para intercambio el "Intercambio" ya aparece
+                            // en el slot del precio (arriba derecha).
+                            if (!esIntercambio)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: colors.cream2,
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                              ),
-                            ),
-                            for (final etq in producto.etiquetas.take(2)) ...[
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: colors.olive.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    etq,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: colors.oliveDeep,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                child: Text(
+                                  'Venta',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: colors.inkSoft,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                            ],
+                            for (final etq in producto.etiquetas.take(2))
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: colors.olive.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  etq,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: colors.oliveDeep,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ],

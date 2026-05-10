@@ -203,6 +203,27 @@ class AutenticacionNotifier extends Notifier<EstadoAutenticacion> {
     }
   }
 
+  /// Persiste el mapa de preferencias de notificaciones y refresca la
+  /// sesión local. La pantalla aplica los cambios uno a uno (un toggle =
+  /// una llamada), así que este método debe ser barato y rápido.
+  Future<void> actualizarPreferenciasNotificaciones(
+    Map<String, bool> preferencias,
+  ) async {
+    final usuarioActual = state.usuario.value;
+    if (usuarioActual == null) return;
+    try {
+      final actualizado =
+          await _repository.actualizarPreferenciasNotificaciones(
+        usuarioActual.id,
+        preferencias,
+      );
+      state = state.copyWith(usuario: AsyncValue.data(actualizado));
+    } catch (error, stackTrace) {
+      state = state.copyWith(usuario: AsyncValue.error(error, stackTrace));
+      rethrow;
+    }
+  }
+
   /// Guarda la nueva contraseña y cierra la sesión temporal de recovery.
   Future<void> restablecerPassword(String nuevaPassword) async {
     await _repository.restablecerPassword(nuevaPassword);
