@@ -433,7 +433,10 @@ Extiende `auth.users` de Supabase. Almacena datos públicos y preferencias.
     *   `creado_en` TIMESTAMPTZ (NOT NULL, DEFAULT now())
     *   `actualizado_en` TIMESTAMPTZ (NOT NULL, DEFAULT now())
 *   **Relaciones:** FK `id` references `auth.users(id)` ON DELETE CASCADE.
-*   **Privacidad por GRANT columnar:** Tras `20260430130000_hardening_privacidad_perfiles`, la tabla aplica "RLS + GRANT columnar". `email`, `ciudad`, `preferencias`, `certificacion_sanitaria`, `alergenos`, `preferencias_notificaciones`, `latitud_predeterminada`, `longitud_predeterminada` y `actualizado_en` no son `SELECT`-ables vía consulta directa por `authenticated`; el propio usuario los obtiene mediante la RPC `obtener_mi_perfil`.
+*   **Privacidad por GRANT columnar:** La tabla aplica "RLS + GRANT columnar" (migración `20260430130000_hardening_privacidad_perfiles` y posteriores). El conjunto **efectivo** de columnas con `SELECT` directo para `authenticated` tras todas las migraciones es:
+    *   **Públicas vía consulta directa:** `id`, `nombre`, `url_avatar`, `valoracion_media`, `numero_valoraciones`, `ciudad` (añadido en `perfil_publico.sql`), `bio` (`perfil_publico.sql`), `creado_en` (`perfil_publico.sql`), `alergenos` (`alergenos_perfiles.sql`) y `preferencias_notificaciones` (`preferencias_notificaciones.sql`).
+    *   **Privadas (sin GRANT de SELECT):** `email`, `preferencias`, `certificacion_sanitaria`, `es_moderador`, `latitud_predeterminada`, `longitud_predeterminada`, `actualizado_en`. Solo se obtienen mediante la RPC `obtener_mi_perfil` cuando son del propio usuario.
+*   **Carencia conocida:** La intención de diseño en la migración base era mantener `ciudad`, `bio`, `alergenos` y `preferencias_notificaciones` privadas, pero las migraciones posteriores ampliaron el SELECT columnar para alimentar la pantalla de perfil público y los filtros del feed por alérgenos sin pasar por una RPC adicional. Hoy esos datos son consultables por **cualquier usuario autenticado** sobre cualquier `id`. Ver sección 9.
 
 ### `public.productos`
 Las ofertas publicadas en la plataforma.
@@ -939,23 +942,26 @@ classDiagram
 
     class SolicitudOfertaModel {
         +String id
-        +String tipo
+        +String tipoSolicitud
         +String estado
         +String productoId
         +String? productoOfrecidoId
-        +String solicitanteId
-        +String propietarioId
-        +int cantidad
-        +int? cantidadOfrecida
+        +String tituloProducto
+        +String nombreContraparte
         +String? mensaje
         +DateTime creadoEn
-        +DateTime? respondidoEn
+        +bool esEntrante
+        +int cantidad
+        +int? cantidadOfrecida
+        +String urlImagenProducto
+        +double? precioUnitario
     }
 
     class PanelPedidosModel {
-        +List~SolicitudOfertaModel~ solicitudesEntrantes
-        +List~SolicitudOfertaModel~ solicitudesSalientes
+        +List~SolicitudOfertaModel~ solicitudesRecibidas
+        +List~SolicitudOfertaModel~ solicitudesEnviadas
         +List~TransaccionModel~ transacciones
+        +bool isEmpty
     }
 
     class ConversacionModel {
@@ -1081,14 +1087,20 @@ classDiagram
         +reportar(String tipoObjetivo, String objetivoId, String motivo) Future~void~
     }
 
-    class AutenticacionRepository {
+    class AuthRepository {
         <<interface>>
-        +iniciarSesion(String email, String password) Future~UsuarioModel~
-        +registrar(String email, String password, String nombre) Future~UsuarioModel~
+        +iniciarSesion(String correo, String password) Future~UsuarioModel~
+        +registrarUsuario(String nombre, String correo, String password) Future~UsuarioModel~
         +cerrarSesion() Future~void~
-        +enviarEmailRecuperacion(String email) Future~void~
-        +obtenerMiPerfil() Future~UsuarioModel~
-        +actualizarPerfil(UsuarioModel) Future~void~
+        +obtenerUsuarioActual() Future~UsuarioModel?~
+        +actualizarPerfil(UsuarioModel) Future~UsuarioModel~
+        +subirAvatar(String usuarioId, File imagen) Future~String~
+        +actualizarUbicacionPredeterminada(UsuarioModel) Future~UsuarioModel~
+        +actualizarPreferenciasNotificaciones(String usuarioId, Map~String,bool~) Future~UsuarioModel~
+        +enviarEmailRecuperacion(String correo) Future~void~
+        +verificarRecuperacionPassword(String tokenHash) Future~void~
+        +verificarCodigoRecuperacionPassword(String codigo) Future~void~
+        +restablecerPassword(String nuevaPassword) Future~void~
     }
 
     class SupabaseProductoRepository
@@ -1099,7 +1111,7 @@ classDiagram
     class SupabaseNotificacionRepository
     class SupabaseValoracionRepository
     class SupabaseReporteRepository
-    class SupabaseAutenticacionRepository
+    class SupabaseAuthRepository
 
     ProductoRepository <|.. SupabaseProductoRepository
     SolicitudOfertaRepository <|.. SupabaseSolicitudOfertaRepository
@@ -1109,7 +1121,7 @@ classDiagram
     NotificacionRepository <|.. SupabaseNotificacionRepository
     ValoracionRepository <|.. SupabaseValoracionRepository
     ReporteRepository <|.. SupabaseReporteRepository
-    AutenticacionRepository <|.. SupabaseAutenticacionRepository
+    AuthRepository <|.. SupabaseAuthRepository
 ```
 
 **Cómo leer estos diagramas:**
@@ -1121,16 +1133,16 @@ classDiagram
 Como no hay un backend REST tradicional intermedio, la "API" son las llamadas directas a las tablas protegidas por RLS, apoyadas por funciones RPC para operaciones complejas.
 
 **RPCs (Endpoints transaccionales personalizados):**
-*   `POST /rpc/obtener_mi_perfil`: (Auth requerido). Devuelve los datos completos del perfil del usuario autenticado, incluyendo los campos privados (`email`, `bio`, `alergenos`, `preferencias_notificaciones`, `pedidos_completados`, `latitud_predeterminada`, `longitud_predeterminada`, `certificacion_sanitaria`) que la RLS de la tabla `perfiles` no expone vía consulta directa. Es el único punto de acceso del cliente a su información privada.
+*   `POST /rpc/obtener_mi_perfil`: (Auth requerido). Devuelve los datos completos del perfil del usuario autenticado, incluyendo los campos verdaderamente privados (`email`, `preferencias`, `certificacion_sanitaria`, `latitud_predeterminada`, `longitud_predeterminada`) y métricas calculadas como `pedidos_completados`. Es el único punto de acceso del cliente a su información privada. **Nota:** `bio`, `ciudad`, `alergenos` y `preferencias_notificaciones` también vienen aquí por comodidad, pero hoy son leíbles vía SELECT directo por cualquier usuario autenticado (ver sección 4 y 9).
 *   `POST /rpc/obtener_perfil_publico(p_usuario_id)`: (Auth requerido). Devuelve el shape público de cualquier otro usuario (nombre, avatar, ciudad, bio, valoraciones, `pedidos_completados`, `creado_en`). `pedidos_completados` cuenta transacciones donde el usuario es propietario y estado `completada`; al estar dentro de `security definer` puede contar transacciones que la RLS no le dejaría leer directamente.
 *   `POST /rpc/crear_solicitud_oferta(producto_id, tipo, producto_ofrecido_id?, mensaje?, cantidad=1, cantidad_ofrecida?)`: (Auth requerido). Crea una solicitud, inicia un chat y lanza una notificación atómicamente. Soporta cantidad de raciones y, en intercambios, cantidad ofrecida.
 *   `POST /rpc/cancelar_solicitud_oferta`: (Solo Solicitante). Cancela una solicitud que sigue en estado pendiente.
 *   `POST /rpc/aceptar_solicitud_oferta`: (Solo Propietario). Acepta la petición, genera la `transaccion` final, **decrementa raciones** y pasa el producto a `agotado` cuando se quedan en cero. Auto-deniega las solicitudes pendientes que excedan ahora el stock disponible.
 *   `POST /rpc/denegar_solicitud_oferta`: (Solo Propietario). Actualiza la solicitud a estado "denegada".
 *   `POST /rpc/cancelar_transaccion`: (Cualquier Participante). Cancela una transacción aceptada, **restituye raciones** y devuelve los productos a estado `disponible` si estaban en `agotado`.
-*   `POST /rpc/completar_transaccion`: (Comprador o Vendedor). Marca la transacción como concluida, habilitando la valoración. Ya no toca el estado de los productos: el stock se descuenta al aceptar, no al completar.
+*   `POST /rpc/completar_transaccion`: (Cualquier Participante). Marca la transacción como concluida, habilitando la valoración. Ya no toca el estado de los productos: el stock se descuenta al aceptar, no al completar.
 *   `POST /rpc/eliminar_producto(producto_id)`: (Solo Propietario). Borrado híbrido: si el plato no tiene actividad asociada (sin solicitudes, transacciones, valoraciones ni conversaciones), hace DELETE real y devuelve `true` para que el cliente limpie los blobs de Storage. Si tiene actividad, hace soft delete (`estado='cancelado'`) y devuelve `false`. Se ejecuta con `security definer` para esquivar el trigger `validar_transicion_estado_producto`.
-*   `POST /rpc/obtener_ubicacion_exacta_producto`: (Comprador o Vendedor con transacción aceptada). Devuelve las coordenadas reales, puenteando el nivel de privacidad inicial.
+*   `POST /rpc/obtener_ubicacion_exacta_producto`: (Propietario del producto o participante de una transacción `aceptada`/`completada`). Devuelve las coordenadas exactas, puenteando el nivel de privacidad inicial.
 *   `POST /rpc/obtener_productos_cercanos(lat, lng, radio_km, limite=50)`: (Auth requerido). Motor principal de búsqueda. Devuelve productos disponibles dentro del radio incluyendo `categoria`, `etiquetas`, `alergenos`, `sin_alergenos_declarados`, `raciones_totales`, `raciones_disponibles`, perfil del propietario y lista de imágenes. Ordena por distancia ascendente y, en empate, por `creado_en` descendente.
 
 **Triggers de base de datos relevantes:**
@@ -1157,19 +1169,19 @@ Como no hay un backend REST tradicional intermedio, la "API" son las llamadas di
 5.  **Negociación e Intercambio:**
     *   *Solicitud:* Usuario B encuentra un plato del Usuario A y envía una solicitud de compra/intercambio, eligiendo cuántas raciones quiere y, en intercambio, qué plato propio ofrece y cuántas raciones.
     *   *Chat:* Se abre una `conversación` en tiempo real.
-    *   *Aceptación:* Usuario A pulsa "Aceptar". El backend transacciona: aprueba la solicitud, decrementa raciones, marca el producto como `agotado` si llegan a cero, auto-deniega solicitudes pendientes que excedan ahora el stock y aparta el inventario. Se revela la dirección exacta a Usuario B.
+    *   *Aceptación:* Usuario A pulsa "Aceptar". El backend transacciona: aprueba la solicitud, decrementa raciones, marca el producto como `agotado` si llegan a cero, auto-deniega solicitudes pendientes que excedan ahora el stock y aparta el inventario. Se desbloquea la consulta de las coordenadas exactas del plato a Usuario B mediante la RPC `obtener_ubicacion_exacta_producto`.
     *   *Cierre:* Tras el intercambio físico, un usuario marca la transacción como completada.
 6.  **Feedback:** Se habilita la inserción de un registro en `valoraciones`. Un trigger asíncrono (`recalcular_valoracion_perfil`) re-calcula la media del usuario instantáneamente.
 7.  **Edición y eliminación del catálogo:** El propietario puede editar las propiedades modificables del plato (categoría, etiquetas, alérgenos, declaración de seguridad, raciones totales/disponibles) o eliminarlo via `eliminar_producto`, que decide entre DELETE real y soft delete según haya o no actividad asociada.
-8.  **Notificaciones realtime:** Cada RPC inserta filas en `notificaciones` con payload normalizado. El cliente está suscrito vía Supabase Realtime y enruta cada notificación a chat/detalle/pedidos según `tipo` y los IDs del JSONB `datos`. Las preferencias por categoría del usuario filtran qué tipos suman al badge y aparecen en bandeja.
+8.  **Notificaciones realtime:** Cada RPC transaccional inserta filas en `notificaciones` con payload normalizado. El cliente está suscrito vía Supabase Realtime y, al entrar en el centro de notificaciones, marca **todas** como leídas de golpe mediante `NotificacionRepository.marcarTodasLeidas(usuarioId)`, que ejecuta un `UPDATE` directo sobre la tabla. El toque sobre una notificación enruta al detalle del pedido (`RutasApp.pedidoPorSolicitud(...)`) o al detalle de la transacción (`RutasApp.transaccionDetalle(...)`) según `tipo` y los IDs del JSONB `datos`; el chat no se abre directamente desde aquí. Las preferencias por categoría del usuario filtran qué tipos suman al badge y aparecen en bandeja.
 
 ## 7. Decisiones técnicas relevantes
 *   **Delegación de complejidad en PostgreSQL:** En lugar de crear un backend intermedio que verifique la atomicidad al crear transacciones, esta se asegura usando lógica PL/pgSQL (`SELECT ... FOR UPDATE`, manejo estricto de bloqueos en `aceptar_solicitud_oferta`). Esto reduce los puntos de falla pero acopla el sistema al motor de BD.
 *   **Polimorfismo en Notificaciones y Reportes:** La tabla `reportes` tiene un `objetivo_id` UUID genérico y un `tipo_objetivo` (producto, perfil, mensaje). Es una solución de compromiso temporal, aceptada para un MVP para no multiplicar tablas. Las `notificaciones` usan un JSONB `datos` estandarizado por tipo (`solicitud_id`, `producto_id`, `conversacion_id`, `transaccion_id`) tras la migración de normalización.
 *   **Separación de Coordenadas:** Existiendo un alto riesgo para los usuarios (que operan desde sus casas), almacenar `latitud_publica` intencionadamente "difuminada" y usar `latitud_exacta` protegida por RLS es una decisión de privacidad de diseño brillante.
-*   **Privacidad de perfiles vía GRANT por columna + RPC:** La tabla `perfiles` aplica un patrón "RLS + GRANTs columnares" en lugar de una RLS amplia: se hace `revoke all` y luego `grant select (columnas_publicas)` a `authenticated`, dejando fuera del SELECT directo los campos sensibles (`email`, `ciudad`, `preferencias`, `alergenos`, `preferencias_notificaciones`, `certificacion_sanitaria`, ubicación predeterminada). Para que el propio usuario pueda leer su perfil completo se expone la RPC `obtener_mi_perfil` (`security definer`). Esto evita filtraciones accidentales si una consulta del cliente no aplica el filtro `id = auth.uid()`. La pantalla de perfil público usa otra RPC equivalente (`obtener_perfil_publico`) que solo expone los campos realmente públicos más métricas agregadas (`pedidos_completados`).
+*   **Privacidad de perfiles vía GRANT por columna + RPC:** La tabla `perfiles` aplica un patrón "RLS + GRANTs columnares" en lugar de una RLS amplia: se hace `revoke all` y luego `grant select (...)` a `authenticated` solo sobre las columnas consideradas públicas. Tras todas las migraciones, las **realmente** privadas son `email`, `preferencias`, `certificacion_sanitaria`, `es_moderador`, `latitud_predeterminada`, `longitud_predeterminada` y `actualizado_en`; los campos `ciudad`, `bio`, `alergenos` y `preferencias_notificaciones` quedaron en SELECT directo por necesidades posteriores (perfil público y filtros de feed por alérgenos), aunque originalmente la migración base los pensó como privados. La RPC `obtener_mi_perfil` (`security definer`) sigue siendo el único punto que entrega los campos realmente privados al propio usuario; la pantalla de perfil público usa la RPC equivalente `obtener_perfil_publico`, que añade además la métrica agregada `pedidos_completados`.
 *   **Marcar mensajes como leídos con GRANT escalpelo:** La policy de UPDATE sobre `mensajes` deja a un participante actualizar los mensajes ajenos de su conversación, pero el GRANT está restringido a la columna `leido_en` (`grant update (leido_en) on public.mensajes to authenticated`). Así, aunque la RLS permita la fila, PostgreSQL bloquea cualquier intento de alterar `contenido` o `remitente_id` antes incluso de evaluar la policy. La RLS controla *qué filas*, los GRANT controlan *qué columnas*; ambos son necesarios.
-*   **Stock por raciones (en lugar de bloqueo binario):** La sustitución del estado `reservado` por contadores `raciones_totales`/`raciones_disponibles` permite que un producto sirva a varios compradores simultáneamente y que las solicitudes pendientes que aún caben sigan vivas tras aceptar una. La RPC de aceptación gestiona la auto-denegación selectiva: solo se denegan las que ahora exceden el stock restante.
+*   **Stock por raciones (en lugar de bloqueo binario):** La sustitución del estado `reservado` por contadores `raciones_totales`/`raciones_disponibles` permite que un producto sirva a varios solicitantes simultáneamente y que las solicitudes pendientes que aún caben sigan vivas tras aceptar una. La RPC de aceptación gestiona la auto-denegación selectiva: solo se denegan las que ahora exceden el stock restante.
 *   **Borrado híbrido (`eliminar_producto`):** En vez de imponer DELETE o soft delete por igual, la RPC inspecciona si hay actividad asociada y elige por sí misma. El cliente recibe un booleano que le indica si debe limpiar también los blobs de Storage.
 *   **Tema visual persistido sin "flash":** El arranque carga `SharedPreferences` antes de `runApp` y sobreescribe `preferenciasLocalesProvider`, de modo que `temaProvider` se inicializa de forma síncrona con el tema elegido por el usuario. En web, además, `aplicarThemeColor` sincroniza el meta `theme-color` de la PWA con el `cream` del tema activo, evitando el corte visual entre la barra del navegador y el `Scaffold`.
 *   **FAB de asistente IA aislado:** El componente `BotonIAGlobal` vive en `core/widgets/ui/` pero se monta solamente en la pantalla de Inicio (no en el shell), por lo que no compite con el FAB '+' del bottom nav. El cliente HTTP (`IAService`) está completamente desacoplado del resto de la lógica de Supabase y los errores de red se aíslan en su propio SnackBar.
@@ -1180,6 +1192,7 @@ Como no hay un backend REST tradicional intermedio, la "API" son las llamadas di
 *   **Pendiente:** Despliegues continuos para las tiendas móviles, implementación de pasarelas de pago digitales si se desea escalar las "ventas" más allá del efectivo en mano, y pulido general de UI/UX a nivel granular.
 
 ## 9. Carencias y puntos de mejora
+*   **Fuga de privacidad de perfil por GRANT columnar:** La intención original de la migración `hardening_privacidad_perfiles` era mantener `ciudad`, `bio`, `alergenos` y `preferencias_notificaciones` fuera del SELECT directo de la tabla `perfiles`, accesibles solo a través de RPCs (`obtener_mi_perfil`, `obtener_perfil_publico`). Migraciones posteriores ampliaron el SELECT columnar para alimentar la pantalla de perfil público y los filtros del feed por alérgenos, dejando esos cuatro campos consultables por cualquier usuario autenticado sobre cualquier `id`. Hay que decidir si se acepta como diseño efectivo (todos esos campos son públicos) o si se revierten los GRANTs y se centraliza el acceso en las RPCs.
 *   **Deuda técnica en Paginación:** El endpoint principal `obtener_productos_cercanos` recibe un parámetro de `limite` (limit = 50 por defecto), pero carece de un parámetro `offset` o soporte de paginación basada en cursor (Keyset pagination). A medida que crezca el volumen de productos, la app solo mostrará los 50 más cercanos, pero no permitirá "cargar más".
 *   **Escalabilidad de Imágenes:** Actualmente, se suben fotos directamente a Supabase Storage y se obtienen las URLs estáticas. No hay evidencia de uso de compresión previa al subido (desde Flutter) o de un redimensionador dinámico (Image Transformation) en la descarga. Las imágenes muy pesadas lastrarán el consumo de datos móviles y la UI de los feeds (ListView).
 *   **Riesgo y cascada destructiva en Auth (`ON DELETE CASCADE`):**
@@ -1420,8 +1433,12 @@ A continuación se listan las reglas de negocio explícitas identificadas en las
     1.  Al iniciar sesión, el cliente abre una suscripción Supabase Realtime sobre `public.notificaciones` filtrada por `usuario_id = auth.uid()`.
     2.  Las RPCs transaccionales (`crear_solicitud_oferta`, `aceptar_solicitud_oferta`, `denegar_solicitud_oferta`, `cancelar_solicitud_oferta`, `cancelar_transaccion`) insertan filas en `notificaciones` con un `tipo` y un `datos` JSONB normalizado que contiene los identificadores de las entidades relacionadas (`solicitud_id`, `producto_id`, `conversacion_id`, `transaccion_id` cuando aplica). Las notificaciones de auto-denegación añaden además `producto_ofrecido_id`.
     3.  Cada nueva inserción llega en streaming al cliente, que aplica el filtro de preferencias por categoría (`pedidos`, `mensajes`, `valoraciones`) leído desde `usuario.preferenciasNotificaciones`, recalcula el contador de no leídas y lo pinta como badge dinámico en el AppBar (rediseñado como `ConsumerWidget`).
-    4.  Al abrir el centro de notificaciones, el cliente lista las filas ordenadas por `creado_en DESC` y, al pulsar una notificación, decide la ruta destino según el `tipo` (chat, detalle de producto, panel de pedidos) leyendo los identificadores del campo `datos`.
-    5.  Tras navegar, la notificación se marca como leída actualizando `leido_en = now()`, lo que retira el badge.
+    4.  Al abrir el centro de notificaciones (`/notificaciones`), el `initState` de la pantalla dispara `marcarTodasLeidas(usuarioId)` que pone `leido_en = now()` en todas las no leídas del usuario en una sola operación. Las que entren por Realtime mientras la pantalla está abierta conservan el punto terracotta hasta la siguiente visita.
+    5.  Al pulsar una notificación, el router decide el destino por `tipo` con un fallback robusto por presencia de IDs:
+        *   `solicitud_oferta_creada` / `denegada` / `auto_denegada` / `cancelada` → `RutasApp.pedidoPorSolicitud(solicitud_id)`.
+        *   `solicitud_oferta_aceptada` / `transaccion_cancelada` → `RutasApp.transaccionDetalle(transaccion_id)`.
+        *   Sin coincidencia exacta, se cae al primer ID disponible (`transaccion_id` → `solicitud_id` → `producto_id`).
+    6.  La pantalla destino (detalle de pedido o transacción) es donde el usuario puede *actuar* (aceptar, denegar, completar, cancelar) y donde aparece el acceso al chat en el footer; por eso el chat **no** se abre directamente desde la notificación.
 *   **Excepciones / Casos de error:**
     *   Si la suscripción Realtime se interrumpe (red caída), el cliente recompone el contador con un `SELECT` directo al recuperar conexión.
     *   Si el `tipo` o el contenido del campo `datos` son desconocidos para una versión antigua del cliente, la notificación se muestra pero el toque no enruta a ningún destino para evitar navegaciones erróneas.
@@ -1430,7 +1447,7 @@ A continuación se listan las reglas de negocio explícitas identificadas en las
 *   **Actores implicados:** Usuario Autenticado, Sistema.
 *   **Precondiciones:** El usuario debe estar autenticado.
 *   **Pasos:**
-    1.  El cliente carga el perfil completo del usuario invocando la RPC `obtener_mi_perfil` (necesaria porque los GRANT por columna sobre `perfiles` ocultan campos privados como `email`, `bio`, `alergenos`, `preferencias_notificaciones` o las coordenadas predeterminadas).
+    1.  El cliente carga el perfil completo del usuario invocando la RPC `obtener_mi_perfil` (necesaria porque los GRANT por columna sobre `perfiles` ocultan los campos verdaderamente privados como `email`, `preferencias`, `certificacion_sanitaria` o las coordenadas predeterminadas; `bio`, `ciudad`, `alergenos` y `preferencias_notificaciones` también llegan por aquí por comodidad, aunque hoy son leíbles vía SELECT directo).
     2.  El usuario edita los campos modificables (nombre, ciudad, bio, preferencias, alérgenos personales, ubicación predeterminada, certificación sanitaria) y opcionalmente selecciona una imagen nueva de avatar.
     3.  Si hay imagen, el cliente la sube al bucket `avatares` dentro de la carpeta `<uuid_usuario>/`. Las policies de `storage.objects` permiten INSERT y UPDATE únicamente a esa carpeta, garantizando aislamiento entre usuarios. La URL pública resultante se asigna a `url_avatar`.
     4.  El cliente lanza un `UPDATE` sobre `public.perfiles` con los nuevos valores. La RLS de la tabla limita la actualización al propio `id = auth.uid()` y los GRANT columnares restringen qué columnas son modificables (`nombre`, `url_avatar`, `ciudad`, `bio`, `preferencias`, `alergenos`, `preferencias_notificaciones`, `certificacion_sanitaria`, `latitud_predeterminada`, `longitud_predeterminada`).

@@ -62,6 +62,7 @@ prototipo-funciones/
 !/documentacion/
 !/documentacion/divergencias_diseno_backend.md
 !/documentacion/documentacion_tecnica.md
+!/documentacion/documentacion_tecnica.pdf
 
 # Residuos de symlinks de WSL (creados por scripts/run_local.sh).
 /build.reparsepoint.bak
