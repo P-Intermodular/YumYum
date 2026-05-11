@@ -54,6 +54,9 @@ prototipo-figma/
 prototipo-funciones/
 .render/
 
+# Configuración local de Codex CLI (MCP, etc.)
+.codex/
+
 # Large documentation exports stay local; keep the backend divergence note versioned.
 /documentacion/*
 !/documentacion/
