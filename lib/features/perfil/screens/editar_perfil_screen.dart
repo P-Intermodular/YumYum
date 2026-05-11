@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/alergenos_ue.dart';
 import '../../../core/constants/etiquetas_dieteticas.dart';
 import '../../../core/feedback/app_feedback.dart';
+import '../../../core/preferencias/avatar_preset_provider.dart';
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/avatar_usuario.dart';
 import '../../../core/widgets/ui/label_seccion.dart';
@@ -47,7 +47,9 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
 
   final Set<String> _preferencias = {};
   final Set<String> _alergenos = {};
-  File? _nuevoAvatar;
+  Uint8List? _nuevoAvatarBytes;
+  String? _nuevoAvatarExtension;
+  String? _avatarPresetLocal;
 
   /// Marca explícita para borrar el avatar al guardar (vs. no tocar nada).
   /// Cuando es true se ignora `_nuevoAvatar`.
@@ -58,6 +60,10 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
     super.initState();
     final usuario = ref.read(autenticacionProvider).value;
     if (usuario == null) return;
+
+    // Carga inicial del preset local (no bloqueante, es sync).
+    // Si el usuario cambia el preset en esta pantalla, lo aplicamos al vuelo.
+    _avatarPresetLocal = ref.read(avatarPresetProvider);
 
     _nombreController.text = usuario.nombre;
     _ciudadController.text = usuario.ciudad ?? '';
@@ -106,6 +112,15 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
+                leading: Icon(Icons.person_outline_rounded, color: colors.ink),
+                title: const Text('Elegir avatar predefinido'),
+                subtitle: const Text('Sin subir foto (recomendado en web)'),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  await _abrirSelectorAvatarPreset();
+                },
+              ),
+              ListTile(
                 leading: Icon(Icons.photo_camera_outlined, color: colors.ink),
                 title: const Text('Tomar foto'),
                 onTap: () {
@@ -134,7 +149,8 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
                   onTap: () {
                     Navigator.pop(sheetContext);
                     setState(() {
-                      _nuevoAvatar = null;
+                      _nuevoAvatarBytes = null;
+                      _nuevoAvatarExtension = null;
                       _quitarAvatar = true;
                     });
                   },
@@ -146,8 +162,112 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
     );
   }
 
+  Future<void> _abrirSelectorAvatarPreset() async {
+    final colors = context.yumColors;
+    final actual = _avatarPresetLocal ?? ref.read(avatarPresetProvider);
+    const presets = <({String key, String label, IconData icon})>[
+      (key: 'chef', label: 'Chef', icon: Icons.restaurant_rounded),
+      (key: 'leaf', label: 'Eco', icon: Icons.eco_rounded),
+      (key: 'heart', label: 'Corazón', icon: Icons.favorite_rounded),
+      (key: 'star', label: 'Estrella', icon: Icons.star_rounded),
+      (key: 'spark', label: 'Spark', icon: Icons.auto_awesome_rounded),
+    ];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          decoration: BoxDecoration(
+            color: colors.paper,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: colors.line),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.line,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Elige un avatar predefinido',
+                style: TextStyle(
+                  color: colors.ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _PillPresetAvatar(
+                    label: 'Iniciales',
+                    icon: Icons.text_fields_rounded,
+                    seleccionado: actual == null,
+                    onTap: () async {
+                      await ref.read(avatarPresetProvider.notifier).seleccionar(null);
+                      if (!mounted) return;
+                      setState(() => _avatarPresetLocal = null);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                  for (final p in presets)
+                    _PillPresetAvatar(
+                      label: p.label,
+                      icon: p.icon,
+                      seleccionado: actual == p.key,
+                      onTap: () async {
+                        await ref
+                            .read(avatarPresetProvider.notifier)
+                            .seleccionar(p.key);
+                        if (!mounted) return;
+                        setState(() {
+                          _avatarPresetLocal = p.key;
+                          // Si selecciona preset, no subimos imagen.
+                          _nuevoAvatarBytes = null;
+                          _nuevoAvatarExtension = null;
+                          _quitarAvatar = false;
+                        });
+                        Navigator.pop(sheetContext);
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _seleccionarImagen(ImageSource source) async {
     try {
+      // `image_picker` en web no soporta correctamente `ImageSource.camera`
+      // en todos los navegadores. Evitamos el crash y damos fallback.
+      if (kIsWeb && source == ImageSource.camera) {
+        if (mounted) {
+          mostrarError(
+            context,
+            Exception('En web, “Tomar foto” no está soportado. Usa “Galería”.'),
+          );
+        }
+        return;
+      }
+
       final imagen = await _picker.pickImage(
         source: source,
         maxWidth: 800,
@@ -155,9 +275,17 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
         imageQuality: 85,
       );
       if (imagen == null || !mounted) return;
+      final bytes = await imagen.readAsBytes();
+      if (!mounted) return;
+
+      // En web evitamos depender de `name/path` (pueden lanzar Unsupported).
+      const ext = 'jpg';
       setState(() {
-        _nuevoAvatar = File(imagen.path);
+        _nuevoAvatarBytes = bytes;
+        _nuevoAvatarExtension = ext;
         _quitarAvatar = false;
+        // Si elige una imagen real, dejamos el preset como estaba (solo aplica
+        // cuando no hay URL/imagen).
       });
     } catch (error) {
       if (mounted) mostrarError(context, error);
@@ -176,7 +304,8 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
             bio: _bioController.text,
             preferencias: _preferencias.toList(),
             alergenos: _alergenos.toList(),
-            nuevoAvatar: _nuevoAvatar,
+            nuevoAvatarBytes: _nuevoAvatarBytes,
+            nuevoAvatarExtension: _nuevoAvatarExtension,
             quitarAvatar: _quitarAvatar,
           );
       if (!mounted) return;
@@ -193,6 +322,7 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
   Widget build(BuildContext context) {
     final usuario = ref.watch(autenticacionProvider).value;
     final cargando = ref.watch(editarPerfilControllerProvider).isLoading;
+    final preset = _avatarPresetLocal ?? ref.watch(avatarPresetProvider);
 
     if (usuario == null) {
       return const Scaffold(
@@ -225,10 +355,11 @@ class _EditarPerfilScreenState extends ConsumerState<EditarPerfilScreen> {
                 Center(
                   child: _AvatarEditable(
                     usuario: usuario,
-                    nuevoAvatar: _nuevoAvatar,
+                    nuevoAvatarBytes: _nuevoAvatarBytes,
                     quitarAvatar: _quitarAvatar,
+                    preset: preset,
                     onTap: () => _abrirSheetAvatar(
-                      _nuevoAvatar != null ||
+                      _nuevoAvatarBytes != null ||
                           (!_quitarAvatar &&
                               usuario.urlImagenPerfil.isNotEmpty),
                     ),
@@ -396,14 +527,16 @@ class _BotonGuardarSutil extends StatelessWidget {
 
 class _AvatarEditable extends StatelessWidget {
   final dynamic usuario;
-  final File? nuevoAvatar;
+  final Uint8List? nuevoAvatarBytes;
   final bool quitarAvatar;
+  final String? preset;
   final VoidCallback onTap;
 
   const _AvatarEditable({
     required this.usuario,
-    required this.nuevoAvatar,
+    required this.nuevoAvatarBytes,
     required this.quitarAvatar,
+    required this.preset,
     required this.onTap,
   });
 
@@ -421,15 +554,27 @@ class _AvatarEditable extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: colors.line, width: 1.5),
           ),
-          child: nuevoAvatar != null
-              ? CircleAvatar(
-                  radius: 48,
-                  backgroundImage: FileImage(nuevoAvatar!),
+          child: nuevoAvatarBytes != null
+              ? ClipOval(
+                  child: Image.memory(
+                    nuevoAvatarBytes!,
+                    width: 96,
+                    height: 96,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => AvatarUsuario(
+                      nombre: usuario.nombre as String,
+                      identificadorColor: usuario.id as String,
+                      urlImagen: urlVigente,
+                      preset: preset,
+                      radius: 48,
+                    ),
+                  ),
                 )
               : AvatarUsuario(
                   nombre: usuario.nombre as String,
                   identificadorColor: usuario.id as String,
                   urlImagen: urlVigente,
+                  preset: preset,
                   radius: 48,
                 ),
         ),
@@ -595,6 +740,59 @@ class _ChipSeleccionable extends StatelessWidget {
             fontSize: 12.5,
             fontWeight: activa ? FontWeight.w700 : FontWeight.w500,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PillPresetAvatar extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool seleccionado;
+  final VoidCallback onTap;
+
+  const _PillPresetAvatar({
+    required this.label,
+    required this.icon,
+    required this.seleccionado,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: seleccionado ? colors.terracotta.withValues(alpha: 0.16) : colors.cream2,
+          border: Border.all(
+            color: seleccionado ? colors.terracotta : colors.line,
+          ),
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: seleccionado ? colors.terracottaDeep : colors.inkSoft,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: colors.ink,
+                fontSize: 13,
+                fontWeight: seleccionado ? FontWeight.w700 : FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );

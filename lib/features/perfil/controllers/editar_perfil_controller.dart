@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -28,7 +28,8 @@ class EditarPerfilController extends Notifier<AsyncValue<void>> {
     required String bio,
     required List<String> preferencias,
     required List<String> alergenos,
-    File? nuevoAvatar,
+    Uint8List? nuevoAvatarBytes,
+    String? nuevoAvatarExtension,
     bool quitarAvatar = false,
   }) async {
     final keepAlive = ref.keepAlive();
@@ -55,8 +56,12 @@ class EditarPerfilController extends Notifier<AsyncValue<void>> {
         // romper avatares cacheados en chats antiguos; lo limpia un job de
         // mantenimiento si hace falta.
         urlAvatar = '';
-      } else if (nuevoAvatar != null) {
-        urlAvatar = await repository.subirAvatar(usuarioActual.id, nuevoAvatar);
+      } else if (nuevoAvatarBytes != null) {
+        urlAvatar = await repository.subirAvatar(
+          usuarioActual.id,
+          nuevoAvatarBytes,
+          extension: (nuevoAvatarExtension ?? 'jpg'),
+        );
       }
 
       final usuarioActualizado = usuarioActual.copyWith(

@@ -9,6 +9,7 @@ class AvatarUsuario extends StatelessWidget {
   final String? urlImagen;
   final String identificadorColor;
   final double radius;
+  final String? preset;
 
   const AvatarUsuario({
     super.key,
@@ -16,6 +17,7 @@ class AvatarUsuario extends StatelessWidget {
     required this.identificadorColor,
     this.urlImagen,
     this.radius = 20,
+    this.preset,
   });
 
   @override
@@ -23,21 +25,40 @@ class AvatarUsuario extends StatelessWidget {
     final color = _colorDesdeIdentificador(identificadorColor);
     final iniciales = _inicialesDesdeNombre(nombre);
     final urlNormalizada = urlImagen?.trim() ?? '';
+    final presetNormalizado = preset?.trim() ?? '';
+    final presetIcon = _iconoDesdePreset(presetNormalizado);
 
     return CircleAvatar(
       radius: radius,
       backgroundColor: color.withValues(alpha: 0.18),
       foregroundImage:
           urlNormalizada.isEmpty ? null : NetworkImage(urlNormalizada),
-      child: Text(
-        iniciales,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: radius * 0.72,
-        ),
-      ),
+      child: presetIcon != null && urlNormalizada.isEmpty
+          ? Icon(
+              presetIcon,
+              color: color,
+              size: radius * 1.15,
+            )
+          : Text(
+              iniciales,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: radius * 0.72,
+              ),
+            ),
     );
+  }
+
+  IconData? _iconoDesdePreset(String preset) {
+    return switch (preset) {
+      'chef' => Icons.restaurant_rounded,
+      'leaf' => Icons.eco_rounded,
+      'heart' => Icons.favorite_rounded,
+      'star' => Icons.star_rounded,
+      'spark' => Icons.auto_awesome_rounded,
+      _ => null,
+    };
   }
 
   String _inicialesDesdeNombre(String nombre) {
