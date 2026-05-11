@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:typed_data';
 import 'package:yumyum/features/auth/domain/entities/usuario_model.dart';
 import 'package:yumyum/features/auth/domain/repositories/auth_repository.dart';
 
@@ -46,7 +47,11 @@ class AuthRepositoryFake implements AuthRepository {
   }
 
   @override
-  Future<String> subirAvatar(String usuarioId, dynamic imagen) {
+  Future<String> subirAvatar(
+    String usuarioId,
+    Uint8List bytes, {
+    required String extension,
+  }) {
     throw UnimplementedError();
   }
 

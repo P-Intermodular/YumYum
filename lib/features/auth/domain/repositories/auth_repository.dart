@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import '../entities/usuario_model.dart';
 
@@ -27,7 +27,11 @@ abstract class AuthRepository {
   Future<UsuarioModel> actualizarPerfil(UsuarioModel usuario);
 
   /// Sube un nuevo avatar para el usuario y devuelve la URL pública.
-  Future<String> subirAvatar(String usuarioId, File imagen);
+  Future<String> subirAvatar(
+    String usuarioId,
+    Uint8List bytes, {
+    required String extension,
+  });
 
   /// Actualiza solo la ubicacion predeterminada del perfil.
   Future<UsuarioModel> actualizarUbicacionPredeterminada(UsuarioModel usuario);

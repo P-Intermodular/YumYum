@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/yum_colors.dart';
 import '../../../core/widgets/avatar_usuario.dart';
+import '../../../core/preferencias/avatar_preset_provider.dart';
 
 /// Cabecera reutilizable del perfil de un usuario (propio o ajeno).
 ///
@@ -11,7 +13,7 @@ import '../../../core/widgets/avatar_usuario.dart';
 ///
 /// El llamador inyecta su botón superior derecho mediante [coverAction]: un
 /// engranaje en mi perfil, una bandera de reportar en perfil ajeno.
-class CabeceraPerfil extends StatelessWidget {
+class CabeceraPerfil extends ConsumerWidget {
   final String usuarioId;
   final String nombre;
   final String urlImagen;
@@ -36,10 +38,11 @@ class CabeceraPerfil extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.yumColors;
     final topPadding = MediaQuery.of(context).padding.top;
     final bioNormalizada = bio?.trim() ?? '';
+    final preset = ref.watch(avatarPresetProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,6 +131,7 @@ class CabeceraPerfil extends StatelessWidget {
                   nombre: nombre,
                   identificadorColor: usuarioId,
                   urlImagen: urlImagen,
+                  preset: preset,
                   radius: 44,
                 ),
               ),

@@ -131,8 +131,13 @@ abstract final class ErrorTraductor {
       return 'El archivo no se encontró.';
     }
 
-    if (mensaje.contains('permission') || mensaje.contains('not allowed')) {
-      return 'No tienes permiso para subir este archivo.';
+    if (mensaje.contains('permission') ||
+        mensaje.contains('not allowed') ||
+        mensaje.contains('row-level security') ||
+        mensaje.contains('rls') ||
+        mensaje.contains('unauthorized') ||
+        error.statusCode == '403') {
+      return 'No tienes permiso para subir este archivo (policy de Storage/RLS).';
     }
 
     return 'Error al subir el archivo. Inténtalo de nuevo.';
