@@ -112,7 +112,7 @@ class _PublicarProductoScreenState
         _productoOriginal = producto;
         _tituloController.text = producto.titulo;
         _descripcionController.text = producto.descripcion;
-        _tipo = producto.tipo;
+        _tipo = TipoOferta.intercambio;
         _precioController.text = producto.precio?.toStringAsFixed(2) ?? '';
         _racionesController.text = producto.racionesTotales.toString();
         _categoria = producto.categoria;
@@ -467,97 +467,19 @@ class _PublicarProductoScreenState
               const SizedBox(height: 18),
               const LabelSeccion(text: 'Tipo de oferta', obligatorio: true),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _BotonTipo(
-                      label: 'Intercambio',
-                      icon: Icons.swap_horiz_rounded,
-                      activo: _tipo == TipoOferta.intercambio,
-                      onTap: () =>
-                          setState(() => _tipo = TipoOferta.intercambio),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _BotonTipo(
-                      label: 'Venta',
-                      icon: Icons.euro_rounded,
-                      activo: _tipo == TipoOferta.venta,
-                      onTap: () => setState(() => _tipo = TipoOferta.venta),
-                    ),
-                  ),
-                ],
-              ),
+              _TipoOfertaFijoIntercambio(),
               const SizedBox(height: 16),
-              if (_tipo == TipoOferta.venta)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const LabelSeccion(
-                            text: 'Precio por ración',
-                            obligatorio: true,
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _precioController,
-                            decoration: _decoracion('4,50'),
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            validator: (v) {
-                              if (_tipo != TipoOferta.venta) return null;
-                              final parsed = double.tryParse(
-                                (v ?? '').replaceAll(',', '.'),
-                              );
-                              if (parsed == null || parsed <= 0) {
-                                return 'Introduce un precio válido';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const LabelSeccion(
-                            text: 'Raciones',
-                            obligatorio: true,
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _racionesController,
-                            decoration: _decoracion('3'),
-                            keyboardType: TextInputType.number,
-                            validator: _validarRaciones,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                )
-              else ...[
-                const LabelSeccion(
-                  text: 'Raciones disponibles',
-                  obligatorio: true,
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _racionesController,
-                  decoration: _decoracion('3'),
-                  keyboardType: TextInputType.number,
-                  validator: _validarRaciones,
-                ),
-              ],
+              const LabelSeccion(
+                text: 'Raciones disponibles',
+                obligatorio: true,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _racionesController,
+                decoration: _decoracion('3'),
+                keyboardType: TextInputType.number,
+                validator: _validarRaciones,
+              ),
               const SizedBox(height: 16),
               const LabelSeccion(text: 'Categoría', obligatorio: true),
               const SizedBox(height: 8),
@@ -1066,6 +988,36 @@ class _BotonTipo extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TipoOfertaFijoIntercambio extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: colors.paper,
+        border: Border.all(color: colors.line),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          Icon(Icons.swap_horiz_rounded, size: 16, color: colors.ink),
+          const SizedBox(width: 8),
+          Text(
+            'Intercambio',
+            style: TextStyle(
+              color: colors.ink,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

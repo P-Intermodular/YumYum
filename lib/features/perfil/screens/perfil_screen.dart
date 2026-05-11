@@ -711,6 +711,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen> {
       ),
     );
   }
+
 }
 
 enum _PerfilTab { platos, valoraciones, datos }
