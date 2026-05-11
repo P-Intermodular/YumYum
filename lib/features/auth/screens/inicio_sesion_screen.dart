@@ -103,16 +103,21 @@ class _InicioSesionScreenState extends ConsumerState<InicioSesionScreen> {
                       // Header con logo
                       Row(
                         children: [
-                          Icon(Icons.restaurant, color: colors.terracotta, size: 28),
-                          const SizedBox(width: 8),
+                          Image.asset(
+                            'assets/images/logo.png',
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(width: 16),
                           Text(
                             'YumYum',
-                            style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 20),
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 40),
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 48),
+                      const SizedBox(height: 96),
 
                       // Titulares
                       Text.rich(
