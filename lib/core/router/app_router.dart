@@ -20,6 +20,7 @@ import '../../features/perfil/screens/editar_ubicacion_perfil_screen.dart';
 import '../../features/perfil/screens/perfil_publico_screen.dart';
 import '../../features/ajustes/screens/ajustes_screen.dart';
 import '../../features/ajustes/screens/preferencias_notificaciones_screen.dart';
+import '../../features/legal/screens/legal_pages.dart';
 import '../../features/producto/screens/publicar_producto_screen.dart';
 import '../../features/producto/screens/detalle_producto_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
@@ -63,6 +64,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RutasApp.recuperarPassword,
         builder: (context, state) => const RecuperarPasswordScreen(),
+      ),
+      GoRoute(
+        path: RutasApp.legal,
+        builder: (context, state) => const AvisoLegalScreen(),
+      ),
+      GoRoute(
+        path: RutasApp.privacidad,
+        builder: (context, state) => const PoliticaPrivacidadScreen(),
+      ),
+      GoRoute(
+        path: RutasApp.terminos,
+        builder: (context, state) => const TerminosCondicionesScreen(),
+      ),
+      GoRoute(
+        path: RutasApp.cookies,
+        builder: (context, state) => const PoliticaCookiesScreen(),
+      ),
+      GoRoute(
+        path: RutasApp.reclamaciones,
+        builder: (context, state) => const HojasReclamacionesScreen(),
+      ),
+      GoRoute(
+        path: RutasApp.odr,
+        builder: (context, state) => const PlataformaOdrScreen(),
       ),
       GoRoute(
         path: RutasApp.restablecerPassword,
@@ -236,6 +261,10 @@ String? resolverRedireccionAutenticacion({
 }) {
   final path = uri.path;
   final esRutaRestablecer = path == RutasApp.restablecerPassword;
+  final esRutaLegal = path == RutasApp.legal ||
+      path == RutasApp.privacidad ||
+      path == RutasApp.terminos ||
+      path == RutasApp.cookies;
 
   if (_tieneParametrosRecuperacion(uri) && !esRutaRestablecer) {
     return _rutaRestablecerPasswordConQuery(uri);
@@ -252,6 +281,9 @@ String? resolverRedireccionAutenticacion({
   if (enRecuperacion) {
     return RutasApp.restablecerPassword;
   }
+
+  // Las rutas legales son neutrales: accesibles con o sin sesión.
+  if (esRutaLegal) return null;
 
   final rutaPublica = RutasApp.esRutaPublica(path);
 

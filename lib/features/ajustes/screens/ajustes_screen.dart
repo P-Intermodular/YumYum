@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/rutas_app.dart';
 import '../../../core/feedback/app_feedback.dart';
@@ -69,6 +70,12 @@ class AjustesScreen extends ConsumerWidget {
                     ref,
                     usuario.correo,
                   ),
+                ),
+                AjustesTile(
+                  icon: Icons.delete_forever_outlined,
+                  label: 'Eliminar mi cuenta',
+                  hint: 'Solo interfaz (pendiente backend)',
+                  onTap: () => _mostrarAvisoDestructivo(context),
                   ultimo: true,
                 ),
               ],
@@ -88,8 +95,41 @@ class AjustesScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             AjustesGrupo(
-              titulo: 'Acerca de',
+              titulo: 'Legal',
               children: [
+                AjustesTile(
+                  icon: Icons.gavel_outlined,
+                  label: 'Aviso legal',
+                  onTap: () => context.push(RutasApp.legal),
+                ),
+                AjustesTile(
+                  icon: Icons.privacy_tip_outlined,
+                  label: 'Política de privacidad',
+                  onTap: () => context.push(RutasApp.privacidad),
+                ),
+                AjustesTile(
+                  icon: Icons.description_outlined,
+                  label: 'Términos y condiciones',
+                  onTap: () => context.push(RutasApp.terminos),
+                ),
+                AjustesTile(
+                  icon: Icons.cookie_outlined,
+                  label: 'Política de cookies',
+                  onTap: () => context.push(RutasApp.cookies),
+                ),
+                AjustesTile(
+                  icon: Icons.receipt_long_outlined,
+                  label: 'Hojas de reclamaciones (Andalucía)',
+                  onTap: () => context.push(RutasApp.reclamaciones),
+                ),
+                AjustesTile(
+                  icon: Icons.open_in_new_rounded,
+                  label: 'Plataforma ODR UE',
+                  onTap: () => _abrirUrlExterna(
+                    context,
+                    Uri.parse('https://ec.europa.eu/consumers/odr'),
+                  ),
+                ),
                 AjustesTile(
                   icon: Icons.info_outline_rounded,
                   label: 'Sobre YumYum',
@@ -119,6 +159,24 @@ class AjustesScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _mostrarAvisoDestructivo(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar mi cuenta'),
+        content: const Text(
+          'Esta acción requiere backend. De momento es solo interfaz.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Entendido'),
+          ),
+        ],
       ),
     );
   }
@@ -327,6 +385,13 @@ class AjustesScreen extends ConsumerWidget {
     await ref.read(autenticacionProvider.notifier).cerrarSesion();
     if (context.mounted) {
       context.go(RutasApp.iniciarSesion);
+    }
+  }
+
+  Future<void> _abrirUrlExterna(BuildContext context, Uri uri) async {
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      mostrarError(context, Exception('No se pudo abrir el enlace.'));
     }
   }
 }

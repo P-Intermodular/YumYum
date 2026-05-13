@@ -24,6 +24,7 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _ocultarPassword = true;
+  bool _aceptaLegal = false;
 
   @override
   void dispose() {
@@ -36,6 +37,13 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
   /// Valida el formulario y delega el registro en [AutenticacionNotifier].
   Future<void> _registrarUsuario() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_aceptaLegal) {
+      mostrarError(
+        context,
+        Exception('Debes aceptar los Términos y la Política de Privacidad.'),
+      );
+      return;
+    }
 
     await ref.read(autenticacionProvider.notifier).registrarUsuario(
           _nombreController.text.trim(),
@@ -141,6 +149,42 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
                             : null,
                       ),
                       const SizedBox(height: 32),
+                      CheckboxListTile(
+                        value: _aceptaLegal,
+                        onChanged: cargando
+                            ? null
+                            : (value) => setState(() => _aceptaLegal = value ?? false),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                        title: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            const Text('He leído y acepto los '),
+                            GestureDetector(
+                              onTap: () => context.push(RutasApp.terminos),
+                              child: Text(
+                                'T&C',
+                                style: TextStyle(
+                                  color: colors.terracotta,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                            const Text(' y la '),
+                            GestureDetector(
+                              onTap: () => context.push(RutasApp.privacidad),
+                              child: Text(
+                                'Política de Privacidad',
+                                style: TextStyle(
+                                  color: colors.terracotta,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       YumButton(
                         text: cargando ? 'Creando cuenta…' : 'Registrarme',
                         fullWidth: true,

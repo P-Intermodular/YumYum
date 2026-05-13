@@ -30,6 +30,8 @@ dependencies:
   # Cliente HTTP para el asistente IA. Requiere un backend Node corriendo
   # en localhost:3000 (fuera de este repo) para que el FAB tenga efecto real.
   http: ^1.2.0
+  url_launcher: ^6.3.2
+  emoji_picker_flutter: ^4.4.0
 
 dev_dependencies:
   flutter_test:

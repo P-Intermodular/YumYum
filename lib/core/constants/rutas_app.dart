@@ -16,6 +16,12 @@ abstract final class RutasApp {
   static const preferenciasNotificaciones = '/ajustes/notificaciones';
   static const recuperarPassword = '/recuperar-password';
   static const restablecerPassword = '/restablecer-password';
+  static const legal = '/legal';
+  static const privacidad = '/privacidad';
+  static const terminos = '/terminos';
+  static const cookies = '/cookies';
+  static const reclamaciones = '/reclamaciones';
+  static const odr = '/odr';
   static const chats = '/chats';
   static const notificaciones = '/notificaciones';
   static const guardados = '/guardados';
@@ -69,6 +75,12 @@ abstract final class RutasApp {
         path == registro ||
         path == recuperarPassword ||
         path == restablecerPassword ||
+        path == legal ||
+        path == privacidad ||
+        path == terminos ||
+        path == cookies ||
+        path == reclamaciones ||
+        path == odr ||
         path == aliasLogin ||
         path == aliasSignup;
   }

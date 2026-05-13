@@ -12,6 +12,7 @@ import 'core/supabase/supabase_config.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/tema_provider.dart';
 import 'core/theme/yum_colors.dart';
+import 'core/widgets/cookies_banner_gate.dart';
 
 /// Punto de entrada de YumYum.
 ///
@@ -73,6 +74,9 @@ class YumYumApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(tema.colores),
       routerConfig: router,
+      builder: (context, child) => CookiesBannerGate(
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }
