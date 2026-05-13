@@ -264,7 +264,9 @@ String? resolverRedireccionAutenticacion({
   final esRutaLegal = path == RutasApp.legal ||
       path == RutasApp.privacidad ||
       path == RutasApp.terminos ||
-      path == RutasApp.cookies;
+      path == RutasApp.cookies ||
+      path == RutasApp.reclamaciones ||
+      path == RutasApp.odr;
 
   if (_tieneParametrosRecuperacion(uri) && !esRutaRestablecer) {
     return _rutaRestablecerPasswordConQuery(uri);

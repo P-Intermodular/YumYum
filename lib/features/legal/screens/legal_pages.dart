@@ -189,12 +189,7 @@ class _LegalScaffold extends StatelessWidget {
               'Plataforma ODR UE: https://ec.europa.eu/consumers/odr',
               style: textTheme.bodySmall,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Hojas de reclamaciones (Andalucía): '
-              'https://www.juntadeandalucia.es/temas/consumo/reclamaciones.html',
-              style: textTheme.bodySmall,
-            ),
+
           ],
         ),
       ),
