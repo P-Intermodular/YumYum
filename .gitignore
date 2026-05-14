@@ -57,12 +57,10 @@ prototipo-funciones/
 # Configuración local de Codex CLI (MCP, etc.)
 .codex/
 
-# Large documentation exports stay local; keep the backend divergence note versioned.
+# Large documentation exports stay local; only the canonical .md is versioned.
 /documentacion/*
 !/documentacion/
-!/documentacion/divergencias_diseno_backend.md
 !/documentacion/documentacion_tecnica.md
-!/documentacion/documentacion_tecnica.pdf
 
 # Residuos de symlinks de WSL (creados por scripts/run_local.sh).
 /build.reparsepoint.bak
