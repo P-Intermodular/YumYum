@@ -13,6 +13,11 @@ final chatControllerProvider =
 );
 
 /// Construye mensajes válidos y delega la persistencia en el repositorio.
+///
+/// Genera un UUID cliente para que el modelo esté completo en memoria
+/// desde el momento del envío, aunque la base de datos sea quien decide el
+/// identificador final persistido. Una vez insertado, el mensaje vuelve a
+/// llegar por el stream Realtime y reemplaza al optimista en la UI.
 class ChatController extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);

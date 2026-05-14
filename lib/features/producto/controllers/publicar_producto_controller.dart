@@ -17,7 +17,16 @@ final publicarProductoControllerProvider =
   PublicarProductoController.new,
 );
 
-/// Construye el producto de dominio y delega su persistencia en el repositorio.
+/// Construye el producto de dominio a partir del estado del formulario
+/// ([DatosPublicacionProducto]) y delega su persistencia en el repositorio.
+///
+/// Se mantiene con [Ref.keepAlive] mientras la operación está en curso para
+/// que la publicación no se cancele si el usuario abandona la pantalla antes
+/// de que termine la subida de imágenes al bucket `imagenes-productos`.
+///
+/// Recibe las coordenadas exactas del usuario y calcula aquí las "públicas"
+/// con un desplazamiento aleatorio antes de persistir, evitando exponer la
+/// posición real en el feed.
 class PublicarProductoController extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);

@@ -8,6 +8,13 @@ import '../../auth/controllers/auth_controller.dart';
 import '../../auth/providers/auth_repository_provider.dart';
 
 /// Controlador responsable de la actualización del perfil de usuario y avatar.
+///
+/// Sube el avatar al bucket `avatares` (carpeta `<auth.uid()>/`) cuando se
+/// proporcionan bytes nuevos, o lo limpia si `quitarAvatar` es `true`, y
+/// persiste el resto de campos editables en `perfiles`. Se mantiene con
+/// [Ref.keepAlive] mientras la operación está en vuelo para que el cambio
+/// se complete aunque el usuario navegue lejos del formulario antes de
+/// recibir la respuesta de Storage.
 final editarPerfilControllerProvider =
     NotifierProvider.autoDispose<EditarPerfilController, AsyncValue<void>>(
   EditarPerfilController.new,

@@ -15,6 +15,16 @@ import '../providers/perfil_providers.dart';
 import '../widgets/cabecera_perfil.dart';
 
 /// Pantalla de perfil del usuario autenticado.
+///
+/// Compone tres bloques verticales:
+/// - [CabeceraPerfil] con avatar, nombre, valoración media agregada (leída
+///   de `valoracion_providers`) y atajos a "Guardados" y editar perfil.
+/// - Lista de productos propios (`misProductosProvider`) bajo la pestaña
+///   "Platos".
+/// - Lista de valoraciones recibidas bajo la pestaña "Valoraciones".
+///
+/// Los datos privados (email, ubicación predeterminada) no se leen aquí
+/// sino en `editar_perfil_screen.dart` vía RPC `obtener_mi_perfil`.
 class PerfilScreen extends ConsumerStatefulWidget {
   const PerfilScreen({super.key});
 

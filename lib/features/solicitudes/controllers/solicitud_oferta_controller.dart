@@ -10,6 +10,13 @@ final solicitudOfertaControllerProvider =
 );
 
 /// Orquesta la aceptación y denegación de solicitudes desde pedidos.
+///
+/// La aceptación delega en la RPC `aceptar_solicitud_oferta`, que es
+/// atómica: crea la transacción asociada, decrementa raciones del producto
+/// y auto-deniega solicitudes competidoras que ya no caben en el stock
+/// restante. Tras cada acción se invalidan en bloque los providers
+/// afectados (pedidos, productos, notificaciones) para que las vistas se
+/// refresquen sin esperar a Realtime.
 class SolicitudOfertaController extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
