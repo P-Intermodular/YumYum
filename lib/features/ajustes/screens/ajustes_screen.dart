@@ -43,7 +43,10 @@ class AjustesScreen extends ConsumerWidget {
       appBar: const YumAppBar(title: 'Ajustes', showBack: true),
       body: YumBackground(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          // El shell usa extendBody:true y la YumBottomNav ocupa ~120 px,
+          // así que el contenido inferior necesita aire suficiente para
+          // no quedar tapado por la barra.
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 140),
           children: [
             _buildHeaderCuenta(context, usuario),
             const SizedBox(height: 18),
