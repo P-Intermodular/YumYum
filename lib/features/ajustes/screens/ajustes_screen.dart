@@ -73,12 +73,6 @@ class AjustesScreen extends ConsumerWidget {
                     ref,
                     usuario.correo,
                   ),
-                ),
-                AjustesTile(
-                  icon: Icons.delete_forever_outlined,
-                  label: 'Eliminar mi cuenta',
-                  hint: 'Solo interfaz (pendiente backend)',
-                  onTap: () => _mostrarAvisoDestructivo(context),
                   ultimo: true,
                 ),
               ],
@@ -162,24 +156,6 @@ class AjustesScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Future<void> _mostrarAvisoDestructivo(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar mi cuenta'),
-        content: const Text(
-          'Esta acción requiere backend. De momento es solo interfaz.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
-          ),
-        ],
       ),
     );
   }
