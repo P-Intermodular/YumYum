@@ -56,10 +56,7 @@ YumYum/
 |
 |-- doc/                            # Documentación auxiliar
 |-- documentacion/                  # Documentación principal del proyecto
-|   |-- documentacion_tecnica.md
-|   |-- estado_tecnico_actual.md
-|   |-- roadmap_tecnico_yumyum.md
-|   `-- roadmap_tfg_acotado.md
+|   `-- documentacion_tecnica.md    # Documento canónico único
 |
 |-- lib/                            # Código fuente de la aplicación Flutter
 |   |-- main.dart                   # Punto de entrada de la app
@@ -72,7 +69,7 @@ YumYum/
 |   |   |-- feedback/               # Helpers para mostrar feedback en UI
 |   |   |-- format/                 # Formateadores compartidos (tiempo relativo, etc.)
 |   |   |-- location/               # Servicios/providers de ubicación
-|   |   |-- preferencias/           # Inyección de SharedPreferences
+|   |   |-- preferencias/           # SharedPreferences y consentimiento de cookies
 |   |   |-- providers_refresher.dart # Helpers para invalidar grupos de providers
 |   |   |-- router/                 # GoRouter y reglas de redirección
 |   |   |-- services/               # Servicios transversales (asistente IA)
@@ -90,6 +87,7 @@ YumYum/
 |   |       |   `-- boton_ia_global.dart
 |   |       |-- yumyum_app_bar.dart # AppBar global con badge de notificaciones
 |   |       |-- avatar_usuario.dart
+|   |       |-- cookies_banner_gate.dart # Banner RGPD persistente sobre todo el árbol
 |   |       `-- selector_ubicacion_mapa.dart
 |   |
 |   `-- features/                   # Módulos organizados por funcionalidad
@@ -126,7 +124,11 @@ YumYum/
 |       |   |                       # alérgenos excluidos, tipo, orden
 |       |   |-- screens/            # Pantalla inicial con productos cercanos
 |       |   `-- widgets/            # Buscador, chips, bottom sheet de filtros,
-|       |                           # hero del feed y cabecera contextual
+|       |                           # hero del feed, cabecera y FAB "volver arriba"
+|       |
+|       |-- legal/                  # Páginas legales (RGPD, cookies, ODR, etc.)
+|       |   `-- screens/            # Aviso legal, privacidad, términos,
+|       |                           # cookies, hojas de reclamaciones, ODR UE
 |       |
 |       |-- mapa/                   # Vista de mapa con filtros propios
 |       |   |-- providers/
@@ -250,8 +252,8 @@ Desde ahí se renderiza `YumYumApp`, que construye un `MaterialApp.router` consu
 *   **`core/router/`:** Configuración de GoRouter. `app_router.dart` define rutas públicas, rutas privadas, `ShellRoute` con navegación principal y redirecciones según autenticación.
 *   **`core/supabase/`:** Configuración e inyección del cliente Supabase. `supabase_config.dart` lee variables de compilación y `supabase_client_provider.dart` expone el cliente al resto de providers.
 *   **`core/theme/`:** Tema visual de la app. Incluye `app_theme.dart` (Material3 + tipografías Inter/Fraunces), `yum_colors.dart` con los dos temas (`huertoModerno` por defecto y `mesaBarrio`), `tema_provider.dart` (persistencia en SharedPreferences) y `theme_color_web.dart`/`theme_color_web_real.dart`/`theme_color_web_stub.dart` (conditional imports para sincronizar el `meta theme-color` de la PWA con el tema activo).
-*   **`core/preferencias/`:** Inyección de `SharedPreferences` mediante `preferenciasLocalesProvider`, sobrescrito en `main.dart`.
-*   **`core/widgets/`:** Widgets reutilizables no ligados a una sola feature, como `YumAppBar`, `YumBackground`, `YumButton`, `YumCard`, `YumBottomNav`, `DishCardItem`, `LabelSeccion`, `AvatarUsuario`, `SelectorUbicacionMapa`, `YumYumAppBar` (AppBar con badge dinámico de notificaciones) y `BotonIAGlobal` (FAB del asistente IA).
+*   **`core/preferencias/`:** Inyección de `SharedPreferences` mediante `preferenciasLocalesProvider`, sobrescrito en `main.dart`. Además expone `cookiesAceptadasProvider`, un `NotifierProvider<bool>` que persiste el consentimiento RGPD (clave `cookies_aceptadas`) y se consume desde el banner global.
+*   **`core/widgets/`:** Widgets reutilizables no ligados a una sola feature, como `YumAppBar`, `YumBackground`, `YumButton`, `YumCard`, `YumBottomNav`, `DishCardItem`, `LabelSeccion`, `AvatarUsuario`, `SelectorUbicacionMapa`, `YumYumAppBar` (AppBar con badge dinámico de notificaciones), `BotonIAGlobal` (FAB del asistente IA) y `CookiesBannerGate` (banner persistente envuelto sobre todo el árbol desde `main.dart`, oculto en cuanto el usuario acepta).
 *   **`core/services/`:** Servicios transversales no ligados a ninguna feature concreta. Actualmente solo `IAService`, cliente HTTP del asistente IA contra un backend Node externo (`localhost:3000` por defecto, `10.0.2.2` en emuladores Android).
 *   **`core/location/`:** Servicios y providers de ubicación. Encapsulan permisos, coordenadas actuales, formato de distancia e integración con `geolocator`.
 *   **`core/errors/`:** Excepciones de aplicación y traducción de errores técnicos a mensajes entendibles para el usuario.
@@ -279,6 +281,7 @@ Cada carpeta dentro de `features` representa una parte reconocible del producto:
 *   **`ajustes/`:** Hub de gestión de cuenta y preferencias. Incluye `AjustesScreen` (cuenta, apariencia, acerca de, cerrar sesión) y `PreferenciasNotificacionesScreen` (toggles por categoría con UI optimista).
 *   **`valoraciones/`:** Emisión de valoraciones tras completar transacciones.
 *   **`reportes/`:** Acceso a la lógica de reportes/moderación. Actualmente está más orientada a repositorio que a pantallas completas.
+*   **`legal/`:** Páginas legales accesibles desde el banner de cookies, el enlace de aceptación en registro y el footer de Ajustes: aviso legal, política de privacidad, términos y condiciones, política de cookies, hojas de reclamaciones y plataforma ODR de la UE. Todas son rutas públicas (no requieren sesión).
 
 No todas las features tienen exactamente las mismas subcarpetas, porque algunas son más simples que otras. Aun así, cuando una feature crece, suele seguir esta estructura:
 
@@ -341,7 +344,7 @@ Las rutas se centralizan en dos lugares:
 *   **`core/constants/rutas_app.dart`:** Define las cadenas de ruta y helpers para construir rutas con parámetros.
 *   **`core/router/app_router.dart`:** Registra las pantallas concretas, redirecciones, aliases y reglas de autenticación.
 
-**Rutas públicas:** `/iniciar-sesion`, `/registro`, `/recuperar-password`, `/restablecer-password`. Aceptan parámetros `code` o `token_hash`+`type=recovery` para los enlaces de email de recuperación, y el resolver `resolverRedireccionAutenticacion` los redirige de forma especial.
+**Rutas públicas:** `/iniciar-sesion`, `/registro`, `/recuperar-password`, `/restablecer-password` y las seis rutas legales (`/legal`, `/privacidad`, `/terminos`, `/cookies`, `/reclamaciones`, `/odr`). Las de auth aceptan parámetros `code` o `token_hash`+`type=recovery` para los enlaces de email de recuperación, y el resolver `resolverRedireccionAutenticacion` los redirige de forma especial. Las legales son siempre accesibles desde cualquier estado de la app (ver `RutasApp.esRutaPublica`).
 
 **Shell privado (envuelto por `PrincipalScreen` con `BottomNavigationBar`):**
 `/inicio`, `/mapa`, `/publicar`, `/pedidos`, `/chats`, `/perfil`, `/perfil/editar`, `/notificaciones`, `/guardados`, `/ajustes`, `/ajustes/notificaciones`.
@@ -1185,9 +1188,10 @@ Como no hay un backend REST tradicional intermedio, la "API" son las llamadas di
 *   **Borrado híbrido (`eliminar_producto`):** En vez de imponer DELETE o soft delete por igual, la RPC inspecciona si hay actividad asociada y elige por sí misma. El cliente recibe un booleano que le indica si debe limpiar también los blobs de Storage.
 *   **Tema visual persistido sin "flash":** El arranque carga `SharedPreferences` antes de `runApp` y sobreescribe `preferenciasLocalesProvider`, de modo que `temaProvider` se inicializa de forma síncrona con el tema elegido por el usuario. En web, además, `aplicarThemeColor` sincroniza el meta `theme-color` de la PWA con el `cream` del tema activo, evitando el corte visual entre la barra del navegador y el `Scaffold`.
 *   **FAB de asistente IA aislado:** El componente `BotonIAGlobal` vive en `core/widgets/ui/` pero se monta solamente en la pantalla de Inicio (no en el shell), por lo que no compite con el FAB '+' del bottom nav. El cliente HTTP (`IAService`) está completamente desacoplado del resto de la lógica de Supabase y los errores de red se aíslan en su propio SnackBar.
+*   **Cumplimiento RGPD desde el día uno:** Se incorpora una capa legal mínima alineada con el RGPD/LSSI sin requerir backend adicional: (a) `CookiesBannerGate` envuelve la app entera desde `main.dart` y muestra un banner persistente hasta que el usuario acepta, persistiendo la decisión vía `SharedPreferences` (`cookiesAceptadasProvider`); (b) la pantalla de registro exige un checkbox de consentimiento explícito vinculado a `/terminos` y `/privacidad` antes de poder crear la cuenta; (c) las seis páginas legales (`AvisoLegal`, `PoliticaPrivacidad`, `TerminosCondiciones`, `PoliticaCookies`, `HojasReclamaciones`, `PlataformaOdr`) viven en una feature aislada con rutas públicas, son navegables sin sesión y comparten el mismo `_LegalScaffold` para uniformidad. La decisión prioriza ser defendible legalmente sobre añadir capas de tracking que requerirían políticas más complejas.
 
 ## 8. Estado actual del proyecto
-*   **Implementado:** Arquitectura base de Flutter lista con Riverpod y GoRouter. Flujos de Auth (incluyendo PKCE + recovery), publicación, edición y eliminación de platos, búsqueda por proximidad con filtros (categoría, etiquetas dietéticas, alérgenos a excluir, tipo de oferta, orden), solicitudes con cantidades de raciones, transacciones con stock decremental, valoraciones, favoritos realtime con pantalla "Guardados" y enrutamiento desde tarjetas/detalles cableados de extremo a extremo. Chat en tiempo real con cómputo de mensajes no leídos por conversación y marcado automático al entrar. Centro de notificaciones realtime con payloads normalizados, badge dinámico en el AppBar y enrutamiento contextual al chat/producto/pedido relacionado al pulsar la notificación, además de filtrado por preferencias por categoría guardadas en `perfiles.preferencias_notificaciones`. Edición de perfil con bio, alérgenos personales y subida de avatar al bucket `avatares`. Hub de Ajustes con secciones Cuenta/Apariencia/Acerca de, cambio de tema persistido (Huerto Moderno por defecto, Mesa de Barrio alternativo) y solicitud de cambio de contraseña via email. FAB del asistente IA conectado a un backend Node externo. En el backend, las migraciones, RLS, triggers y RPCs están desplegadas y sincronizadas con remoto, aunque persisten algunos problemas de diseño relacional (ver sección 9).
+*   **Implementado:** Arquitectura base de Flutter lista con Riverpod y GoRouter. Flujos de Auth (incluyendo PKCE + recovery), publicación, edición y eliminación de platos, búsqueda por proximidad con filtros (categoría, etiquetas dietéticas, alérgenos a excluir, tipo de oferta, orden), solicitudes con cantidades de raciones, transacciones con stock decremental, valoraciones, favoritos realtime con pantalla "Guardados" y enrutamiento desde tarjetas/detalles cableados de extremo a extremo. Pantalla de Inicio con FAB "volver arriba" que aparece tras unos cientos de píxeles de scroll y se apila sobre el FAB del asistente IA. Chat en tiempo real con cómputo de mensajes no leídos por conversación y marcado automático al entrar. Centro de notificaciones realtime con payloads normalizados, badge dinámico en el AppBar y enrutamiento contextual al chat/producto/pedido relacionado al pulsar la notificación, además de filtrado por preferencias por categoría guardadas en `perfiles.preferencias_notificaciones`. Edición de perfil con bio, alérgenos personales y subida de avatar al bucket `avatares`. Hub de Ajustes con secciones Cuenta/Apariencia/Acerca de, cambio de tema persistido (Huerto Moderno por defecto, Mesa de Barrio alternativo) y solicitud de cambio de contraseña via email. FAB del asistente IA conectado a un backend Node externo. Capa legal/RGPD completa: banner de cookies persistente que envuelve toda la app, checkbox de consentimiento obligatorio en el registro vinculado a Términos y Política de Privacidad, y seis páginas públicas (aviso legal, privacidad, términos, cookies, hojas de reclamaciones, ODR UE). En el backend, las migraciones, RLS, triggers y RPCs están desplegadas y sincronizadas con remoto, aunque persisten algunos problemas de diseño relacional (ver sección 9).
 *   **En Progreso / Estructurado:** Pulido visual de algunas pantallas, refinamiento de mensajes de error normalizados desde Supabase hacia la UI, y orquestación completa del intent devuelto por el asistente IA (actualmente la respuesta se imprime en consola pendiente de cablear navegación a publicar/filtrar feed).
 *   **Pendiente:** Despliegues continuos para las tiendas móviles, implementación de pasarelas de pago digitales si se desea escalar las "ventas" más allá del efectivo en mano, y pulido general de UI/UX a nivel granular.
 
@@ -1334,12 +1338,14 @@ A continuación se listan las reglas de negocio explícitas identificadas en las
 *   **Actores implicados:** Usuario Anónimo, Sistema (Supabase Auth y Base de datos).
 *   **Precondiciones:** El usuario no debe estar registrado con el email proporcionado.
 *   **Pasos:**
-    1.  El usuario introduce su email y contraseña o utiliza un proveedor OAuth (como Google/Apple).
-    2.  El sistema (Supabase Auth) registra al usuario y le asigna un UUID en `auth.users`.
-    3.  El sistema dispara el trigger interno `crear_perfil_usuario` al detectar la inserción en `auth.users`.
-    4.  El trigger inserta automáticamente un registro en `public.perfiles` con el mismo UUID, el email y el nombre (extrayéndolo de los metadatos o generándolo a partir del email).
+    1.  El usuario rellena el formulario de registro (nombre, email, contraseña) y debe marcar explícitamente el checkbox "Acepto los Términos y la Política de Privacidad" antes de poder enviarlo. El propio checkbox enlaza a `/terminos` y `/privacidad` para que el usuario pueda leer ambas páginas sin abandonar el flujo (vuelve atrás con el botón del `YumAppBar`).
+    2.  Si el checkbox no está marcado, la pantalla muestra un error normalizado mediante `mostrarError` y aborta el envío antes de llamar a Supabase Auth.
+    3.  El sistema (Supabase Auth) registra al usuario y le asigna un UUID en `auth.users`.
+    4.  El sistema dispara el trigger interno `crear_perfil_usuario` al detectar la inserción en `auth.users`.
+    5.  El trigger inserta automáticamente un registro en `public.perfiles` con el mismo UUID, el email y el nombre (extrayéndolo de los metadatos o generándolo a partir del email).
 *   **Excepciones / Casos de error:**
     *   Si el email ya existe, Supabase Auth devuelve un error de validación.
+    *   Si el usuario intenta saltarse el consentimiento legal (`_aceptaLegal=false`), el envío se bloquea en cliente con un mensaje específico antes de invocar el repositorio de auth.
 
 ### 12.2. Publicación de un Plato (Oferta)
 *   **Actores implicados:** Usuario Autenticado (Propietario), Sistema.
