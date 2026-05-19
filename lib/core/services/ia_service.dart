@@ -1,13 +1,30 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
+/// Cliente del asistente IA de YumYum.
+///
+/// Toda la logica del asistente vive en una Edge Function de Supabase
+/// (`supabase/functions/asistente-ia/`) que es quien habla con Gemini.
+/// El cliente solo invoca esa funcion: el SDK de Supabase resuelve la URL
+/// del proyecto, adjunta el JWT del usuario autenticado y deserializa la
+/// respuesta JSON. Asi evitamos exponer la clave de Gemini en el cliente y
+/// no necesitamos un backend Node propio.
 class IAService {
-  /// Envía la entrada del usuario a la Edge Function de Supabase para el análisis semántico.
-  static Future<Map<String, dynamic>> procesarTexto(String texto, String usuarioId) async {
+  static const String _functionName = 'asistente-ia';
+
+  /// Envia la entrada del usuario a la Edge Function para analisis de
+  /// intencion.
+  ///
+  /// La funcion devuelve un JSON con `accion` (`'publicar'` | `'buscar'` |
+  /// `'desconocido'`), `resumen` y campos opcionales (`nombre`, `categoria`,
+  /// `tipo`, `precio`, `descripcion`). La orquestacion del intent (navegar
+  /// a publicar, filtrar el feed) se hace en la capa de UI.
+  static Future<Map<String, dynamic>> procesarTexto(
+    String texto,
+    String usuarioId,
+  ) async {
     try {
-      // Invocamos la Edge Function llamada 'procesar_ia'
       final response = await Supabase.instance.client.functions.invoke(
-        'procesar_ia',
+        _functionName,
         body: {
           'texto': texto,
           'usuario': usuarioId,
@@ -15,20 +32,22 @@ class IAService {
         },
       );
 
-      // Si el código HTTP es 200 (OK), devolvemos el JSON parseado.
-      if (response.status == 200) {
-        // Supabase functions.invoke ya devuelve la data parseada si es JSON.
-        return response.data as Map<String, dynamic>;
-      } else {
-        // Si hay error controlado desde la función
-        final errorMsg = response.data['error'] ?? 'Error desconocido en Edge Function';
-        throw Exception('Fallo en el servidor: $errorMsg');
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return data;
       }
+      throw Exception('Respuesta inesperada del asistente.');
+    } on FunctionException catch (e) {
+      // La Edge Function devuelve `{ "error": "..." }` para errores
+      // controlados (texto vacio, fallo upstream, etc.). Propagamos ese
+      // mensaje para que la UI lo muestre en un SnackBar.
+      final detalle = e.details;
+      if (detalle is Map && detalle['error'] is String) {
+        throw Exception(detalle['error'] as String);
+      }
+      throw Exception('Error del asistente (codigo ${e.status}).');
     } catch (e) {
-      if (e is FunctionException) {
-        throw Exception('Error de ejecución en Edge Function: ${e.reasonPhrase}');
-      }
-      throw Exception('Fallo de red al contactar con la IA: $e');
+      throw Exception('Fallo de red al contactar la IA: $e');
     }
   }
 }

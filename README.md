@@ -8,7 +8,7 @@ La app lee la configuración de Supabase mediante `--dart-define`.
 El archivo `.env` es solo para desarrollo local y no debe versionarse.
 
 ```env
-SUPABASE_URL=https://gnzrintyysnpuiadzrce.supabase.co
+SUPABASE_URL=https://lqlekjlatkxurnnwtjgo.supabase.co
 SUPABASE_ANON_KEY=tu_anon_key
 ```
 
@@ -16,6 +16,25 @@ SUPABASE_ANON_KEY=tu_anon_key
 No hay que subir `service_role`, tokens privados ni otras credenciales sensibles.
 
 Si en algún momento hay que apuntar a otro proyecto de Supabase, se puede usar `.env.example` como plantilla.
+
+## Asistente IA (Edge Function)
+
+El botón flotante del asistente IA (`BotonIAGlobal`) llama a la Edge Function
+`asistente-ia` desplegada en Supabase (`supabase/functions/asistente-ia/`).
+La función habla con Gemini desde el servidor, así que la `GEMINI_API_KEY`
+nunca se expone al cliente.
+
+Configurar el secret (una sola vez por proyecto Supabase):
+
+- **Dashboard**: Supabase → *Project Settings* → *Edge Functions* → *Secrets*
+  → añade `GEMINI_API_KEY` con la clave de Google AI Studio.
+- **CLI**: `supabase secrets set GEMINI_API_KEY=tu_clave`.
+
+Para volver a desplegar la función tras cambios locales:
+
+```bash
+supabase functions deploy asistente-ia
+```
 
 ## Puesta en marcha
 

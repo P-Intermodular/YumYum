@@ -7,7 +7,8 @@ import '../../theme/yum_colors.dart';
 
 /// FAB persistente del asistente IA. Se monta en el shell autenticado
 /// (`PrincipalScreen`) y abre un bottom sheet con un campo de texto que
-/// envía la consulta al backend Node externo (ver [IAService]).
+/// envía la consulta a la Edge Function `asistente-ia` de Supabase (ver
+/// [IAService]). La integración con Gemini vive ahí, no en el cliente.
 ///
 /// Originalmente venía de la rama `origin/César`; aquí adaptamos:
 /// - mismo gradient de luminosidad que la cabecera del perfil
