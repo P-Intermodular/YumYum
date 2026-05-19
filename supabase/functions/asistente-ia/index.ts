@@ -45,7 +45,7 @@ const CATEGORIAS_VALIDAS = [
 ] as const;
 const TIPOS_VALIDOS = ["venta", "intercambio"] as const;
 
-const SYSTEM_PROMPT =
+const BASE_PROMPT =
   `Eres el asistente conversacional de YumYum, una app de venta e intercambio local de comida casera entre vecinos.
 
 CAPACIDADES:
@@ -59,7 +59,35 @@ REGLAS:
 - Cuando el usuario quiera publicar/ofrecer un plato propio, NO llames a la herramienta: explicale brevemente que va a abrirse el formulario de publicar.
 - Si la consulta es saludo, ayuda general o algo que no requiere productos cercanos, responde directamente sin llamar a la herramienta.
 - Responde SIEMPRE en espanol, en tono cercano (de tu) y maximo 4 frases. No inventes platos: usa solo los que devuelva la herramienta.
+- Si el usuario declara alergenos en su perfil, JAMAS recomiendes platos que los contengan. Tampoco propongas publicar recetas con alergenos del usuario sin avisarle.
+- Si el usuario tiene un nombre conocido, usalo de vez en cuando para personalizar (no en todas las frases).
 - Categorias validas: ${CATEGORIAS_VALIDAS.join(", ")}. Tipos validos: ${TIPOS_VALIDOS.join(", ")}.`;
+
+interface PerfilUsuario {
+  nombre: string | null;
+  ciudad: string | null;
+  alergenos: string[];
+  bio: string | null;
+}
+
+function construirSystemPrompt(perfil: PerfilUsuario | null): string {
+  if (!perfil) return BASE_PROMPT;
+  const partes: string[] = [];
+  if (perfil.nombre) partes.push(`Nombre del usuario: ${perfil.nombre}.`);
+  if (perfil.ciudad) partes.push(`Ciudad declarada: ${perfil.ciudad}.`);
+  if (perfil.alergenos.length > 0) {
+    partes.push(
+      `Alergenos del usuario (debes evitarlos en toda recomendacion): ${
+        perfil.alergenos.join(", ")
+      }.`,
+    );
+  }
+  if (perfil.bio) {
+    partes.push(`Bio del usuario (tonelo en cuenta para personalizar): "${perfil.bio}".`);
+  }
+  if (partes.length === 0) return BASE_PROMPT;
+  return `${BASE_PROMPT}\n\nCONTEXTO DEL USUARIO:\n- ${partes.join("\n- ")}`;
+}
 
 const TOOLS = [
   {
@@ -214,6 +242,42 @@ function filtrarProductos(
   });
 }
 
+async function cargarPerfilUsuario(
+  authHeader: string,
+): Promise<PerfilUsuario | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  try {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false },
+    });
+    const { data: user } = await supabase.auth.getUser();
+    const uid = user?.user?.id;
+    if (!uid) return null;
+    const { data, error } = await supabase
+      .from("perfiles")
+      .select("nombre, ciudad, alergenos, bio")
+      .eq("id", uid)
+      .maybeSingle();
+    if (error || !data) return null;
+    const alergenosRaw = (data as Record<string, unknown>).alergenos;
+    const alergenos = Array.isArray(alergenosRaw)
+      ? alergenosRaw.filter((a): a is string => typeof a === "string")
+      : [];
+    return {
+      nombre: typeof data.nombre === "string" ? data.nombre : null,
+      ciudad: typeof data.ciudad === "string" ? data.ciudad : null,
+      alergenos,
+      bio: typeof (data as Record<string, unknown>).bio === "string"
+        ? ((data as Record<string, unknown>).bio as string)
+        : null,
+    };
+  } catch (err) {
+    console.error("cargarPerfilUsuario fallo:", err);
+    return null;
+  }
+}
+
 async function ejecutarBusqueda(
   authHeader: string,
   latitud: number,
@@ -284,10 +348,10 @@ interface GeminiResponse {
 
 async function llamarGemini(
   contents: Array<{ role: string; parts: GeminiPart[] }>,
-  opciones: { withTools: boolean; withSchema: boolean },
+  opciones: { withTools: boolean; withSchema: boolean; systemPrompt: string },
 ): Promise<GeminiResponse> {
   const body: Record<string, unknown> = {
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    systemInstruction: { parts: [{ text: opciones.systemPrompt }] },
     contents,
   };
   if (opciones.withTools) {
@@ -362,6 +426,11 @@ Deno.serve(async (req: Request) => {
     : null;
 
   try {
+    // Cargamos el perfil para personalizar el prompt (nombre, alergenos,
+    // ciudad, bio). Si falla, seguimos con el prompt base.
+    const perfil = await cargarPerfilUsuario(authHeader);
+    const systemPrompt = construirSystemPrompt(perfil);
+
     // Turno 1: el usuario habla. Gemini puede decidir llamar a la herramienta.
     const contents: Array<{ role: string; parts: GeminiPart[] }> = [
       { role: "user", parts: [{ text: texto }] },
@@ -370,6 +439,7 @@ Deno.serve(async (req: Request) => {
     const primera = await llamarGemini(contents, {
       withTools: true,
       withSchema: false,
+      systemPrompt,
     });
     const partsPrimera = primera.candidates?.[0]?.content?.parts ?? [];
     const llamada = partsPrimera.find((p) => p.functionCall)?.functionCall;
@@ -441,6 +511,7 @@ Deno.serve(async (req: Request) => {
       const segunda = await llamarGemini(contents, {
         withTools: false,
         withSchema: true,
+        systemPrompt,
       });
       const partsSegunda = segunda.candidates?.[0]?.content?.parts ?? [];
       const textoFinal = partsSegunda.map((p) => p.text ?? "").join("");
@@ -478,6 +549,7 @@ Deno.serve(async (req: Request) => {
     const segundaSinTool = await llamarGemini(contentsEstructurada, {
       withTools: false,
       withSchema: true,
+      systemPrompt,
     });
     const partsFinal = segundaSinTool.candidates?.[0]?.content?.parts ?? [];
     const textoFinal = partsFinal.map((p) => p.text ?? "").join("");

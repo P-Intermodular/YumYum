@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -97,11 +99,28 @@ class _AsistenteSheet extends ConsumerStatefulWidget {
   ConsumerState<_AsistenteSheet> createState() => _AsistenteSheetState();
 }
 
+/// Sugerencias iniciales que se muestran como chips en el estado input.
+/// Pulsar una rellena el campo y dispara el envio para reducir friccion.
+const List<String> _sugerenciasIniciales = [
+  '¿Qué hay para comer cerca?',
+  'Quiero algo dulce',
+  'Planifica mi comida de hoy',
+  'Ayúdame a publicar un plato',
+];
+
 class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
   final TextEditingController _controller = TextEditingController();
   bool _cargando = false;
   RespuestaAsistente? _respuesta;
   String? _error;
+  String _ultimaPregunta = '';
+
+  Future<void> _enviarConTexto(String texto) async {
+    final preparado = texto.trim();
+    if (preparado.isEmpty) return;
+    _controller.text = preparado;
+    await _enviar();
+  }
 
   Future<void> _enviar() async {
     final texto = _controller.text.trim();
@@ -116,6 +135,7 @@ class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
     setState(() {
       _cargando = true;
       _error = null;
+      _ultimaPregunta = texto;
     });
 
     // Resolvemos la ubicacion sin bloquear si falla: la IA igual responde,
@@ -156,6 +176,7 @@ class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
     setState(() {
       _respuesta = null;
       _error = null;
+      _ultimaPregunta = '';
       _controller.clear();
     });
   }
@@ -178,6 +199,24 @@ class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget cuerpo;
+    if (_respuesta != null) {
+      cuerpo = _VistaRespuesta(
+        respuesta: _respuesta!,
+        pregunta: _ultimaPregunta,
+        onProducto: (id) => _irAProducto(context, id),
+        onPublicar: () => _irAPublicar(context),
+      );
+    } else if (_cargando) {
+      cuerpo = _VistaLoading(pregunta: _ultimaPregunta);
+    } else {
+      cuerpo = _VistaInput(
+        controller: _controller,
+        error: _error,
+        onEnviar: _enviar,
+        onSugerencia: _enviarConTexto,
+      );
+    }
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -187,19 +226,7 @@ class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
           children: [
             _Cabecera(reiniciar: _respuesta != null ? _reiniciar : null),
             const SizedBox(height: 16),
-            if (_respuesta != null)
-              _VistaRespuesta(
-                respuesta: _respuesta!,
-                onProducto: (id) => _irAProducto(context, id),
-                onPublicar: () => _irAPublicar(context),
-              )
-            else
-              _VistaInput(
-                controller: _controller,
-                cargando: _cargando,
-                error: _error,
-                onEnviar: _enviar,
-              ),
+            cuerpo,
           ],
         ),
       ),
@@ -236,15 +263,15 @@ class _Cabecera extends StatelessWidget {
 
 class _VistaInput extends StatelessWidget {
   final TextEditingController controller;
-  final bool cargando;
   final String? error;
   final VoidCallback onEnviar;
+  final void Function(String texto) onSugerencia;
 
   const _VistaInput({
     required this.controller,
-    required this.cargando,
     required this.error,
     required this.onEnviar,
+    required this.onSugerencia,
   });
 
   @override
@@ -262,26 +289,16 @@ class _VistaInput extends StatelessWidget {
           controller: controller,
           minLines: 2,
           maxLines: 4,
-          enabled: !cargando,
           textInputAction: TextInputAction.send,
           onSubmitted: (_) => onEnviar(),
           decoration: InputDecoration(
             hintText:
-                'Ej: "quiero comerme un kebab", "planifica mi comida de hoy" o "ayudame a publicar un plato"',
-            suffixIcon: cargando
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : IconButton(
-                    icon: const Icon(Icons.send_rounded),
-                    color: colors.oliveDeep,
-                    onPressed: onEnviar,
-                  ),
+                'Ej: "quiero comerme un kebab", "planifica mi comida de hoy"...',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.send_rounded),
+              color: colors.oliveDeep,
+              onPressed: onEnviar,
+            ),
           ),
         ),
         if (error != null) ...[
@@ -294,18 +311,148 @@ class _VistaInput extends StatelessWidget {
                 ?.copyWith(color: colors.terracottaDeep),
           ),
         ],
+        const SizedBox(height: 16),
+        Text(
+          'Prueba con:',
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final sugerencia in _sugerenciasIniciales)
+              ActionChip(
+                avatar: Icon(Icons.bolt_rounded,
+                    size: 16, color: colors.oliveDeep),
+                label: Text(sugerencia),
+                onPressed: () => onSugerencia(sugerencia),
+              ),
+          ],
+        ),
       ],
+    );
+  }
+}
+
+/// Vista de carga con mensajes que van rotando para que el usuario
+/// perciba progreso aunque la peticion tarde unos segundos.
+class _VistaLoading extends StatefulWidget {
+  final String pregunta;
+  const _VistaLoading({required this.pregunta});
+
+  @override
+  State<_VistaLoading> createState() => _VistaLoadingState();
+}
+
+class _VistaLoadingState extends State<_VistaLoading> {
+  static const List<String> _mensajes = [
+    'Pensando…',
+    'Buscando platos cerca de ti…',
+    'Cruzando tus preferencias…',
+    'Casi listo…',
+  ];
+
+  int _indice = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+      if (!mounted) return;
+      setState(() {
+        _indice = (_indice + 1) % _mensajes.length;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.pregunta.isNotEmpty)
+          _BurbujaUsuario(texto: widget.pregunta),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.terracotta,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: Text(
+                  _mensajes[_indice],
+                  key: ValueKey(_indice),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Burbuja con la pregunta original del usuario, para dar contexto en
+/// modo loading y modo respuesta (estilo chat de un solo turno).
+class _BurbujaUsuario extends StatelessWidget {
+  final String texto;
+  const _BurbujaUsuario({required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.85,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: colors.terracotta.withValues(alpha: 0.15),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(4),
+          ),
+        ),
+        child: Text(
+          texto,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ),
     );
   }
 }
 
 class _VistaRespuesta extends StatelessWidget {
   final RespuestaAsistente respuesta;
+  final String pregunta;
   final void Function(String productoId) onProducto;
   final VoidCallback onPublicar;
 
   const _VistaRespuesta({
     required this.respuesta,
+    required this.pregunta,
     required this.onProducto,
     required this.onPublicar,
   });
@@ -314,18 +461,32 @@ class _VistaRespuesta extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.yumColors;
     final tieneProductos = respuesta.productos.isNotEmpty;
-    final mostrarBotonPublicar =
-        respuesta.accion == AccionAsistente.publicar ||
-            (respuesta.prefilled != null && !tieneProductos);
+    final buscoSinResultados =
+        respuesta.accion == AccionAsistente.buscar && !tieneProductos;
+    final mostrarBotonPublicar = respuesta.accion == AccionAsistente.publicar ||
+        respuesta.prefilled != null ||
+        buscoSinResultados;
+    final etiquetaBotonPublicar = buscoSinResultados
+        ? 'Publica tú un plato'
+        : 'Empezar a publicar';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (pregunta.isNotEmpty) ...[
+          _BurbujaUsuario(texto: pregunta),
+          const SizedBox(height: 12),
+        ],
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: colors.olive.withValues(alpha: 0.25),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(4),
+              topRight: Radius.circular(16),
+              bottomLeft: Radius.circular(16),
+              bottomRight: Radius.circular(16),
+            ),
           ),
           child: Text(
             respuesta.respuesta,
@@ -354,13 +515,38 @@ class _VistaRespuesta extends StatelessWidget {
               },
             ),
           ),
+        ] else if (buscoSinResultados) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.cream2,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colors.olive.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.lightbulb_outline_rounded,
+                    color: colors.oliveDeep),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Hoy no hay nada cerca con esos criterios. ¿Te animas a cocinarlo tú?',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
         if (mostrarBotonPublicar) ...[
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onPublicar,
             icon: const Icon(Icons.add_circle_outline_rounded),
-            label: const Text('Empezar a publicar'),
+            label: Text(etiquetaBotonPublicar),
           ),
         ],
       ],
