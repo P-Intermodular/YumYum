@@ -11,11 +11,11 @@ import '../../services/ia_service.dart';
 import '../../theme/yum_colors.dart';
 
 /// FAB persistente del asistente IA. Se monta en el shell autenticado
-/// (`PrincipalScreen`) y abre un bottom sheet conversacional con tres
-/// estados: input -> loading -> respuesta. El bottom sheet llama a
-/// [IAService], que invoca la Edge Function `asistente-ia` de Supabase.
-/// La integracion con Gemini (con function calling y busqueda real de
-/// productos cercanos via RPC) vive en el servidor, no en el cliente.
+/// (`PrincipalScreen`) y abre un bottom sheet conversacional multi-turno.
+/// La integracion con Gemini (function calling, busqueda real de productos
+/// cercanos via RPC y contexto del perfil) vive en la Edge Function
+/// `asistente-ia` de Supabase; el cliente solo orquesta historial e
+/// interaccion.
 class BotonIAGlobal extends StatelessWidget {
   const BotonIAGlobal({super.key});
 
@@ -29,12 +29,7 @@ class BotonIAGlobal extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: const _AsistenteSheet(),
-      ),
+      builder: (sheetContext) => const _AsistenteSheet(),
     );
   }
 
@@ -87,20 +82,7 @@ class BotonIAGlobal extends StatelessWidget {
   }
 }
 
-/// Bottom sheet conversacional. Tres estados sucesivos:
-/// - Input: campo de texto + boton de envio.
-/// - Loading: spinner mientras la Edge Function razona.
-/// - Respuesta: texto natural del asistente + chips de accion (productos
-///   o publicar) que cierran el sheet y navegan al sitio correspondiente.
-class _AsistenteSheet extends ConsumerStatefulWidget {
-  const _AsistenteSheet();
-
-  @override
-  ConsumerState<_AsistenteSheet> createState() => _AsistenteSheetState();
-}
-
-/// Sugerencias iniciales que se muestran como chips en el estado input.
-/// Pulsar una rellena el campo y dispara el envio para reducir friccion.
+/// Sugerencias iniciales mostradas solo cuando no hay turnos previos.
 const List<String> _sugerenciasIniciales = [
   '¿Qué hay para comer cerca?',
   'Quiero algo dulce',
@@ -108,12 +90,49 @@ const List<String> _sugerenciasIniciales = [
   'Ayúdame a publicar un plato',
 ];
 
+/// Mensajes rotatorios mientras la IA esta razonando, para que el
+/// loading no parezca colgado.
+const List<String> _mensajesLoading = [
+  'Pensando…',
+  'Buscando platos cerca de ti…',
+  'Cruzando tus preferencias…',
+  'Casi listo…',
+];
+
+/// Turno renderizable en el chat. Mezcla turnos de usuario (solo texto) y
+/// turnos del asistente (texto + posibles productos / prefilled).
+sealed class _Turno {
+  const _Turno();
+}
+
+class _TurnoUsuario extends _Turno {
+  final String texto;
+  const _TurnoUsuario(this.texto);
+}
+
+class _TurnoAsistente extends _Turno {
+  final RespuestaAsistente respuesta;
+  final bool esUltimo;
+  const _TurnoAsistente(this.respuesta, {required this.esUltimo});
+}
+
+/// Bottom sheet conversacional multi-turno. Usa
+/// `DraggableScrollableSheet` para ocupar la mayor parte de la pantalla y
+/// dejar espacio para la conversacion completa.
+class _AsistenteSheet extends ConsumerStatefulWidget {
+  const _AsistenteSheet();
+
+  @override
+  ConsumerState<_AsistenteSheet> createState() => _AsistenteSheetState();
+}
+
 class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  final List<MensajeChat> _historial = [];
+  final List<_Turno> _turnos = [];
   bool _cargando = false;
-  RespuestaAsistente? _respuesta;
   String? _error;
-  String _ultimaPregunta = '';
 
   Future<void> _enviarConTexto(String texto) async {
     final preparado = texto.trim();
@@ -132,14 +151,17 @@ class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
       return;
     }
 
+    final mensajeUsuario = MensajeChat(rol: RolMensaje.user, texto: texto);
+
     setState(() {
+      _historial.add(mensajeUsuario);
+      _turnos.add(_TurnoUsuario(texto));
       _cargando = true;
       _error = null;
-      _ultimaPregunta = texto;
+      _controller.clear();
     });
+    _scrollAlFinal();
 
-    // Resolvemos la ubicacion sin bloquear si falla: la IA igual responde,
-    // solo que sin productos cercanos cuando los necesite.
     double? lat;
     double? lon;
     try {
@@ -152,17 +174,28 @@ class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
     }
 
     try {
-      final respuesta = await IAService.procesarTexto(
-        texto,
-        usuario.id,
+      final respuesta = await IAService.enviarHistorial(
+        _historial,
         latitud: lat,
         longitud: lon,
       );
       if (!mounted) return;
       setState(() {
-        _respuesta = respuesta;
+        _historial.add(
+          MensajeChat(rol: RolMensaje.assistant, texto: respuesta.respuesta),
+        );
+        // Reetiquetamos el turno anterior del asistente para que pierda
+        // los chips de accion: solo el ultimo turno responde a "publicar".
+        for (var i = 0; i < _turnos.length; i++) {
+          final t = _turnos[i];
+          if (t is _TurnoAsistente && t.esUltimo) {
+            _turnos[i] = _TurnoAsistente(t.respuesta, esUltimo: false);
+          }
+        }
+        _turnos.add(_TurnoAsistente(respuesta, esUltimo: true));
         _cargando = false;
       });
+      _scrollAlFinal();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -174,60 +207,126 @@ class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
 
   void _reiniciar() {
     setState(() {
-      _respuesta = null;
+      _historial.clear();
+      _turnos.clear();
       _error = null;
-      _ultimaPregunta = '';
       _controller.clear();
     });
   }
 
-  void _irAProducto(BuildContext sheetContext, String productoId) {
-    Navigator.pop(sheetContext);
-    sheetContext.push(RutasApp.productoDetalle(productoId));
+  void _scrollAlFinal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
-  void _irAPublicar(BuildContext sheetContext) {
-    Navigator.pop(sheetContext);
-    sheetContext.go(RutasApp.publicar);
+  void _irAProducto(String productoId) {
+    Navigator.pop(context);
+    context.push(RutasApp.productoDetalle(productoId));
+  }
+
+  void _irAPublicar() {
+    Navigator.pop(context);
+    context.go(RutasApp.publicar);
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final Widget cuerpo;
-    if (_respuesta != null) {
-      cuerpo = _VistaRespuesta(
-        respuesta: _respuesta!,
-        pregunta: _ultimaPregunta,
-        onProducto: (id) => _irAProducto(context, id),
-        onPublicar: () => _irAPublicar(context),
-      );
-    } else if (_cargando) {
-      cuerpo = _VistaLoading(pregunta: _ultimaPregunta);
-    } else {
-      cuerpo = _VistaInput(
-        controller: _controller,
-        error: _error,
-        onEnviar: _enviar,
-        onSugerencia: _enviarConTexto,
-      );
-    }
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Cabecera(reiniciar: _respuesta != null ? _reiniciar : null),
-            const SizedBox(height: 16),
-            cuerpo,
-          ],
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.55,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, scrollSheetController) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            children: [
+              const _ManijaDrag(),
+              _Cabecera(
+                puedeReiniciar: _turnos.isNotEmpty || _cargando,
+                onReiniciar: _reiniciar,
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: _turnos.isEmpty && !_cargando
+                    ? _VistaBienvenida(onSugerencia: _enviarConTexto)
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        itemCount: _turnos.length + (_cargando ? 1 : 0),
+                        itemBuilder: (_, index) {
+                          if (index == _turnos.length) {
+                            return const _BurbujaLoading();
+                          }
+                          final turno = _turnos[index];
+                          if (turno is _TurnoUsuario) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _BurbujaUsuario(texto: turno.texto),
+                            );
+                          }
+                          turno as _TurnoAsistente;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _BurbujaAsistente(
+                              respuesta: turno.respuesta,
+                              acciones: turno.esUltimo,
+                              onProducto: _irAProducto,
+                              onPublicar: _irAPublicar,
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              if (_error != null) _BannerError(error: _error!),
+              SafeArea(
+                top: false,
+                child: _BarraInput(
+                  controller: _controller,
+                  habilitado: !_cargando,
+                  onEnviar: _enviar,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ManijaDrag extends StatelessWidget {
+  const _ManijaDrag();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Container(
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: colors.olive.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(2),
         ),
       ),
     );
@@ -235,183 +334,88 @@ class _AsistenteSheetState extends ConsumerState<_AsistenteSheet> {
 }
 
 class _Cabecera extends StatelessWidget {
-  final VoidCallback? reiniciar;
-  const _Cabecera({this.reiniciar});
+  final bool puedeReiniciar;
+  final VoidCallback onReiniciar;
+  const _Cabecera({required this.puedeReiniciar, required this.onReiniciar});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(Icons.auto_awesome_rounded, color: context.yumColors.terracotta),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Asistente YumYum',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ),
-        if (reiniciar != null)
-          TextButton.icon(
-            onPressed: reiniciar,
-            icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Nueva consulta'),
-          ),
-      ],
-    );
-  }
-}
-
-class _VistaInput extends StatelessWidget {
-  final TextEditingController controller;
-  final String? error;
-  final VoidCallback onEnviar;
-  final void Function(String texto) onSugerencia;
-
-  const _VistaInput({
-    required this.controller,
-    required this.error,
-    required this.onEnviar,
-    required this.onSugerencia,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.yumColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Cuentame que te apetece o que quieres hacer.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: controller,
-          minLines: 2,
-          maxLines: 4,
-          textInputAction: TextInputAction.send,
-          onSubmitted: (_) => onEnviar(),
-          decoration: InputDecoration(
-            hintText:
-                'Ej: "quiero comerme un kebab", "planifica mi comida de hoy"...',
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.send_rounded),
-              color: colors.oliveDeep,
-              onPressed: onEnviar,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(Icons.auto_awesome_rounded, color: context.yumColors.terracotta),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Asistente YumYum',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
-        ),
-        if (error != null) ...[
-          const SizedBox(height: 12),
-          Text(
-            error!,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: colors.terracottaDeep),
+          if (puedeReiniciar)
+            IconButton(
+              tooltip: 'Nueva conversación',
+              onPressed: onReiniciar,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          IconButton(
+            tooltip: 'Cerrar',
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded),
           ),
         ],
-        const SizedBox(height: 16),
-        Text(
-          'Prueba con:',
-          style: Theme.of(context).textTheme.labelMedium,
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final sugerencia in _sugerenciasIniciales)
-              ActionChip(
-                avatar: Icon(Icons.bolt_rounded,
-                    size: 16, color: colors.oliveDeep),
-                label: Text(sugerencia),
-                onPressed: () => onSugerencia(sugerencia),
-              ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }
 
-/// Vista de carga con mensajes que van rotando para que el usuario
-/// perciba progreso aunque la peticion tarde unos segundos.
-class _VistaLoading extends StatefulWidget {
-  final String pregunta;
-  const _VistaLoading({required this.pregunta});
-
-  @override
-  State<_VistaLoading> createState() => _VistaLoadingState();
-}
-
-class _VistaLoadingState extends State<_VistaLoading> {
-  static const List<String> _mensajes = [
-    'Pensando…',
-    'Buscando platos cerca de ti…',
-    'Cruzando tus preferencias…',
-    'Casi listo…',
-  ];
-
-  int _indice = 0;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
-      if (!mounted) return;
-      setState(() {
-        _indice = (_indice + 1) % _mensajes.length;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+class _VistaBienvenida extends StatelessWidget {
+  final void Function(String texto) onSugerencia;
+  const _VistaBienvenida({required this.onSugerencia});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.yumColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (widget.pregunta.isNotEmpty)
-          _BurbujaUsuario(texto: widget.pregunta),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colors.terracotta,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: Text(
-                  _mensajes[_indice],
-                  key: ValueKey(_indice),
-                  style: Theme.of(context).textTheme.bodyMedium,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 12),
+          Text(
+            'Cuéntame qué te apetece o qué quieres hacer.',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Puedo recomendarte platos cercanos, planificar comidas o ayudarte a publicar.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Prueba con:',
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final sugerencia in _sugerenciasIniciales)
+                ActionChip(
+                  avatar: Icon(Icons.bolt_rounded,
+                      size: 16, color: colors.oliveDeep),
+                  label: Text(sugerencia),
+                  onPressed: () => onSugerencia(sugerencia),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Burbuja con la pregunta original del usuario, para dar contexto en
-/// modo loading y modo respuesta (estilo chat de un solo turno).
 class _BurbujaUsuario extends StatelessWidget {
   final String texto;
   const _BurbujaUsuario({required this.texto});
@@ -423,7 +427,7 @@ class _BurbujaUsuario extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.85,
+          maxWidth: MediaQuery.of(context).size.width * 0.8,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
@@ -444,15 +448,15 @@ class _BurbujaUsuario extends StatelessWidget {
   }
 }
 
-class _VistaRespuesta extends StatelessWidget {
+class _BurbujaAsistente extends StatelessWidget {
   final RespuestaAsistente respuesta;
-  final String pregunta;
+  final bool acciones;
   final void Function(String productoId) onProducto;
   final VoidCallback onPublicar;
 
-  const _VistaRespuesta({
+  const _BurbujaAsistente({
     required this.respuesta,
-    required this.pregunta,
+    required this.acciones,
     required this.onProducto,
     required this.onPublicar,
   });
@@ -463,93 +467,247 @@ class _VistaRespuesta extends StatelessWidget {
     final tieneProductos = respuesta.productos.isNotEmpty;
     final buscoSinResultados =
         respuesta.accion == AccionAsistente.buscar && !tieneProductos;
-    final mostrarBotonPublicar = respuesta.accion == AccionAsistente.publicar ||
-        respuesta.prefilled != null ||
-        buscoSinResultados;
+    final mostrarBotonPublicar = acciones &&
+        (respuesta.accion == AccionAsistente.publicar ||
+            respuesta.prefilled != null ||
+            buscoSinResultados);
     final etiquetaBotonPublicar = buscoSinResultados
         ? 'Publica tú un plato'
         : 'Empezar a publicar';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (pregunta.isNotEmpty) ...[
-          _BurbujaUsuario(texto: pregunta),
-          const SizedBox(height: 12),
-        ],
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: colors.olive.withValues(alpha: 0.25),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(4),
-              topRight: Radius.circular(16),
-              bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(16),
-            ),
-          ),
-          child: Text(
-            respuesta.respuesta,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
         ),
-        if (tieneProductos) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Sugerencias cercanas',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 280),
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: respuesta.productos.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, index) {
-                final p = respuesta.productos[index];
-                return _ProductoChip(
-                  producto: p,
-                  onTap: () => onProducto(p.id),
-                );
-              },
-            ),
-          ),
-        ] else if (buscoSinResultados) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: colors.cream2,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: colors.olive.withValues(alpha: 0.4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colors.olive.withValues(alpha: 0.25),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
+              child: Text(
+                respuesta.respuesta,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.lightbulb_outline_rounded,
-                    color: colors.oliveDeep),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Hoy no hay nada cerca con esos criterios. ¿Te animas a cocinarlo tú?',
-                    style: Theme.of(context).textTheme.bodySmall,
+            if (tieneProductos) ...[
+              const SizedBox(height: 10),
+              for (final p in respuesta.productos)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: _ProductoChip(
+                    producto: p,
+                    onTap: () => onProducto(p.id),
                   ),
                 ),
-              ],
+            ] else if (buscoSinResultados && acciones) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colors.cream2,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colors.olive.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline_rounded,
+                        color: colors.oliveDeep),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '¿Te animas a cocinarlo tú?',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (mostrarBotonPublicar) ...[
+              const SizedBox(height: 10),
+              FilledButton.icon(
+                onPressed: onPublicar,
+                icon: const Icon(Icons.add_circle_outline_rounded),
+                label: Text(etiquetaBotonPublicar),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Burbuja "el asistente esta escribiendo" con mensajes rotatorios.
+class _BurbujaLoading extends StatefulWidget {
+  const _BurbujaLoading();
+
+  @override
+  State<_BurbujaLoading> createState() => _BurbujaLoadingState();
+}
+
+class _BurbujaLoadingState extends State<_BurbujaLoading> {
+  int _indice = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+      if (!mounted) return;
+      setState(() {
+        _indice = (_indice + 1) % _mensajesLoading.length;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: colors.olive.withValues(alpha: 0.25),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(4),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.terracotta,
+              ),
+            ),
+            const SizedBox(width: 10),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: Text(
+                _mensajesLoading[_indice],
+                key: ValueKey(_indice),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BannerError extends StatelessWidget {
+  final String error;
+  const _BannerError({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: colors.terracotta.withValues(alpha: 0.12),
+      child: Text(
+        error,
+        style: Theme.of(context)
+            .textTheme
+            .bodySmall
+            ?.copyWith(color: colors.terracottaDeep),
+      ),
+    );
+  }
+}
+
+class _BarraInput extends StatelessWidget {
+  final TextEditingController controller;
+  final bool habilitado;
+  final VoidCallback onEnviar;
+
+  const _BarraInput({
+    required this.controller,
+    required this.habilitado,
+    required this.onEnviar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.yumColors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              minLines: 1,
+              maxLines: 4,
+              enabled: habilitado,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => onEnviar(),
+              decoration: InputDecoration(
+                hintText: habilitado
+                    ? 'Escribe algo…'
+                    : 'Esperando respuesta…',
+                filled: true,
+                fillColor: colors.cream2,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Material(
+            color: colors.terracotta,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: habilitado ? onEnviar : null,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Icon(
+                  Icons.send_rounded,
+                  color: colors.paper,
+                  size: 20,
+                ),
+              ),
             ),
           ),
         ],
-        if (mostrarBotonPublicar) ...[
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: onPublicar,
-            icon: const Icon(Icons.add_circle_outline_rounded),
-            label: Text(etiquetaBotonPublicar),
-          ),
-        ],
-      ],
+      ),
     );
   }
 }

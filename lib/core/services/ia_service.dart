@@ -120,29 +120,51 @@ class RespuestaAsistente {
   }
 }
 
+/// Rol de un turno en la conversacion con el asistente IA.
+enum RolMensaje { user, assistant }
+
+/// Mensaje individual dentro del historial de chat que se envia a la
+/// Edge Function. Solo contiene texto: los productos y la accion del
+/// turno previo no se reenvian, basta con el texto natural.
+class MensajeChat {
+  final RolMensaje rol;
+  final String texto;
+
+  const MensajeChat({required this.rol, required this.texto});
+
+  Map<String, dynamic> toJson() => {
+        'rol': rol == RolMensaje.user ? 'user' : 'assistant',
+        'texto': texto,
+      };
+}
+
 /// Cliente del asistente IA de YumYum.
 ///
 /// La logica del asistente vive en una Edge Function de Supabase
-/// (`supabase/functions/asistente-ia/`). El cliente envia la consulta y la
-/// ubicacion aproximada; la funcion habla con Gemini con function calling,
-/// ejecuta busquedas reales contra Supabase si hace falta y devuelve un
-/// JSON con texto conversacional, accion sugerida, productos y prefilled
-/// opcional para publicar.
+/// (`supabase/functions/asistente-ia/`). El cliente envia el historial
+/// completo de la conversacion (multi-turno) y la ubicacion aproximada;
+/// la funcion habla con Gemini con function calling, ejecuta busquedas
+/// reales contra Supabase si hace falta y devuelve un JSON con texto
+/// conversacional, accion sugerida, productos y prefilled opcional para
+/// publicar.
 class IAService {
   static const String _functionName = 'asistente-ia';
 
-  static Future<RespuestaAsistente> procesarTexto(
-    String texto,
-    String usuarioId, {
+  /// Envia un historial de conversacion a la Edge Function. El ultimo
+  /// elemento debe ser un mensaje del usuario.
+  static Future<RespuestaAsistente> enviarHistorial(
+    List<MensajeChat> mensajes, {
     double? latitud,
     double? longitud,
   }) async {
+    if (mensajes.isEmpty) {
+      throw Exception('El historial no puede estar vacio.');
+    }
     try {
       final response = await Supabase.instance.client.functions.invoke(
         _functionName,
         body: {
-          'texto': texto,
-          'usuario': usuarioId,
+          'mensajes': mensajes.map((m) => m.toJson()).toList(),
           if (latitud != null && longitud != null)
             'ubicacion': {
               'latitud': latitud,

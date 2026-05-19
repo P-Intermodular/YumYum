@@ -219,6 +219,39 @@ interface FiltrosBusqueda {
   max_precio?: number;
 }
 
+interface MensajeChat {
+  rol: "user" | "assistant";
+  texto: string;
+}
+
+/// Normaliza el payload de entrada a una lista de mensajes. Acepta tanto
+/// el formato legacy `{ texto: "..." }` (lo envuelve como un unico turno
+/// del usuario) como el nuevo `{ mensajes: [{ rol, texto }, ...] }`.
+function normalizarHistorial(payload: {
+  texto?: unknown;
+  mensajes?: unknown;
+}): MensajeChat[] {
+  const fuente = Array.isArray(payload.mensajes) ? payload.mensajes : null;
+  if (fuente) {
+    const limpio: MensajeChat[] = [];
+    for (const item of fuente) {
+      if (item === null || typeof item !== "object") continue;
+      const rolRaw = (item as Record<string, unknown>).rol;
+      const textoRaw = (item as Record<string, unknown>).texto;
+      if (typeof textoRaw !== "string") continue;
+      const texto = textoRaw.trim();
+      if (!texto) continue;
+      const rol = rolRaw === "assistant" ? "assistant" : "user";
+      limpio.push({ rol, texto });
+    }
+    return limpio;
+  }
+  if (typeof payload.texto === "string" && payload.texto.trim()) {
+    return [{ rol: "user", texto: payload.texto.trim() }];
+  }
+  return [];
+}
+
 function filtrarProductos(
   productos: ProductoRpc[],
   filtros: FiltrosBusqueda,
@@ -402,6 +435,7 @@ Deno.serve(async (req: Request) => {
 
   let payload: {
     texto?: unknown;
+    mensajes?: unknown;
     usuario?: unknown;
     ubicacion?: { latitud?: unknown; longitud?: unknown };
   };
@@ -411,10 +445,12 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "JSON invalido en la solicitud" }, 400);
   }
 
-  const texto = typeof payload.texto === "string" ? payload.texto.trim() : "";
-  if (!texto) {
+  // Soporta dos formatos: legacy `{ texto }` y nuevo `{ mensajes: [...] }`
+  // con historial para multi-turno.
+  const mensajes = normalizarHistorial(payload);
+  if (mensajes.length === 0) {
     return jsonResponse(
-      { error: "El campo 'texto' es obligatorio" },
+      { error: "Falta historial de mensajes en la solicitud" },
       400,
     );
   }
@@ -431,10 +467,14 @@ Deno.serve(async (req: Request) => {
     const perfil = await cargarPerfilUsuario(authHeader);
     const systemPrompt = construirSystemPrompt(perfil);
 
-    // Turno 1: el usuario habla. Gemini puede decidir llamar a la herramienta.
-    const contents: Array<{ role: string; parts: GeminiPart[] }> = [
-      { role: "user", parts: [{ text: texto }] },
-    ];
+    // Reconstruimos el historial completo para Gemini: cada mensaje del
+    // usuario con role "user" y cada respuesta previa del asistente con
+    // role "model".
+    const contents: Array<{ role: string; parts: GeminiPart[] }> = mensajes
+      .map((m) => ({
+        role: m.rol === "user" ? "user" : "model",
+        parts: [{ text: m.texto }],
+      }));
 
     const primera = await llamarGemini(contents, {
       withTools: true,
@@ -529,11 +569,12 @@ Deno.serve(async (req: Request) => {
     }
 
     // Camino sin tool: Gemini no quiso buscar. Re-llamamos pidiendo
-    // formato estructurado (publicar / info / ninguna).
+    // formato estructurado (publicar / info / ninguna), conservando el
+    // historial para que la accion final tenga contexto multi-turno.
     const textoLibre = partsPrimera.map((p) => p.text ?? "").join("");
 
     const contentsEstructurada: Array<{ role: string; parts: GeminiPart[] }> = [
-      { role: "user", parts: [{ text: texto }] },
+      ...contents,
       {
         role: "user",
         parts: [
