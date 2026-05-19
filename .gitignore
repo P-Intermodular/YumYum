@@ -59,6 +59,14 @@ prototipo-funciones/
 !/documentacion/
 !/documentacion/divergencias_diseno_backend.md
 !/documentacion/documentacion_tecnica.md
+!/documentacion/00_LEEME_PRIMERO.md
+!/documentacion/01_vision_y_stack.md
+!/documentacion/02_arquitectura_y_carpetas.md
+!/documentacion/03_base_de_datos.md
+!/documentacion/04_api_y_backend.md
+!/documentacion/05_flujos_de_negocio.md
+!/documentacion/06_reglas_de_negocio.md
+!/documentacion/07_estado_y_deuda_tecnica.md
 
 # Residuos de symlinks de WSL (creados por scripts/run_local.sh).
 /build.reparsepoint.bak
