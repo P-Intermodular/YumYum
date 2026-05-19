@@ -1,48 +1,124 @@
 // Edge Function del asistente IA de YumYum.
 //
-// Recibe el texto que el usuario teclea en el FAB del asistente y devuelve
-// un JSON estructurado con la intencion detectada (publicar / buscar /
-// desconocido) y los campos extraidos. La integracion con Gemini se hace
-// aqui dentro para que la GEMINI_API_KEY no salga del servidor: el cliente
-// Flutter solo habla con esta funcion via Supabase Functions.
+// Recibe la consulta del usuario, la ubicacion aproximada (lat/lon) y el
+// id del usuario autenticado. Llama a Gemini con una "tool" disponible
+// (`buscar_productos_cercanos`); cuando Gemini decide invocarla, esta
+// funcion ejecuta la RPC `obtener_productos_cercanos` contra Supabase
+// usando el JWT del propio usuario (respeta RLS) y se la devuelve al
+// modelo, que compone una respuesta natural mencionando los productos
+// reales encontrados.
 //
-// Para que funcione hay que configurar el secret GEMINI_API_KEY en
-// Supabase (Dashboard -> Project Settings -> Edge Functions -> Secrets,
-// o `supabase secrets set GEMINI_API_KEY=...` con el CLI).
+// Salida al cliente:
+// {
+//   respuesta: string,                  // texto conversacional listo para UI
+//   accion: 'buscar' | 'publicar' | 'info' | 'ninguna',
+//   productos: Array<{                 // si Gemini busco, top resultados
+//     id, titulo, descripcion, tipo, precio, categoria,
+//     distancia_km, propietario_nombre, propietario_avatar,
+//     imagen_principal
+//   }>,
+//   prefilled_publicacion?: {           // si el usuario quiere publicar
+//     titulo?, descripcion?, categoria?, tipo?, precio?
+//   }
+// }
+//
+// La GEMINI_API_KEY se configura como secret de Supabase
+// (Dashboard -> Project Settings -> Edge Functions -> Secrets).
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_ENDPOINT =
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
+const CATEGORIAS_VALIDAS = [
+  "primero",
+  "segundo",
+  "postre",
+  "snack",
+  "bebida",
+  "panaderia",
+  "otro",
+] as const;
+const TIPOS_VALIDOS = ["venta", "intercambio"] as const;
+
 const SYSTEM_PROMPT =
-  `Eres el asistente de YumYum, una app de venta e intercambio local de comida casera entre vecinos.
+  `Eres el asistente conversacional de YumYum, una app de venta e intercambio local de comida casera entre vecinos.
 
-Tu tarea: analizar la intencion del usuario y extraer datos estructurados.
+CAPACIDADES:
+- Recomendar platos cercanos que el usuario podria comer ahora.
+- Ayudar a planificar comidas usando lo que esta disponible cerca.
+- Guiar al usuario para publicar su propio plato.
+- Responder dudas basicas sobre como funciona la app.
 
-Acciones posibles:
-- "publicar": el usuario quiere publicar u ofrecer un producto.
-- "buscar": el usuario quiere buscar productos o filtrar el feed.
-- "desconocido": no se puede determinar.
+REGLAS:
+- Cuando el usuario quiera "comer algo", "buscar", "que hay cerca", "planificar comidas" o expresiones similares, INVOCA la herramienta "buscar_productos_cercanos" con los filtros que mejor encajen con su intencion. Despues, en tu respuesta final, menciona productos concretos por su nombre y la distancia (formato "a 400 m" o "a 1,2 km").
+- Cuando el usuario quiera publicar/ofrecer un plato propio, NO llames a la herramienta: explicale brevemente que va a abrirse el formulario de publicar.
+- Si la consulta es saludo, ayuda general o algo que no requiere productos cercanos, responde directamente sin llamar a la herramienta.
+- Responde SIEMPRE en espanol, en tono cercano (de tu) y maximo 4 frases. No inventes platos: usa solo los que devuelva la herramienta.
+- Categorias validas: ${CATEGORIAS_VALIDAS.join(", ")}. Tipos validos: ${TIPOS_VALIDOS.join(", ")}.`;
 
-Categorias validas: "primero", "segundo", "postre", "snack", "bebida", "panaderia", "otro".
-Tipos validos: "venta", "intercambio".
+const TOOLS = [
+  {
+    functionDeclarations: [
+      {
+        name: "buscar_productos_cercanos",
+        description:
+          "Busca platos disponibles cerca de la ubicacion del usuario. Devuelve un listado real con titulo, descripcion, distancia y propietario. Usalo cuando el usuario quiera comer, buscar o planificar comidas.",
+        parameters: {
+          type: "object",
+          properties: {
+            consulta: {
+              type: "string",
+              description:
+                "Palabras clave libres (ej: 'kebab', 'tortilla vegana'). Vacio si no aplica.",
+            },
+            categoria: {
+              type: "string",
+              enum: CATEGORIAS_VALIDAS,
+              description: "Filtra por categoria si el usuario la menciona.",
+            },
+            tipo: {
+              type: "string",
+              enum: TIPOS_VALIDOS,
+              description:
+                "Filtra por tipo de oferta si el usuario lo especifica (venta o intercambio).",
+            },
+            max_precio: {
+              type: "number",
+              description: "Precio maximo en euros si el usuario lo menciona.",
+            },
+          },
+          required: [],
+        },
+      },
+    ],
+  },
+];
 
-Si un campo no se menciona, omitelo. El campo "resumen" siempre debe estar presente con una frase corta y amigable describiendo lo que entendiste. Responde SIEMPRE en espanol.`;
-
-const RESPONSE_SCHEMA = {
+const FINAL_RESPONSE_SCHEMA = {
   type: "object",
   properties: {
-    accion: { type: "string", enum: ["publicar", "buscar", "desconocido"] },
-    resumen: { type: "string" },
-    nombre: { type: "string" },
-    categoria: { type: "string" },
-    tipo: { type: "string", enum: ["venta", "intercambio"] },
-    precio: { type: "number" },
-    descripcion: { type: "string" },
+    respuesta: { type: "string" },
+    accion: {
+      type: "string",
+      enum: ["buscar", "publicar", "info", "ninguna"],
+    },
+    prefilled_publicacion: {
+      type: "object",
+      properties: {
+        titulo: { type: "string" },
+        descripcion: { type: "string" },
+        categoria: { type: "string", enum: CATEGORIAS_VALIDAS },
+        tipo: { type: "string", enum: TIPOS_VALIDOS },
+        precio: { type: "number" },
+      },
+    },
   },
-  required: ["accion", "resumen"],
+  required: ["respuesta", "accion"],
 };
 
 const CORS_HEADERS: Record<string, string> = {
@@ -59,6 +135,188 @@ function jsonResponse(body: unknown, status: number): Response {
   });
 }
 
+interface ProductoRpc {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  tipo_oferta: string;
+  precio: number | null;
+  categoria: string | null;
+  alergenos: string[] | null;
+  etiquetas: string[] | null;
+  sin_alergenos_declarados: boolean | null;
+  distancia_km: number | null;
+  perfiles: { nombre?: string; url_avatar?: string | null } | null;
+  imagenes_producto:
+    | Array<{ url_publica: string; posicion: number }>
+    | null;
+}
+
+interface ProductoSalida {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  tipo: string;
+  precio: number | null;
+  categoria: string | null;
+  distancia_km: number | null;
+  propietario_nombre: string | null;
+  propietario_avatar: string | null;
+  imagen_principal: string | null;
+}
+
+function aProductoSalida(p: ProductoRpc): ProductoSalida {
+  const imagenes = p.imagenes_producto ?? [];
+  const principal = imagenes.length > 0
+    ? imagenes.sort((a, b) => a.posicion - b.posicion)[0].url_publica
+    : null;
+  return {
+    id: p.id,
+    titulo: p.titulo,
+    descripcion: p.descripcion,
+    tipo: p.tipo_oferta,
+    precio: p.precio,
+    categoria: p.categoria,
+    distancia_km: p.distancia_km,
+    propietario_nombre: p.perfiles?.nombre ?? null,
+    propietario_avatar: p.perfiles?.url_avatar ?? null,
+    imagen_principal: principal,
+  };
+}
+
+interface FiltrosBusqueda {
+  consulta?: string;
+  categoria?: string;
+  tipo?: string;
+  max_precio?: number;
+}
+
+function filtrarProductos(
+  productos: ProductoRpc[],
+  filtros: FiltrosBusqueda,
+): ProductoRpc[] {
+  const consulta = (filtros.consulta ?? "").trim().toLowerCase();
+  return productos.filter((p) => {
+    if (filtros.categoria && p.categoria !== filtros.categoria) return false;
+    if (filtros.tipo && p.tipo_oferta !== filtros.tipo) return false;
+    if (
+      filtros.max_precio !== undefined &&
+      p.precio !== null &&
+      p.precio > filtros.max_precio
+    ) {
+      return false;
+    }
+    if (consulta) {
+      const base = `${p.titulo} ${p.descripcion ?? ""}`.toLowerCase();
+      if (!base.includes(consulta)) return false;
+    }
+    return true;
+  });
+}
+
+async function ejecutarBusqueda(
+  authHeader: string,
+  latitud: number,
+  longitud: number,
+  filtros: FiltrosBusqueda,
+): Promise<{ productos: ProductoRpc[]; error?: string }> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return { productos: [], error: "Configuracion de Supabase incompleta." };
+  }
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false },
+  });
+
+  const { data, error } = await supabase.rpc(
+    "obtener_productos_cercanos",
+    {
+      p_latitud: latitud,
+      p_longitud: longitud,
+      p_radio_km: 10,
+      p_limite: 30,
+    },
+  );
+
+  if (error) {
+    console.error("RPC obtener_productos_cercanos error:", error);
+    return { productos: [], error: error.message };
+  }
+
+  const todos = (data ?? []) as ProductoRpc[];
+  const filtrados = filtrarProductos(todos, filtros).slice(0, 5);
+  return { productos: filtrados };
+}
+
+function resumirParaModelo(productos: ProductoRpc[]): string {
+  if (productos.length === 0) {
+    return "No se han encontrado platos cercanos que coincidan con los filtros.";
+  }
+  return productos
+    .map((p, i) => {
+      const distancia = p.distancia_km !== null
+        ? p.distancia_km < 1
+          ? `${Math.round(p.distancia_km * 1000)} m`
+          : `${p.distancia_km.toFixed(1).replace(".", ",")} km`
+        : "distancia desconocida";
+      const precio = p.precio !== null ? `${p.precio} EUR` : "sin precio";
+      const propietario = p.perfiles?.nombre ?? "anonimo";
+      const descripcion = (p.descripcion ?? "").slice(0, 120);
+      return `${i + 1}. ${p.titulo} - ${p.tipo_oferta} - ${precio} - ${distancia} - de ${propietario}. ${descripcion}`;
+    })
+    .join("\n");
+}
+
+interface GeminiPart {
+  text?: string;
+  functionCall?: { name: string; args: Record<string, unknown> };
+  functionResponse?: { name: string; response: Record<string, unknown> };
+}
+
+interface GeminiCandidate {
+  content?: { role?: string; parts?: GeminiPart[] };
+  finishReason?: string;
+}
+
+interface GeminiResponse {
+  candidates?: GeminiCandidate[];
+}
+
+async function llamarGemini(
+  contents: Array<{ role: string; parts: GeminiPart[] }>,
+  opciones: { withTools: boolean; withSchema: boolean },
+): Promise<GeminiResponse> {
+  const body: Record<string, unknown> = {
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents,
+  };
+  if (opciones.withTools) {
+    body.tools = TOOLS;
+  }
+  if (opciones.withSchema) {
+    body.generationConfig = {
+      responseMimeType: "application/json",
+      responseSchema: FINAL_RESPONSE_SCHEMA,
+    };
+  }
+
+  const response = await fetch(
+    `${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+
+  if (!response.ok) {
+    const detalle = await response.text();
+    console.error("Gemini upstream error:", response.status, detalle);
+    throw new Error(`Gemini fallo con status ${response.status}`);
+  }
+  return (await response.json()) as GeminiResponse;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -73,7 +331,16 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  let payload: { texto?: unknown; usuario?: unknown };
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader) {
+    return jsonResponse({ error: "Falta token de autenticacion." }, 401);
+  }
+
+  let payload: {
+    texto?: unknown;
+    usuario?: unknown;
+    ubicacion?: { latitud?: unknown; longitud?: unknown };
+  };
   try {
     payload = await req.json();
   } catch (_e) {
@@ -81,55 +348,147 @@ Deno.serve(async (req: Request) => {
   }
 
   const texto = typeof payload.texto === "string" ? payload.texto.trim() : "";
-  const usuarioId = typeof payload.usuario === "string"
-    ? payload.usuario
-    : null;
   if (!texto) {
     return jsonResponse(
       { error: "El campo 'texto' es obligatorio" },
       400,
     );
   }
+  const latitud = typeof payload.ubicacion?.latitud === "number"
+    ? payload.ubicacion.latitud
+    : null;
+  const longitud = typeof payload.ubicacion?.longitud === "number"
+    ? payload.ubicacion.longitud
+    : null;
 
   try {
-    const geminiResponse = await fetch(
-      `${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: [{ parts: [{ text: texto }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
+    // Turno 1: el usuario habla. Gemini puede decidir llamar a la herramienta.
+    const contents: Array<{ role: string; parts: GeminiPart[] }> = [
+      { role: "user", parts: [{ text: texto }] },
+    ];
+
+    const primera = await llamarGemini(contents, {
+      withTools: true,
+      withSchema: false,
+    });
+    const partsPrimera = primera.candidates?.[0]?.content?.parts ?? [];
+    const llamada = partsPrimera.find((p) => p.functionCall)?.functionCall;
+
+    let productosSalida: ProductoSalida[] = [];
+
+    if (llamada && llamada.name === "buscar_productos_cercanos") {
+      if (latitud === null || longitud === null) {
+        // No tenemos ubicacion pero Gemini quiere buscar. Damos una
+        // respuesta honesta sin llamar a la RPC.
+        return jsonResponse({
+          respuesta:
+            "Necesito conocer tu ubicacion para buscar platos cercanos. Activa la ubicacion en la app y vuelve a preguntarme.",
+          accion: "info",
+          productos: [],
+        }, 200);
+      }
+
+      const filtros: FiltrosBusqueda = {
+        consulta: typeof llamada.args.consulta === "string"
+          ? llamada.args.consulta
+          : undefined,
+        categoria: typeof llamada.args.categoria === "string"
+          ? llamada.args.categoria
+          : undefined,
+        tipo: typeof llamada.args.tipo === "string"
+          ? llamada.args.tipo
+          : undefined,
+        max_precio: typeof llamada.args.max_precio === "number"
+          ? llamada.args.max_precio
+          : undefined,
+      };
+
+      const { productos, error } = await ejecutarBusqueda(
+        authHeader,
+        latitud,
+        longitud,
+        filtros,
+      );
+      if (error) {
+        return jsonResponse(
+          { error: `No pude consultar los platos cercanos: ${error}` },
+          502,
+        );
+      }
+      productosSalida = productos.map(aProductoSalida);
+
+      // Turno 2: devolvemos el resultado de la tool a Gemini y le pedimos
+      // la respuesta final en formato estructurado.
+      contents.push({
+        role: "model",
+        parts: [{ functionCall: llamada }],
+      });
+      contents.push({
+        role: "user",
+        parts: [
+          {
+            functionResponse: {
+              name: "buscar_productos_cercanos",
+              response: {
+                listado_resumen: resumirParaModelo(productos),
+                total_resultados: productos.length,
+              },
+            },
           },
-        }),
+        ],
+      });
+
+      const segunda = await llamarGemini(contents, {
+        withTools: false,
+        withSchema: true,
+      });
+      const partsSegunda = segunda.candidates?.[0]?.content?.parts ?? [];
+      const textoFinal = partsSegunda.map((p) => p.text ?? "").join("");
+      if (!textoFinal) {
+        return jsonResponse(
+          { error: "Respuesta vacia del asistente." },
+          502,
+        );
+      }
+      const parsed = JSON.parse(textoFinal);
+      return jsonResponse({
+        ...parsed,
+        productos: productosSalida,
+      }, 200);
+    }
+
+    // Camino sin tool: Gemini no quiso buscar. Re-llamamos pidiendo
+    // formato estructurado (publicar / info / ninguna).
+    const textoLibre = partsPrimera.map((p) => p.text ?? "").join("");
+
+    const contentsEstructurada: Array<{ role: string; parts: GeminiPart[] }> = [
+      { role: "user", parts: [{ text: texto }] },
+      {
+        role: "user",
+        parts: [
+          {
+            text:
+              `Redacta la respuesta final al usuario manteniendo este tono y contenido aproximado: "${textoLibre}". ` +
+              `Marca "accion" como "publicar" si el usuario quiere publicar/ofrecer un plato, "info" si es ayuda general, ` +
+              `o "ninguna" en cualquier otro caso. Si la accion es "publicar", rellena "prefilled_publicacion" con los datos que el usuario haya dado (titulo, descripcion, categoria, tipo, precio).`,
+          },
+        ],
       },
-    );
-
-    if (!geminiResponse.ok) {
-      const detalle = await geminiResponse.text();
-      console.error(
-        "Gemini upstream error:",
-        geminiResponse.status,
-        detalle,
-      );
-      return jsonResponse(
-        { error: "El asistente no esta disponible ahora mismo" },
-        502,
-      );
+    ];
+    const segundaSinTool = await llamarGemini(contentsEstructurada, {
+      withTools: false,
+      withSchema: true,
+    });
+    const partsFinal = segundaSinTool.candidates?.[0]?.content?.parts ?? [];
+    const textoFinal = partsFinal.map((p) => p.text ?? "").join("");
+    if (!textoFinal) {
+      return jsonResponse({ error: "Respuesta vacia del asistente." }, 502);
     }
-
-    const data = await geminiResponse.json();
-    const rawText: string | undefined =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) {
-      return jsonResponse({ error: "Respuesta vacia del asistente" }, 502);
-    }
-
-    const parsed = JSON.parse(rawText);
-    return jsonResponse({ ...parsed, usuarioId }, 200);
+    const parsed = JSON.parse(textoFinal);
+    return jsonResponse({
+      ...parsed,
+      productos: [],
+    }, 200);
   } catch (err) {
     console.error("Error procesando solicitud:", err);
     return jsonResponse({ error: "Error procesando la solicitud" }, 500);
