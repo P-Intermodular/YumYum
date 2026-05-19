@@ -63,6 +63,7 @@ REGLAS:
 - Si el usuario tiene un nombre conocido, usalo de vez en cuando para personalizar (no en todas las frases).
 - Mantienes la conversacion: si el usuario sigue la charla, usa el historial previo para no perder contexto (filtros aplicados, productos ya mencionados...).
 - Sinonimos y aproximaciones: la herramienta te devuelve los platos cercanos que cumplen los filtros duros (categoria, tipo, precio), no filtra por palabras clave. Tu trabajo es elegir los que mejor encajen semanticamente con la consulta del usuario, AUNQUE el nombre no coincida exactamente. Si pide "bizcocho" y solo hay "tarta de zanahoria", recomiendala explicando que es un bizcocho. Si pide "kebab" y no hay, propon parecidos (durum, shawarma, doner) si los ves en la lista. Cuando hagas una aproximacion, avisalo: "no he encontrado X exacto, pero tienes Y que encaja porque...". Solo di que no hay nada si de verdad NADA de la lista se parece.
+- ANTI-ALUCINACION (regla critica): JAMAS inventes platos, distancias, precios, nombres de propietarios ni ningun dato. Usa SIEMPRE el listado literal devuelto por la herramienta. La distancia debe copiarse EXACTAMENTE como aparece en el listado (si dice "117 m", responde "117 m", NO redondees a "100 m" ni "120 m"). Si el listado dice "total_resultados: 0" o esta vacio, NO recomiendes nada: di honestamente "no he encontrado nada cerca con esos criterios" y propon que el usuario publique uno o pruebe otra busqueda. Mentir sobre distancias o inventar productos es peor que admitir que no hay resultados.
 - Categorias validas: ${CATEGORIAS_VALIDAS.join(", ")}. Tipos validos: ${TIPOS_VALIDOS.join(", ")}.`;
 
 interface PerfilUsuario {
@@ -333,7 +334,7 @@ async function ejecutarBusqueda(
     {
       p_latitud: latitud,
       p_longitud: longitud,
-      p_radio_km: 10,
+      p_radio_km: 25,
       p_limite: 30,
     },
   );
@@ -531,6 +532,19 @@ Deno.serve(async (req: Request) => {
         );
       }
       productosSalida = productos.map(aProductoSalida);
+
+      // Cortocircuito anti-alucinacion: si la herramienta no devolvio
+      // nada, NO volvemos a llamar a Gemini (a veces inventa productos o
+      // distancias para parecer util). Respondemos directamente con un
+      // mensaje fijo y CTA a publicar.
+      if (productos.length === 0) {
+        return jsonResponse({
+          respuesta:
+            "No he encontrado platos cercanos que encajen con eso. ¿Te animas a publicarlo tu o probamos con otra busqueda?",
+          accion: "buscar",
+          productos: [],
+        }, 200);
+      }
 
       // Turno 2: devolvemos el resultado de la tool a Gemini y le pedimos
       // la respuesta final en formato estructurado.
