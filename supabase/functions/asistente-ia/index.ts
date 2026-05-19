@@ -61,6 +61,8 @@ REGLAS:
 - Responde SIEMPRE en espanol, en tono cercano (de tu) y maximo 4 frases. No inventes platos: usa solo los que devuelva la herramienta.
 - Si el usuario declara alergenos en su perfil, JAMAS recomiendes platos que los contengan. Tampoco propongas publicar recetas con alergenos del usuario sin avisarle.
 - Si el usuario tiene un nombre conocido, usalo de vez en cuando para personalizar (no en todas las frases).
+- Mantienes la conversacion: si el usuario sigue la charla, usa el historial previo para no perder contexto (filtros aplicados, productos ya mencionados...).
+- Sinonimos y aproximaciones: la herramienta te devuelve los platos cercanos que cumplen los filtros duros (categoria, tipo, precio), no filtra por palabras clave. Tu trabajo es elegir los que mejor encajen semanticamente con la consulta del usuario, AUNQUE el nombre no coincida exactamente. Si pide "bizcocho" y solo hay "tarta de zanahoria", recomiendala explicando que es un bizcocho. Si pide "kebab" y no hay, propon parecidos (durum, shawarma, doner) si los ves en la lista. Cuando hagas una aproximacion, avisalo: "no he encontrado X exacto, pero tienes Y que encaja porque...". Solo di que no hay nada si de verdad NADA de la lista se parece.
 - Categorias validas: ${CATEGORIAS_VALIDAS.join(", ")}. Tipos validos: ${TIPOS_VALIDOS.join(", ")}.`;
 
 interface PerfilUsuario {
@@ -95,14 +97,14 @@ const TOOLS = [
       {
         name: "buscar_productos_cercanos",
         description:
-          "Busca platos disponibles cerca de la ubicacion del usuario. Devuelve un listado real con titulo, descripcion, distancia y propietario. Usalo cuando el usuario quiera comer, buscar o planificar comidas.",
+          "Devuelve los platos disponibles cerca del usuario que cumplen los filtros duros (categoria, tipo, precio). No filtra por palabras clave: tu mismo seleccionas en la respuesta los que encajen semanticamente con lo que pide el usuario. Usalo cuando el usuario quiera comer, buscar o planificar comidas.",
         parameters: {
           type: "object",
           properties: {
             consulta: {
               type: "string",
               description:
-                "Palabras clave libres (ej: 'kebab', 'tortilla vegana'). Vacio si no aplica.",
+                "Palabras clave libres (ej: 'kebab', 'tortilla vegana'). Solo para registro/logging: el servidor NO filtra por este campo.",
             },
             categoria: {
               type: "string",
@@ -252,11 +254,16 @@ function normalizarHistorial(payload: {
   return [];
 }
 
+/// Filtra solo por criterios DUROS (categoria, tipo, max_precio). La
+/// busqueda por palabras clave intencionalmente NO se aplica aqui: que
+/// Gemini decida en la respuesta natural cuales son relevantes
+/// semanticamente. Asi una peticion de "bizcocho" puede acabar
+/// recomendando "tarta de zanahoria" aunque ningun campo contenga la
+/// palabra exacta.
 function filtrarProductos(
   productos: ProductoRpc[],
   filtros: FiltrosBusqueda,
 ): ProductoRpc[] {
-  const consulta = (filtros.consulta ?? "").trim().toLowerCase();
   return productos.filter((p) => {
     if (filtros.categoria && p.categoria !== filtros.categoria) return false;
     if (filtros.tipo && p.tipo_oferta !== filtros.tipo) return false;
@@ -266,10 +273,6 @@ function filtrarProductos(
       p.precio > filtros.max_precio
     ) {
       return false;
-    }
-    if (consulta) {
-      const base = `${p.titulo} ${p.descripcion ?? ""}`.toLowerCase();
-      if (!base.includes(consulta)) return false;
     }
     return true;
   });
@@ -341,7 +344,9 @@ async function ejecutarBusqueda(
   }
 
   const todos = (data ?? []) as ProductoRpc[];
-  const filtrados = filtrarProductos(todos, filtros).slice(0, 5);
+  // Mandamos hasta 8 a Gemini para que tenga margen de eleccion semantica
+  // sin disparar el coste de tokens.
+  const filtrados = filtrarProductos(todos, filtros).slice(0, 8);
   return { productos: filtrados };
 }
 
