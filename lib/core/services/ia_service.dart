@@ -180,8 +180,14 @@ class IAService {
       throw Exception('Respuesta inesperada del asistente.');
     } on FunctionException catch (e) {
       final detalle = e.details;
-      if (detalle is Map && detalle['error'] is String) {
-        throw Exception(detalle['error'] as String);
+      if (detalle is Map) {
+        final mensaje =
+            detalle['error'] as String? ?? 'Error del asistente.';
+        final tecnico = detalle['detalle'] as String?;
+        if (tecnico != null && tecnico.isNotEmpty) {
+          throw Exception('$mensaje | $tecnico');
+        }
+        throw Exception(mensaje);
       }
       throw Exception('Error del asistente (codigo ${e.status}).');
     } catch (e) {

@@ -608,7 +608,14 @@ Deno.serve(async (req: Request) => {
       productos: [],
     }, 200);
   } catch (err) {
-    console.error("Error procesando solicitud:", err);
-    return jsonResponse({ error: "Error procesando la solicitud" }, 500);
+    const detalle = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    console.error("Error procesando solicitud:", detalle, err);
+    return jsonResponse(
+      {
+        error: "Error procesando la solicitud",
+        detalle,
+      },
+      500,
+    );
   }
 });
