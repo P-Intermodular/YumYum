@@ -279,18 +279,38 @@ function filtrarProductos(
   });
 }
 
+function uidDeJwt(authHeader: string): string | null {
+  try {
+    const jwt = authHeader.replace(/^Bearer\s+/i, "");
+    const parts = jwt.split(".");
+    if (parts.length < 2) return null;
+    // base64url -> base64
+    const payloadB64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = payloadB64.padEnd(
+      payloadB64.length + (4 - (payloadB64.length % 4)) % 4,
+      "=",
+    );
+    const payload = JSON.parse(atob(padded));
+    return typeof payload?.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 async function cargarPerfilUsuario(
   authHeader: string,
 ): Promise<PerfilUsuario | null> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  // Decodificamos el UID del JWT en local en lugar de pedirselo a Supabase
+  // con auth.getUser(). Ahorra un round trip (~150 ms) y la RLS sigue
+  // protegiendo la query con el mismo Authorization header.
+  const uid = uidDeJwt(authHeader);
+  if (!uid) return null;
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false },
     });
-    const { data: user } = await supabase.auth.getUser();
-    const uid = user?.user?.id;
-    if (!uid) return null;
     const { data, error } = await supabase
       .from("perfiles")
       .select("nombre, ciudad, alergenos, bio")
