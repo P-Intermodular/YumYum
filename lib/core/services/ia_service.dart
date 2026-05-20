@@ -179,19 +179,23 @@ class IAService {
       }
       throw Exception('Respuesta inesperada del asistente.');
     } on FunctionException catch (e) {
+      // El servidor devuelve siempre un mensaje amigable en `error`. El
+      // campo `detalle` queda solo para los logs (lo emitimos por
+      // `debugPrint` arriba pero no lo mostramos al usuario).
       final detalle = e.details;
       if (detalle is Map) {
-        final mensaje =
-            detalle['error'] as String? ?? 'Error del asistente.';
-        final tecnico = detalle['detalle'] as String?;
-        if (tecnico != null && tecnico.isNotEmpty) {
-          throw Exception('$mensaje | $tecnico');
+        final mensaje = detalle['error'] as String?;
+        if (mensaje != null && mensaje.isNotEmpty) {
+          throw Exception(mensaje);
         }
-        throw Exception(mensaje);
       }
-      throw Exception('Error del asistente (codigo ${e.status}).');
+      throw Exception(
+        'No he podido contactar con el asistente. Inténtalo en un momento.',
+      );
     } catch (e) {
-      throw Exception('Fallo de red al contactar la IA: $e');
+      throw Exception(
+        'Sin conexión con el asistente. Comprueba tu Internet y vuelve a intentarlo.',
+      );
     }
   }
 }

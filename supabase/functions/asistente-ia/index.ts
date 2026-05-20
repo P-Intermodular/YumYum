@@ -30,9 +30,39 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-const GEMINI_MODEL = "gemini-2.5-flash-lite";
-const GEMINI_ENDPOINT =
-  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+/// Cascada de modelos para fallback automatico. Si el primero da 429/503,
+/// pasamos al siguiente. Si todos fallan, devolvemos al usuario una
+/// respuesta amigable. El primer elemento (o el valor del secret
+/// `GEMINI_MODEL`, si esta definido) marca el modelo preferido.
+const MODELOS_PRIORITARIOS_DEFAULT = [
+  "gemini-2.5-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-3-flash-preview",
+  "gemini-2.0-flash-lite",
+  "gemini-flash-latest",
+  "gemini-2.5-flash",
+] as const;
+const modeloPreferido = Deno.env.get("GEMINI_MODEL")?.trim();
+const MODELOS_PRIORITARIOS: string[] = modeloPreferido
+  ? [modeloPreferido, ...MODELOS_PRIORITARIOS_DEFAULT.filter((m) => m !== modeloPreferido)]
+  : [...MODELOS_PRIORITARIOS_DEFAULT];
+
+function endpointGemini(modelo: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
+}
+
+/// Tipos de fallo que justifican intentar con otro modelo.
+const STATUS_FALLBACK = new Set([429, 500, 503]);
+
+class GeminiSinDisponibilidad extends Error {
+  constructor(public ultimosStatus: number[]) {
+    super(
+      `Gemini sin disponibilidad. Ultimos status: ${ultimosStatus.join(", ")}`,
+    );
+    this.name = "GeminiSinDisponibilidad";
+  }
+}
 
 const CATEGORIAS_VALIDAS = [
   "primero",
@@ -405,10 +435,11 @@ interface GeminiResponse {
   candidates?: GeminiCandidate[];
 }
 
-async function llamarGemini(
+async function llamarGeminiModelo(
+  modelo: string,
   contents: Array<{ role: string; parts: GeminiPart[] }>,
   opciones: { withTools: boolean; withSchema: boolean; systemPrompt: string },
-): Promise<GeminiResponse> {
+): Promise<{ ok: true; data: GeminiResponse } | { ok: false; status: number }> {
   const body: Record<string, unknown> = {
     systemInstruction: { parts: [{ text: opciones.systemPrompt }] },
     contents,
@@ -424,7 +455,7 @@ async function llamarGemini(
   }
 
   const response = await fetch(
-    `${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY}`,
+    `${endpointGemini(modelo)}?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -434,10 +465,46 @@ async function llamarGemini(
 
   if (!response.ok) {
     const detalle = await response.text();
-    console.error("Gemini upstream error:", response.status, detalle);
-    throw new Error(`Gemini fallo con status ${response.status}`);
+    console.error(
+      `Gemini upstream error (modelo=${modelo}):`,
+      response.status,
+      detalle.slice(0, 300),
+    );
+    return { ok: false, status: response.status };
   }
-  return (await response.json()) as GeminiResponse;
+  return { ok: true, data: (await response.json()) as GeminiResponse };
+}
+
+/// Itera por la lista de modelos prioritarios. Si un modelo devuelve un
+/// status de los que justifican fallback (429 cuota agotada, 503 servidor
+/// saturado, 500 error transitorio), pasa al siguiente. Si ninguno
+/// responde, lanza `GeminiSinDisponibilidad` para que el handler
+/// principal devuelva una respuesta amigable al usuario.
+async function llamarGemini(
+  contents: Array<{ role: string; parts: GeminiPart[] }>,
+  opciones: { withTools: boolean; withSchema: boolean; systemPrompt: string },
+): Promise<GeminiResponse> {
+  const statusFallidos: number[] = [];
+  for (const modelo of MODELOS_PRIORITARIOS) {
+    const resultado = await llamarGeminiModelo(modelo, contents, opciones);
+    if (resultado.ok) {
+      if (statusFallidos.length > 0) {
+        console.log(
+          `Fallback OK con ${modelo} tras fallar: ${statusFallidos.join(", ")}`,
+        );
+      }
+      return resultado.data;
+    }
+    statusFallidos.push(resultado.status);
+    if (!STATUS_FALLBACK.has(resultado.status)) {
+      // Errores no recuperables (400, 401, 404...): no tiene sentido
+      // probar otro modelo. Cortamos y reportamos.
+      throw new Error(
+        `Gemini fallo con status ${resultado.status} (modelo=${modelo}); no se aplica fallback.`,
+      );
+    }
+  }
+  throw new GeminiSinDisponibilidad(statusFallidos);
 }
 
 Deno.serve(async (req: Request) => {
@@ -642,11 +709,30 @@ Deno.serve(async (req: Request) => {
       productos: [],
     }, 200);
   } catch (err) {
+    // Sin disponibilidad upstream: la cuota se agoto en todos los modelos
+    // o los servidores de Google estan saturados. No devolvemos error
+    // tecnico al usuario; respondemos como mensaje conversacional normal
+    // para que el cliente lo pinte en la burbuja del asistente.
+    if (err instanceof GeminiSinDisponibilidad) {
+      console.warn(
+        "Gemini sin disponibilidad en ningun modelo:",
+        err.ultimosStatus.join(", "),
+      );
+      const hayCuotaAgotada = err.ultimosStatus.includes(429);
+      const respuesta = hayCuotaAgotada
+        ? "Hoy ya he ayudado a mucha gente y se me ha agotado el cupo del dia. Vuelve a probar manana, ¡estare disponible!"
+        : "Estoy un poco saturado ahora mismo. Inténtalo en unos minutos, por favor.";
+      return jsonResponse({
+        respuesta,
+        accion: "info",
+        productos: [],
+      }, 200);
+    }
     const detalle = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
     console.error("Error procesando solicitud:", detalle, err);
     return jsonResponse(
       {
-        error: "Error procesando la solicitud",
+        error: "Algo no ha ido bien por mi parte. Vuelve a intentarlo en un momento.",
         detalle,
       },
       500,
