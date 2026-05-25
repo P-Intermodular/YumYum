@@ -11,27 +11,45 @@ readonly FLUTTER_DOWNLOAD_URL="https://storage.googleapis.com/flutter_infra_rele
 readonly FLUTTER_HOME="$FLUTTER_CACHE_DIR/flutter"
 readonly FLUTTER_BIN="$FLUTTER_HOME/bin/flutter"
 
-if [[ ! -f "$ENV_PATH" ]]; then
-  echo "No existe $ENV_PATH. Usa .env.example como plantilla." >&2
-  exit 1
-fi
+readonly SUPABASE_URL_FROM_ENV="${SUPABASE_URL:-}"
+readonly SUPABASE_ANON_KEY_FROM_ENV="${SUPABASE_ANON_KEY:-}"
+readonly APP_BASE_URL_FROM_ENV="${APP_BASE_URL:-}"
 
-# Exportamos el .env versionado para reutilizar la misma configuracion
-# tanto en local como en el build remoto.
-set -a
-# shellcheck disable=SC1090
-source "$ENV_PATH"
-set +a
+needs_env_file=false
+for key in SUPABASE_URL SUPABASE_ANON_KEY; do
+  if [[ -z "${!key:-}" ]]; then
+    needs_env_file=true
+    break
+  fi
+done
+
+if [[ "$needs_env_file" == true ]]; then
+  if [[ ! -f "$ENV_PATH" ]]; then
+    echo "Faltan variables de entorno. Defínelas en Render o crea $ENV_PATH para builds locales." >&2
+    exit 1
+  fi
+
+  echo "Faltan variables en el entorno; cargando $ENV_PATH para desarrollo local."
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_PATH"
+  set +a
+
+  # Las variables definidas por Render o por el shell siempre tienen prioridad.
+  [[ -n "$SUPABASE_URL_FROM_ENV" ]] && SUPABASE_URL="$SUPABASE_URL_FROM_ENV"
+  [[ -n "$SUPABASE_ANON_KEY_FROM_ENV" ]] && SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_FROM_ENV"
+  [[ -n "$APP_BASE_URL_FROM_ENV" ]] && APP_BASE_URL="$APP_BASE_URL_FROM_ENV"
+fi
 
 for key in SUPABASE_URL SUPABASE_ANON_KEY; do
   if [[ -z "${!key:-}" ]]; then
-    echo "Falta $key en $ENV_PATH." >&2
+    echo "Falta $key. Defínela en las variables de entorno de Render o en $ENV_PATH para builds locales." >&2
     exit 1
   fi
 done
 
 if [[ "${SUPABASE_ANON_KEY}" == "pon_aqui_tu_anon_key" ]]; then
-  echo "Rellena SUPABASE_ANON_KEY en $ENV_PATH antes de compilar." >&2
+  echo "Rellena SUPABASE_ANON_KEY en Render o en $ENV_PATH antes de compilar." >&2
   exit 1
 fi
 
@@ -55,7 +73,15 @@ masked_key="${SUPABASE_ANON_KEY:0:8}"
 echo "Supabase URL: $SUPABASE_URL"
 echo "Supabase anon key cargada: ${masked_key}..."
 
-"$FLUTTER_BIN" pub get
-"$FLUTTER_BIN" build web --release \
-  --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+dart_defines=(
+  --dart-define=SUPABASE_URL="$SUPABASE_URL"
   --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+)
+
+if [[ -n "${APP_BASE_URL:-}" ]]; then
+  echo "APP_BASE_URL: $APP_BASE_URL"
+  dart_defines+=(--dart-define=APP_BASE_URL="$APP_BASE_URL")
+fi
+
+"$FLUTTER_BIN" pub get
+"$FLUTTER_BIN" build web --release "${dart_defines[@]}"

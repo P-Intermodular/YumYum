@@ -11,7 +11,15 @@ final transaccionControllerProvider =
   TransaccionController.new,
 );
 
-/// Orquesta el cierre de transacciones y la invalidación de providers.
+/// Orquesta el cierre y cancelación de transacciones aceptadas y la
+/// invalidación de los providers afectados (pedidos, detalle de
+/// transacción, productos involucrados) para refrescar las vistas sin
+/// depender exclusivamente de Realtime.
+///
+/// Las RPCs `completar_transaccion` y `cancelar_transaccion` son las que
+/// imponen las reglas de negocio (idempotencia, devolución de productos a
+/// `disponible` en cancelaciones, etc.); este controlador solo coordina
+/// estado de UI y refresco.
 class TransaccionController extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);

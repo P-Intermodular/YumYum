@@ -45,6 +45,7 @@ app.*.map.json
 /android/app/release
 
 # Local environment
+.env
 .env.*
 !.env.example
 
@@ -54,10 +55,12 @@ prototipo-figma/
 prototipo-funciones/
 .render/
 
-# Large documentation exports stay local; keep the backend divergence note versioned.
+# Configuración local de Codex CLI (MCP, etc.)
+.codex/
+
+# Large documentation exports stay local; only the canonical .md is versioned.
 /documentacion/*
 !/documentacion/
-!/documentacion/divergencias_diseno_backend.md
 !/documentacion/documentacion_tecnica.md
 !/documentacion/00_LEEME_PRIMERO.md
 !/documentacion/01_vision_y_stack.md

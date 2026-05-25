@@ -1,69 +1,201 @@
-import 'dart:convert';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+/// Representacion de un plato cercano devuelto por el asistente IA.
+class ProductoSugerido {
+  final String id;
+  final String titulo;
+  final String? descripcion;
+  final String tipo;
+  final num? precio;
+  final String? categoria;
+  final double? distanciaKm;
+  final String? propietarioNombre;
+  final String? propietarioAvatar;
+  final String? imagenPrincipal;
+
+  const ProductoSugerido({
+    required this.id,
+    required this.titulo,
+    required this.tipo,
+    this.descripcion,
+    this.precio,
+    this.categoria,
+    this.distanciaKm,
+    this.propietarioNombre,
+    this.propietarioAvatar,
+    this.imagenPrincipal,
+  });
+
+  factory ProductoSugerido.fromJson(Map<String, dynamic> json) {
+    final distancia = json['distancia_km'];
+    return ProductoSugerido(
+      id: json['id'] as String,
+      titulo: json['titulo'] as String,
+      descripcion: json['descripcion'] as String?,
+      tipo: json['tipo'] as String,
+      precio: json['precio'] as num?,
+      categoria: json['categoria'] as String?,
+      distanciaKm: distancia is num ? distancia.toDouble() : null,
+      propietarioNombre: json['propietario_nombre'] as String?,
+      propietarioAvatar: json['propietario_avatar'] as String?,
+      imagenPrincipal: json['imagen_principal'] as String?,
+    );
+  }
+}
+
+/// Datos pre-rellenados que la IA propone para abrir el formulario de
+/// publicar un plato.
+class PrefilledPublicacion {
+  final String? titulo;
+  final String? descripcion;
+  final String? categoria;
+  final String? tipo;
+  final num? precio;
+
+  const PrefilledPublicacion({
+    this.titulo,
+    this.descripcion,
+    this.categoria,
+    this.tipo,
+    this.precio,
+  });
+
+  factory PrefilledPublicacion.fromJson(Map<String, dynamic> json) {
+    return PrefilledPublicacion(
+      titulo: json['titulo'] as String?,
+      descripcion: json['descripcion'] as String?,
+      categoria: json['categoria'] as String?,
+      tipo: json['tipo'] as String?,
+      precio: json['precio'] as num?,
+    );
+  }
+}
+
+/// Accion que el asistente sugiere al cliente tras analizar la consulta.
+enum AccionAsistente { buscar, publicar, info, ninguna }
+
+AccionAsistente _accionFromString(String? valor) {
+  switch (valor) {
+    case 'buscar':
+      return AccionAsistente.buscar;
+    case 'publicar':
+      return AccionAsistente.publicar;
+    case 'info':
+      return AccionAsistente.info;
+    default:
+      return AccionAsistente.ninguna;
+  }
+}
+
+/// Resultado del asistente IA listo para pintar en la UI.
+class RespuestaAsistente {
+  final String respuesta;
+  final AccionAsistente accion;
+  final List<ProductoSugerido> productos;
+  final PrefilledPublicacion? prefilled;
+
+  const RespuestaAsistente({
+    required this.respuesta,
+    required this.accion,
+    required this.productos,
+    this.prefilled,
+  });
+
+  factory RespuestaAsistente.fromJson(Map<String, dynamic> json) {
+    final productos = (json['productos'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(ProductoSugerido.fromJson)
+        .toList();
+    final prefilled = json['prefilled_publicacion'] is Map<String, dynamic>
+        ? PrefilledPublicacion.fromJson(
+            json['prefilled_publicacion'] as Map<String, dynamic>,
+          )
+        : null;
+    return RespuestaAsistente(
+      respuesta: json['respuesta'] as String? ?? '',
+      accion: _accionFromString(json['accion'] as String?),
+      productos: productos,
+      prefilled: prefilled,
+    );
+  }
+}
+
+/// Rol de un turno en la conversacion con el asistente IA.
+enum RolMensaje { user, assistant }
+
+/// Mensaje individual dentro del historial de chat que se envia a la
+/// Edge Function. Solo contiene texto: los productos y la accion del
+/// turno previo no se reenvian, basta con el texto natural.
+class MensajeChat {
+  final RolMensaje rol;
+  final String texto;
+
+  const MensajeChat({required this.rol, required this.texto});
+
+  Map<String, dynamic> toJson() => {
+        'rol': rol == RolMensaje.user ? 'user' : 'assistant',
+        'texto': texto,
+      };
+}
 
 /// Cliente del asistente IA de YumYum.
 ///
-/// El backend que atiende estas peticiones es un servicio Node.js externo
-/// (no incluido en este repositorio): debe estar corriendo en
-/// `localhost:3000` durante el desarrollo. Si no está disponible, el FAB
-/// devolverá un error de red que la UI muestra como SnackBar — sin romper
-/// el resto de la app.
+/// La logica del asistente vive en una Edge Function de Supabase
+/// (`supabase/functions/asistente-ia/`). El cliente envia el historial
+/// completo de la conversacion (multi-turno) y la ubicacion aproximada;
+/// la funcion habla con Gemini con function calling, ejecuta busquedas
+/// reales contra Supabase si hace falta y devuelve un JSON con texto
+/// conversacional, accion sugerida, productos y prefilled opcional para
+/// publicar.
 class IAService {
-  /// Resuelve el host del backend según la plataforma.
-  ///
-  /// En el emulador Android `localhost` apunta al propio emulador, no al
-  /// host de desarrollo. Por eso usamos `10.0.2.2`, el alias estándar al
-  /// host. En web y desktop bastan `localhost`.
-  static String get _baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3000/api';
-    }
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:3000/api';
-    }
-    return 'http://localhost:3000/api';
-  }
+  static const String _functionName = 'asistente-ia';
 
-  /// Envía la entrada del usuario al backend para análisis de intención.
-  ///
-  /// El backend devuelve un JSON con `accion` (`'publicar'` | `'buscar'` |
-  /// otra) y datos auxiliares. El cliente solo deserializa y propaga la
-  /// respuesta — la orquestación del intent (navegar a publicar, filtrar
-  /// el feed) se hace en la capa de UI.
-  static Future<Map<String, dynamic>> procesarTexto(
-    String texto,
-    String usuarioId,
-  ) async {
+  /// Envia un historial de conversacion a la Edge Function. El ultimo
+  /// elemento debe ser un mensaje del usuario.
+  static Future<RespuestaAsistente> enviarHistorial(
+    List<MensajeChat> mensajes, {
+    double? latitud,
+    double? longitud,
+  }) async {
+    if (mensajes.isEmpty) {
+      throw Exception('El historial no puede estar vacio.');
+    }
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/procesar-parte-ia'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'texto': texto,
-          'usuario': usuarioId,
-          'rol': 'USER',
-        }),
+      final response = await Supabase.instance.client.functions.invoke(
+        _functionName,
+        body: {
+          'mensajes': mensajes.map((m) => m.toJson()).toList(),
+          if (latitud != null && longitud != null)
+            'ubicacion': {
+              'latitud': latitud,
+              'longitud': longitud,
+            },
+        },
       );
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return RespuestaAsistente.fromJson(data);
       }
-
-      // El backend documentado devuelve `{ "error": "..." }` en errores
-      // de validación; lo propagamos para que la UI lo muestre.
-      try {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        throw Exception(
-          body['error'] as String? ??
-              'Error de servidor HTTP: ${response.statusCode}',
-        );
-      } on FormatException {
-        throw Exception('Error de servidor HTTP: ${response.statusCode}');
+      throw Exception('Respuesta inesperada del asistente.');
+    } on FunctionException catch (e) {
+      // El servidor devuelve siempre un mensaje amigable en `error`. El
+      // campo `detalle` queda solo para los logs (lo emitimos por
+      // `debugPrint` arriba pero no lo mostramos al usuario).
+      final detalle = e.details;
+      if (detalle is Map) {
+        final mensaje = detalle['error'] as String?;
+        if (mensaje != null && mensaje.isNotEmpty) {
+          throw Exception(mensaje);
+        }
       }
+      throw Exception(
+        'No he podido contactar con el asistente. Inténtalo en un momento.',
+      );
     } catch (e) {
-      throw Exception('Fallo de red al contactar la IA: $e');
+      throw Exception(
+        'Sin conexión con el asistente. Comprueba tu Internet y vuelve a intentarlo.',
+      );
     }
   }
 }

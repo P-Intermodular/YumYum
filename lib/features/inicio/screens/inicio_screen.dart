@@ -20,7 +20,6 @@ import '../widgets/hero_plato.dart';
 import '../widgets/seccion_titulo.dart';
 
 const _kBottomNavOverlayHeight = 120.0;
-const _kBotonSubirGap = 16.0;
 
 /// Feed principal: cabecera personal + búsqueda + chips + plato destacado +
 /// recomendados. Replica la estética del prototipo-figma `FeedScreen`.
@@ -120,6 +119,14 @@ class _InicioScreenState extends ConsumerState<InicioScreen> {
               visible: _mostrarBotonSubir,
               onTap: _subirAlInicio,
             ),
+            // Asistente IA solo en Inicio: aquí la "intención" del usuario
+            // es difusa (descubrir, buscar, publicar) y la ayuda contextual
+            // tiene sentido. En el resto de tabs es ruido.
+            const Positioned(
+              right: 16,
+              bottom: 110,
+              child: BotonIAGlobal(),
+            ),
           ],
         ),
       ),
@@ -201,11 +208,10 @@ class _BotonSubirInicio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.yumColors;
-    final padding = MediaQuery.of(context).padding;
 
     return Positioned(
-      right: 20,
-      bottom: padding.bottom + _kBottomNavOverlayHeight + _kBotonSubirGap,
+      right: 16,
+      bottom: 170,
       child: IgnorePointer(
         ignoring: !visible,
         child: AnimatedOpacity(
