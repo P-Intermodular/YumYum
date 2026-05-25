@@ -76,10 +76,29 @@ Se invocan desde Flutter con `supabase.rpc('nombre', params: {...})`. Garantizan
 
 ---
 
-## Asistente IA (servicio externo)
+## Asistente IA — Edge Function `asistente-ia`
 
-- **Endpoint:** `POST http://localhost:3000/api/procesar-parte-ia` (`http://10.0.2.2:3000` en emuladores Android)
-- **Body:** `{ texto, usuario, rol: 'USER' }`
-- **Respuesta:** `{ accion: 'publicar' | 'buscar', ...datos }`
-- **Estado actual:** la respuesta solo se imprime en consola — el cableado al intent está pendiente.
-- Si el servidor no está levantado → SnackBar de error, el resto de la app no se ve afectado.
+`IAService` (en `core/services/`) invoca la Edge Function `asistente-ia` de Supabase mediante el SDK oficial:
+```dart
+Supabase.instance.client.functions.invoke('asistente-ia', body: { 'mensajes': [...], 'lat': ..., 'lng': ... })
+```
+
+El JWT del usuario se adjunta automáticamente. La Edge Function (Deno + TypeScript) hace lo siguiente:
+
+1. **Personalización:** decodifica el `uid` del JWT, carga el perfil del usuario (`nombre`, `ciudad`, `alergenos`) para construir un *system prompt* personalizado (la IA respeta los alérgenos declarados sin que el usuario los mencione).
+2. **Function calling:** declara la herramienta `buscar_productos_cercanos` a Gemini. Si el modelo decide invocarla, la Edge Function ejecuta la RPC `obtener_productos_cercanos` con el JWT del usuario (respeta RLS) y devuelve los productos reales al modelo en un segundo turno.
+3. **Fallback en cascada:** prueba hasta seis modelos de Gemini (`gemini-2.5-flash-lite` por defecto). Si uno responde `429`/`500`/`503`, pasa al siguiente sin que el usuario lo note. El modelo preferido puede cambiarse con el secret `GEMINI_MODEL` sin redeploy.
+4. **Anti-alucinación:** si todos los modelos fallan o la búsqueda devuelve 0 productos, responde con un mensaje conversacional fijo en lugar de inventar datos.
+
+**Respuesta al cliente:**
+```json
+{
+  "respuesta": "string",
+  "accion": "buscar | publicar | info | ninguna",
+  "productos": [...],
+  "prefilled_publicacion": { "titulo": "...", "categoria": "...", "tipo": "...", "precio": 0 }
+}
+```
+
+> La `GEMINI_API_KEY` vive como **secret de Supabase** y nunca sale del servidor. No se necesita ningún proceso local adicional.
+

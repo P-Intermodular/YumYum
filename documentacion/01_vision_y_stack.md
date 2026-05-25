@@ -26,7 +26,8 @@ Plataforma de **intercambio local de comida casera**. Los usuarios publican plat
 | `google_fonts ^6.2` | Tipografías Inter y Fraunces |
 | `shared_preferences ^2.3` | Persistencia local del tema activo |
 | `intl ^0.19` | Fechas, distancias y monedas en `es` |
-| `http ^1.2` | Cliente del asistente IA (backend Node externo) |
+| `uuid ^4.3` | Generación de IDs locales (nombres de blob en Storage) |
+| `web ^1.0` | Acceso al DOM en web para sincronizar `meta theme-color` de la PWA |
 
 ### Backend — Supabase
 
@@ -38,8 +39,15 @@ Plataforma de **intercambio local de comida casera**. Los usuarios publican plat
 | Storage | Imágenes de productos y avatares |
 | Realtime | WebSockets para chat, notificaciones y favoritos |
 | RPCs (PL/pgSQL) | Operaciones atómicas complejas |
+| **Edge Functions** (Deno + TypeScript) | Asistente IA: integración con Google Gemini sin exponer la API key al cliente |
 
-> ⚠️ **Servicio externo:** El asistente IA usa un backend Node en `localhost:3000` que **no está en este repositorio**. Si no está levantado, el FAB de IA da error de red sin afectar el resto de la app.
+### Asistente IA — Edge Function + Google Gemini
+
+El FAB de IA invoca la Edge Function `asistente-ia` alojada en Supabase (Deno + TypeScript). La función:
+- Habla con **Google Gemini** usando *function calling* para buscar productos reales en la BD.
+- La `GEMINI_API_KEY` vive como **secret de Supabase** — nunca llega al cliente.
+- Aplica fallback automático en cascada entre seis modelos de Gemini si alguno falla.
+- **No requiere ningún servidor externo** ni proceso adicional en local.
 
 ---
 
@@ -50,9 +58,7 @@ Flutter App (iOS / Android / Web PWA)
         │ supabase_flutter
         ▼
 Supabase ─── Auth ─── PostgreSQL (RLS + Triggers + RPCs)
-         └── Storage
-         └── Realtime (WebSockets)
-        │ (solo IA)
-        ▼
-Backend Node externo (localhost:3000) ← no está en el repo
+         ├── Storage
+         ├── Realtime (WebSockets)
+         └── Edge Functions (Deno) ──► Google Gemini API
 ```

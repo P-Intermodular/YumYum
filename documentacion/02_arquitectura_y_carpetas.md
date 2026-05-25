@@ -23,7 +23,7 @@ YumYum/
 │   │   ├── theme/             # Material3, colores, persistencia, sync PWA
 │   │   ├── preferencias/      # SharedPreferences + consentimiento cookies (RGPD)
 │   │   ├── widgets/           # Widgets reutilizables globales
-│   │   ├── services/          # IAService (cliente HTTP del asistente IA)
+│   │   ├── services/          # IAService: invoca la Edge Function `asistente-ia` de Supabase (Gemini)
 │   │   ├── location/          # GPS, permisos, formato de distancia
 │   │   ├── errors/            # Excepciones y traducción de errores técnicos → mensajes UI
 │   │   ├── feedback/          # Snackbars de éxito/error normalizados

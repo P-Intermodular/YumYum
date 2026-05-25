@@ -223,11 +223,25 @@ RPC eliminar_producto:
 ## 13. Asistente IA
 
 ```
-Usuario pulsa FAB BotonIAGlobal → bottom sheet con campo de texto
+Usuario pulsa FAB BotonIAGlobal → bottom sheet tipo chat (multi-turno)
         ▼
-POST http://localhost:3000/api/procesar-parte-ia
-  { texto, usuario, rol: 'USER' }
+IAService llama a la Edge Function `asistente-ia` vía SDK de Supabase:
+  body: { mensajes: [...historial...], lat, lng }
+  JWT del usuario adjuntado automáticamente
         ▼
-Respuesta { accion, ...datos } → actualmente solo debugPrint
-⚠️ El cableado de navegación al intent está PENDIENTE
+Edge Function (Deno + TypeScript) en Supabase:
+  1. Carga perfil del usuario (nombre, alergenos) → personaliza system prompt
+  2. Llama a Google Gemini con function calling
+     Si Gemini invoca buscar_productos_cercanos:
+       → RPC obtener_productos_cercanos (con JWT, respeta RLS)
+       → devuelve productos reales a Gemini en un segundo turno
+  3. Fallback automático entre 6 modelos de Gemini (429/500/503)
+  4. Si todo falla o hay 0 resultados → respuesta fija (anti-alucinación)
+        ▼
+Respuesta: { respuesta, accion, productos[], prefilled_publicacion? }
+  - Chips de producto → navegan al detalle (/producto/:id)
+  - Botón "Empezar a publicar" → navega a /publicar
 ```
+
+> ⚠️ **Pendiente:** los campos de `prefilled_publicacion` (título, categoría, tipo, precio)
+> aún no se inyectan en `PublicarProductoController` al abrir el formulario.

@@ -20,11 +20,12 @@
 - Perfil: visualización, edición, avatar, perfil público ajeno
 - Ajustes: temas (Huerto Moderno / Mesa de Barrio), preferencias de notificaciones
 - Legal/RGPD: banner de cookies, checkbox de consentimiento en registro, 6 páginas legales públicas
+- **Asistente IA:** Edge Function `asistente-ia` (Deno + TypeScript) integrada con Google Gemini, function calling contra `obtener_productos_cercanos`, fallback en cascada entre 6 modelos, anti-alucinación y UI multi-turno con chips navegables
 - Todas las migraciones, RLS, triggers y RPCs desplegadas
 
 ### 🔄 Incompleto
 
-- **Asistente IA:** la respuesta llega del backend pero solo se imprime en consola. Falta cablear navegación al intent.
+- **Prefill del formulario de publicación desde la IA:** la Edge Function ya devuelve `prefilled_publicacion` (título, categoría, tipo, precio) y el botón "Empezar a publicar" navega a `/publicar`, pero los datos no se inyectan todavía en `PublicarProductoController`.
 - **Mensajes de error:** algunos errores de Supabase llegan crudos a la UI sin normalizar.
 - **Pulido visual:** algunas pantallas secundarias pendientes de refinamiento.
 
@@ -77,9 +78,9 @@ Texto libre en una plataforma de alimentos. Cualquiera puede escribir lo que qui
 - El avatar anterior queda huérfano en Storage al subir uno nuevo.
 → `flutter_image_compress` antes del upload. Eliminar blob anterior al actualizar avatar.
 
-**8. Asistente IA sin configuración de entorno**
-Host hardcodeado a `localhost:3000`. Sin variable de entorno ni feature-flag para ocultarlo cuando no está disponible.
-→ `IA_BASE_URL` en `.env`, timeout explícito, flag para ocultar el FAB.
+**8. Prefill del formulario de publicación desde el asistente IA**
+La Edge Function ya devuelve `prefilled_publicacion` con los campos detectados (`titulo`, `descripcion`, `categoria`, `tipo`, `precio`), pero no se inyectan en `PublicarProductoController` al abrir el formulario.
+→ Crear un `borradorAsistenteProvider` transitorio que el formulario lea al construirse para pre-rellenar los campos.
 
 ---
 
