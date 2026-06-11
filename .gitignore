@@ -57,6 +57,7 @@ prototipo-funciones/
 
 # Configuración local de Codex CLI (MCP, etc.)
 .codex/
+.claude/
 
 # Large documentation exports stay local; only the canonical .md is versioned.
 /documentacion/*
